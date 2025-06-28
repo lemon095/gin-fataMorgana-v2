@@ -4,21 +4,31 @@ CREATE DATABASE IF NOT EXISTS gin_fataMorgana CHARACTER SET utf8mb4 COLLATE utf8
 -- 使用数据库
 USE gin_fataMorgana;
 
--- 创建管理员用户表
+-- 创建管理员用户表（邀请码管理表）
 CREATE TABLE IF NOT EXISTS admin_users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    invite_code VARCHAR(6) NOT NULL UNIQUE,
-    status TINYINT DEFAULT 1 COMMENT '1:启用 0:禁用',
+    admin_id VARCHAR(8) NOT NULL UNIQUE COMMENT '管理员唯一ID',
+    username VARCHAR(50) NOT NULL UNIQUE COMMENT '用户名',
+    password VARCHAR(255) NOT NULL COMMENT '密码哈希',
+    remark VARCHAR(500) COMMENT '备注',
+    status TINYINT DEFAULT 1 COMMENT '账户状态 1:正常 0:禁用',
+    avatar VARCHAR(255) COMMENT '头像URL',
+    role INT NOT NULL DEFAULT 1 COMMENT '身份角色 1:超级管理员 2:经理 3:主管 4:业务员',
+    my_invite_code VARCHAR(6) NOT NULL UNIQUE COMMENT '我的邀请码',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL COMMENT '软删除时间',
+    INDEX idx_admin_id (admin_id),
+    INDEX idx_username (username),
+    INDEX idx_my_invite_code (my_invite_code),
+    INDEX idx_status (status),
+    INDEX idx_role (role),
+    INDEX idx_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 插入默认管理员用户（密码：admin123）
-INSERT INTO admin_users (username, email, password, invite_code, status) VALUES 
-('admin', 'admin@example.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ADMIN1', 1)
+INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code) VALUES 
+('ADMIN001', 'admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '系统管理员', 1, 1, 'ADMIN1')
 ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP;
 
 -- 创建用户表
