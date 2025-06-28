@@ -1,0 +1,100 @@
+package utils
+
+import (
+	"errors"
+	"time"
+
+	"gin-fataMorgana/config"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	// Token过期时间
+	AccessTokenExpiry  time.Duration
+	RefreshTokenExpiry time.Duration
+	JWTSecret          []byte
+)
+
+// InitJWT 初始化JWT配置
+func InitJWT() {
+	cfg := config.GlobalConfig.JWT
+	JWTSecret = []byte(cfg.Secret)
+	AccessTokenExpiry = time.Duration(cfg.AccessTokenExpire) * time.Second
+	RefreshTokenExpiry = time.Duration(cfg.RefreshTokenExpire) * time.Second
+}
+
+// Claims JWT声明
+type Claims struct {
+	UserID   uint   `json:"user_id"`
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+// GenerateAccessToken 生成访问令牌
+func GenerateAccessToken(userID uint, username string) (string, error) {
+	claims := Claims{
+		UserID:   userID,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "gin-fataMorgana",
+			Subject:   username,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(JWTSecret)
+}
+
+// GenerateRefreshToken 生成刷新令牌
+func GenerateRefreshToken(userID uint, username string) (string, error) {
+	claims := Claims{
+		UserID:   userID,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "gin-fataMorgana",
+			Subject:   username,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(JWTSecret)
+}
+
+// ParseToken 解析令牌
+func ParseToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+		return JWTSecret, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("无效的令牌")
+}
+
+// ValidateToken 验证令牌
+func ValidateToken(tokenString string) (*Claims, error) {
+	claims, err := ParseToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+
+	// 检查令牌是否过期
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, errors.New("令牌已过期")
+	}
+
+	return claims, nil
+}

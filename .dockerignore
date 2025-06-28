@@ -1,0 +1,45 @@
+# Git相关
+.git
+.gitignore
+
+# 文档
+README.md
+README_DATABASE.md
+docs/
+
+# 测试文件
+test_*.sh
+test_*.md
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# IDE相关
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# Docker相关
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 构建产物
+gin-fataMorgana
+*.exe
+
+# 备份文件
+backups/
+
+# 配置文件（可选，如果需要外部挂载）
+# config/config.yaml 
