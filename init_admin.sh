@@ -53,7 +53,7 @@ echo "  邀请码: $ADMIN_INVITE_CODE"
 echo
 
 # 构建SQL语句
-SQL="INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES ('$ADMIN_ID', '$ADMIN_USERNAME', '$(echo -n "$ADMIN_PASSWORD" | openssl dgst -sha256 | cut -d' ' -f2)', '系统管理员', 1, '超级管理员', '$ADMIN_INVITE_CODE', NOW(), NOW());"
+SQL="INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES ('$ADMIN_ID', '$ADMIN_USERNAME', '$(echo -n "$ADMIN_PASSWORD" | openssl dgst -sha256 | cut -d' ' -f2)', '系统管理员', 1, 1, '$ADMIN_INVITE_CODE', NOW(), NOW());"
 
 echo "📝 执行SQL语句:"
 echo "$SQL"
