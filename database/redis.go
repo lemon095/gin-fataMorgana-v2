@@ -22,19 +22,20 @@ func InitRedis() error {
 		Addr:         cfg.GetRedisAddr(),
 		Password:     cfg.Password,
 		DB:           cfg.DB,
-		PoolSize:     cfg.PoolSize,
-		MinIdleConns: cfg.MinIdleConns,
-		MaxRetries:   cfg.MaxRetries,
-		DialTimeout:  time.Duration(cfg.DialTimeout) * time.Second,
-		ReadTimeout:  time.Duration(cfg.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.WriteTimeout) * time.Second,
+		PoolSize:     10,  // 连接池大小
+		MinIdleConns: 5,   // 最小空闲连接数
+		MaxRetries:   3,   // 最大重试次数
+		DialTimeout:  5 * time.Second,  // 连接超时
+		ReadTimeout:  3 * time.Second,  // 读取超时
+		WriteTimeout: 3 * time.Second,  // 写入超时
 	})
 
 	// 测试连接
-	ctx := context.Background()
-	_, err := RedisClient.Ping(ctx).Result()
-	if err != nil {
-		return fmt.Errorf("Redis连接失败: %w", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := RedisClient.Ping(ctx).Err(); err != nil {
+		return fmt.Errorf("Redis连接测试失败: %w", err)
 	}
 
 	log.Println("Redis连接成功")
@@ -43,15 +44,9 @@ func InitRedis() error {
 
 // CloseRedis 关闭Redis连接
 func CloseRedis() error {
-	if RedisClient == nil {
-		return nil
+	if RedisClient != nil {
+		return RedisClient.Close()
 	}
-
-	if err := RedisClient.Close(); err != nil {
-		return fmt.Errorf("关闭Redis连接失败: %w", err)
-	}
-
-	log.Println("Redis连接已关闭")
 	return nil
 }
 
@@ -76,7 +71,7 @@ func ExistsKey(ctx context.Context, key string) (bool, error) {
 	return result > 0, err
 }
 
-// SetExpire 设置键过期时间
+// SetExpire 设置过期时间
 func SetExpire(ctx context.Context, key string, expiration time.Duration) error {
 	return RedisClient.Expire(ctx, key, expiration).Err()
 }

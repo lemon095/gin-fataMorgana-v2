@@ -94,27 +94,30 @@ func (r *AdminUserRepository) Delete(ctx context.Context, id uint) error {
 }
 
 // List 获取管理员用户列表
-func (r *AdminUserRepository) List(ctx context.Context, limit, offset int, role string) ([]models.AdminUser, error) {
+func (r *AdminUserRepository) List(ctx context.Context, limit, offset int, role int) ([]models.AdminUser, error) {
 	var adminUsers []models.AdminUser
 	query := r.db.WithContext(ctx)
-
-	if role != "" {
+	
+	if role > 0 {
 		query = query.Where("role = ?", role)
 	}
-
-	err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&adminUsers).Error
+	
+	err := query.Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&adminUsers).Error
 	return adminUsers, err
 }
 
 // Count 统计管理员用户数量
-func (r *AdminUserRepository) Count(ctx context.Context, role string) (int64, error) {
+func (r *AdminUserRepository) Count(ctx context.Context, role int) (int64, error) {
 	var count int64
 	query := r.db.WithContext(ctx).Model(&models.AdminUser{})
-
-	if role != "" {
+	
+	if role > 0 {
 		query = query.Where("role = ?", role)
 	}
-
+	
 	err := query.Count(&count).Error
 	return count, err
 }
@@ -277,7 +280,7 @@ func (r *AdminUserRepository) GetActiveAdmins(ctx context.Context, limit, offset
 }
 
 // GetAdminsByRole 根据角色获取管理员列表
-func (r *AdminUserRepository) GetAdminsByRole(ctx context.Context, role string, limit, offset int) ([]models.AdminUser, error) {
+func (r *AdminUserRepository) GetAdminsByRole(ctx context.Context, role int, limit, offset int) ([]models.AdminUser, error) {
 	var adminUsers []models.AdminUser
 	err := r.db.WithContext(ctx).
 		Where("role = ?", role).
@@ -291,23 +294,10 @@ func (r *AdminUserRepository) GetAdminsByRole(ctx context.Context, role string, 
 // GetAdminsByRoleLevel 根据角色等级获取管理员列表
 func (r *AdminUserRepository) GetAdminsByRoleLevel(ctx context.Context, minLevel, maxLevel int, limit, offset int) ([]models.AdminUser, error) {
 	var adminUsers []models.AdminUser
-	roleHierarchy := map[string]int{
-		models.RoleSuperAdmin: 4,
-		models.RoleManager:    3,
-		models.RoleSupervisor: 2,
-		models.RoleSalesman:   1,
-	}
-
-	// 构建角色条件
-	var roles []string
-	for role, level := range roleHierarchy {
-		if level >= minLevel && level <= maxLevel {
-			roles = append(roles, role)
-		}
-	}
-
+	
+	// 直接使用角色ID范围查询
 	err := r.db.WithContext(ctx).
-		Where("role IN ?", roles).
+		Where("role >= ? AND role <= ?", minLevel, maxLevel).
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).

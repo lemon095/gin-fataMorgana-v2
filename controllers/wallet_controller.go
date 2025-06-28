@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
@@ -219,4 +220,49 @@ func (wc *WalletController) GetWithdrawSummary(c *gin.Context) {
 	}
 
 	utils.Success(c, summary)
+}
+
+// RechargeApply 充值申请
+func (wc *WalletController) RechargeApply(c *gin.Context) {
+	var req struct {
+		Uid         string  `json:"uid" binding:"required"`
+		Amount      float64 `json:"amount" binding:"required,gt=0"`
+		Description string  `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		return
+	}
+	operatorUid := middleware.GetCurrentUser(c)
+	operatorUidStr := "system"
+	if operatorUid != 0 {
+		operatorUidStr = fmt.Sprintf("%d", operatorUid)
+	}
+	transactionNo, err := wc.walletService.RechargeApply(req.Uid, req.Amount, req.Description, operatorUidStr)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
+		return
+	}
+	utils.SuccessWithMessage(c, "充值申请已提交", gin.H{"transaction_no": transactionNo})
+}
+
+// RechargeConfirm 充值确认
+func (wc *WalletController) RechargeConfirm(c *gin.Context) {
+	var req struct {
+		TransactionNo string `json:"transaction_no" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		return
+	}
+	operatorUid := middleware.GetCurrentUser(c)
+	operatorUidStr := "system"
+	if operatorUid != 0 {
+		operatorUidStr = fmt.Sprintf("%d", operatorUid)
+	}
+	if err := wc.walletService.RechargeConfirm(req.TransactionNo, operatorUidStr); err != nil {
+		utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
+		return
+	}
+	utils.SuccessWithMessage(c, "充值已到账", nil)
 }

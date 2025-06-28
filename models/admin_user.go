@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AdminUser 后台管理员用户模型（仅用于邀请码校验）
+// AdminUser 邀请码管理表（仅用于邀请码校验）
 type AdminUser struct {
 	ID           uint       `json:"id" gorm:"primaryKey;autoIncrement"`
 	AdminID      string     `json:"admin_id" gorm:"uniqueIndex;not null;size:8;comment:管理员唯一ID"`
@@ -15,7 +15,7 @@ type AdminUser struct {
 	Remark       string     `json:"remark" gorm:"size:500;comment:备注"`
 	Status       int        `json:"status" gorm:"default:1;comment:账户状态 1:正常 0:禁用"`
 	Avatar       string     `json:"avatar" gorm:"size:255;comment:头像URL"`
-	Role         string     `json:"role" gorm:"size:20;not null;default:'业务员';comment:身份角色"`
+	Role         int        `json:"role" gorm:"not null;default:1;comment:身份角色 1:业务员 2:主管 3:经理 4:超级管理员"`
 	MyInviteCode string     `json:"my_invite_code" gorm:"size:6;uniqueIndex;comment:我的邀请码"`
 	CreatedAt    time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
@@ -29,16 +29,32 @@ func (AdminUser) TableName() string {
 
 // TableComment 表注释
 func (AdminUser) TableComment() string {
-	return "管理员用户表 - 存储后台管理员信息，包括角色权限、邀请码管理等"
+	return "邀请码管理表 - 存储邀请码信息，用于用户注册时的邀请码校验"
 }
 
-// 管理员角色常量
+// 管理员角色常量（使用int枚举）
 const (
-	RoleSuperAdmin = "超级管理员" // 超级管理员
-	RoleManager    = "经理"    // 经理
-	RoleSupervisor = "主管"    // 主管
-	RoleSalesman   = "业务员"   // 业务员
+	RoleSalesman   = 1 // 业务员
+	RoleSupervisor = 2 // 主管
+	RoleManager    = 3 // 经理
+	RoleSuperAdmin = 4 // 超级管理员
 )
+
+// 角色名称映射
+var RoleNames = map[int]string{
+	RoleSalesman:   "业务员",
+	RoleSupervisor: "主管",
+	RoleManager:    "经理",
+	RoleSuperAdmin: "超级管理员",
+}
+
+// 角色权限等级映射
+var RoleLevels = map[int]int{
+	RoleSalesman:   1,
+	RoleSupervisor: 2,
+	RoleManager:    3,
+	RoleSuperAdmin: 4,
+}
 
 // AdminUserRegisterRequest 管理员注册请求
 type AdminUserRegisterRequest struct {
@@ -46,8 +62,8 @@ type AdminUserRegisterRequest struct {
 	Password        string `json:"password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=Password"`
 	Remark          string `json:"remark" binding:"max=500"`
-	Role            string `json:"role" binding:"required,oneof=超级管理员 经理 主管 业务员"`
-	InviteCode      string `json:"invite_code" binding:"required"` // 注册时使用的邀请码
+	Role            int    `json:"role" binding:"required,min=1,max=4"` // 1-4对应不同角色
+	InviteCode      string `json:"invite_code" binding:"required"`      // 注册时使用的邀请码
 }
 
 // AdminUserLoginRequest 管理员登录请求
@@ -64,7 +80,8 @@ type AdminUserResponse struct {
 	Remark       string    `json:"remark"`
 	Status       int       `json:"status"`
 	Avatar       string    `json:"avatar"`
-	Role         string    `json:"role"`
+	Role         string    `json:"role"`         // 返回角色名称
+	RoleID       int       `json:"role_id"`      // 返回角色ID
 	MyInviteCode string    `json:"my_invite_code"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -76,7 +93,7 @@ type AdminUserUpdateRequest struct {
 	Remark   string `json:"remark" binding:"max=500"`
 	Status   *int   `json:"status" binding:"oneof=0 1"`
 	Avatar   string `json:"avatar"`
-	Role     string `json:"role" binding:"oneof=超级管理员 经理 主管 业务员"`
+	Role     int    `json:"role" binding:"min=1,max=4"` // 1-4对应不同角色
 }
 
 // AdminUserChangePasswordRequest 管理员修改密码请求
@@ -111,7 +128,8 @@ func (a *AdminUser) ToResponse() AdminUserResponse {
 		Remark:       a.Remark,
 		Status:       a.Status,
 		Avatar:       a.Avatar,
-		Role:         a.Role,
+		Role:         RoleNames[a.Role],
+		RoleID:       a.Role,
 		MyInviteCode: a.MyInviteCode,
 		CreatedAt:    a.CreatedAt,
 		UpdatedAt:    a.UpdatedAt,
@@ -143,40 +161,54 @@ func (a *AdminUser) IsSalesman() bool {
 	return a.Role == RoleSalesman
 }
 
-// HasPermission 检查是否有指定权限
-func (a *AdminUser) HasPermission(requiredRole string) bool {
-	roleHierarchy := map[string]int{
-		RoleSuperAdmin: 4,
-		RoleManager:    3,
-		RoleSupervisor: 2,
-		RoleSalesman:   1,
+// HasPermission 检查是否有指定权限（使用角色ID）
+func (a *AdminUser) HasPermission(requiredRoleID int) bool {
+	return a.Role >= requiredRoleID
+}
+
+// HasPermissionByName 检查是否有指定权限（使用角色名称）
+func (a *AdminUser) HasPermissionByName(requiredRoleName string) bool {
+	// 根据角色名称获取角色ID
+	for roleID, roleName := range RoleNames {
+		if roleName == requiredRoleName {
+			return a.HasPermission(roleID)
+		}
 	}
-
-	userLevel := roleHierarchy[a.Role]
-	requiredLevel := roleHierarchy[requiredRole]
-
-	return userLevel >= requiredLevel
+	return false
 }
 
 // GetRoleLevel 获取角色等级
 func (a *AdminUser) GetRoleLevel() int {
-	roleHierarchy := map[string]int{
-		RoleSuperAdmin: 4,
-		RoleManager:    3,
-		RoleSupervisor: 2,
-		RoleSalesman:   1,
-	}
-
-	return roleHierarchy[a.Role]
+	return RoleLevels[a.Role]
 }
 
-// ValidateRole 验证角色是否有效
-func ValidateRole(role string) bool {
-	validRoles := []string{RoleSuperAdmin, RoleManager, RoleSupervisor, RoleSalesman}
-	for _, validRole := range validRoles {
-		if role == validRole {
+// GetRoleName 获取角色名称
+func (a *AdminUser) GetRoleName() string {
+	return RoleNames[a.Role]
+}
+
+// ValidateRoleID 验证角色ID是否有效
+func ValidateRoleID(roleID int) bool {
+	_, exists := RoleNames[roleID]
+	return exists
+}
+
+// ValidateRole 验证角色名称是否有效
+func ValidateRole(roleName string) bool {
+	for _, name := range RoleNames {
+		if name == roleName {
 			return true
 		}
 	}
 	return false
+}
+
+// GetRoleIDByName 根据角色名称获取角色ID
+func GetRoleIDByName(roleName string) (int, bool) {
+	for roleID, name := range RoleNames {
+		if name == roleName {
+			return roleID, true
+		}
+	}
+	return 0, false
 }

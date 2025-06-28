@@ -21,7 +21,18 @@ func NewAuthController() *AuthController {
 	}
 }
 
-// Register 用户注册
+// Register godoc
+// @Summary 用户注册
+// @Description 用户注册接口，需要提供邮箱、密码和邀请码
+// @Tags 认证
+// @Accept json
+// @Produce json
+// @Param request body models.UserRegisterRequest true "注册请求参数"
+// @Success 200 {object} utils.Response{data=models.UserResponse} "注册成功"
+// @Failure 400 {object} utils.Response "参数错误"
+// @Failure 422 {object} utils.Response "验证失败"
+// @Failure 500 {object} utils.Response "服务器错误"
+// @Router /auth/register [post]
 func (ac *AuthController) Register(c *gin.Context) {
 	var req models.UserRegisterRequest
 

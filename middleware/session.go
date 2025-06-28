@@ -14,8 +14,13 @@ import (
 // SessionMiddleware 会话管理中间件
 func SessionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 记录请求开始时间
-		startTime := time.Now()
+		// 生成请求ID
+		requestID := generateRequestID()
+		c.Set("request_id", requestID)
+		c.Header("X-Request-ID", requestID)
+
+		// 设置请求开始时间
+		c.Set("start_time", time.Now())
 
 		// 检查登录态
 		authHeader := c.GetHeader("Authorization")
@@ -42,15 +47,7 @@ func SessionMiddleware() gin.HandlerFunc {
 			c.Set("is_authenticated", false)
 		}
 
-		// 记录请求信息
-		c.Set("request_start_time", startTime)
-		c.Set("request_id", generateRequestID())
-
 		c.Next()
-
-		// 记录请求处理时间
-		duration := time.Since(startTime)
-		c.Set("request_duration", duration)
 	}
 }
 
@@ -113,7 +110,7 @@ func GetLoginStatus(c *gin.Context) gin.H {
 	return status
 }
 
-// 简单的请求ID生成函数
+// generateRequestID 生成请求ID
 func generateRequestID() string {
 	return time.Now().Format("20060102150405") + "-" + utils.RandomString(8)
 }

@@ -2,197 +2,132 @@ package utils
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-// ResponseCode 响应码定义
+// 完整的错误码定义
 const (
-	// 成功响应码
-	CodeSuccess = 0
-
-	// 客户端错误码 (1000-1999)
-	CodeInvalidParams       = 1000 // 参数错误
-	CodeValidationFailed    = 1001 // 验证失败
-	CodeUnauthorized        = 1002 // 未授权
-	CodeForbidden           = 1003 // 禁止访问
-	CodeNotFound            = 1004 // 资源不存在
-	CodeMethodNotAllowed    = 1005 // 方法不允许
-	CodeRequestTimeout      = 1006 // 请求超时
-	CodeTooManyRequests     = 1007 // 请求过于频繁
-	CodeConflict            = 1008 // 资源冲突
-	CodeUnprocessableEntity = 1009 // 无法处理的实体
-
-	// 认证相关错误码 (2000-2099)
-	CodeTokenExpired       = 2000 // Token过期
-	CodeTokenInvalid       = 2001 // Token无效
-	CodeTokenMissing       = 2002 // Token缺失
-	CodeLoginFailed        = 2003 // 登录失败
-	CodeUserNotFound       = 2004 // 用户不存在
-	CodePasswordIncorrect  = 2005 // 密码错误
-	CodeUserAlreadyExists  = 2006 // 用户已存在
-	CodeEmailAlreadyExists = 2007 // 邮箱已存在
-	CodeInviteCodeInvalid  = 2008 // 邀请码无效
-	CodeAccountLocked      = 2009 // 账户被锁定
-	CodeSessionExpired     = 2010 // 会话过期
-
-	// 业务逻辑错误码 (3000-3999)
-	CodeOperationFailed       = 3000 // 操作失败
-	CodeResourceBusy          = 3001 // 资源繁忙
-	CodeInsufficientFunds     = 3002 // 余额不足
-	CodeLimitExceeded         = 3003 // 超出限制
-	CodeInvalidOperation      = 3004 // 无效操作
-	CodeDataInconsistent      = 3005 // 数据不一致
-	CodeBusinessRuleViolation = 3006 // 违反业务规则
-
-	// 服务器错误码 (5000-5999)
-	CodeInternalError      = 5000 // 内部服务器错误
-	CodeDatabaseError      = 5001 // 数据库错误
-	CodeRedisError         = 5002 // Redis错误
-	CodeExternalAPIError   = 5003 // 外部API错误
-	CodeServiceUnavailable = 5004 // 服务不可用
-	CodeGatewayTimeout     = 5005 // 网关超时
-	CodeConfigError        = 5006 // 配置错误
+	CodeSuccess         = 0    // 成功
+	CodeError           = 1    // 一般错误
+	CodeAuth            = 401  // 认证错误
+	CodeForbidden       = 403  // 禁止访问
+	CodeNotFound        = 404  // 资源不存在
+	CodeValidation      = 422  // 数据验证错误
+	CodeServer          = 500  // 服务器错误
+	CodeDatabaseError   = 1001 // 数据库错误
+	CodeRedisError      = 1002 // Redis错误
+	CodeInvalidParams   = 1003 // 参数错误
+	CodeOperationFailed = 1004 // 操作失败
+	CodeUserNotFound    = 1005 // 用户不存在
+	CodeUserAlreadyExists = 1006 // 用户已存在
+	CodeValidationFailed = 1007 // 验证失败
+	CodeAccountLocked   = 1008 // 账户锁定
 )
 
-// ResponseMessage 响应消息映射
+// ResponseMessage 完整的响应消息映射
 var ResponseMessage = map[int]string{
-	// 成功响应
-	CodeSuccess: "操作成功",
-
-	// 客户端错误
-	CodeInvalidParams:       "参数错误",
-	CodeValidationFailed:    "数据验证失败",
-	CodeUnauthorized:        "未授权访问",
-	CodeForbidden:           "禁止访问",
-	CodeNotFound:            "资源不存在",
-	CodeMethodNotAllowed:    "请求方法不允许",
-	CodeRequestTimeout:      "请求超时",
-	CodeTooManyRequests:     "请求过于频繁，请稍后再试",
-	CodeConflict:            "资源冲突",
-	CodeUnprocessableEntity: "无法处理的请求",
-
-	// 认证相关错误
-	CodeTokenExpired:       "Token已过期",
-	CodeTokenInvalid:       "Token无效",
-	CodeTokenMissing:       "Token缺失",
-	CodeLoginFailed:        "登录失败",
-	CodeUserNotFound:       "用户不存在",
-	CodePasswordIncorrect:  "密码错误",
-	CodeUserAlreadyExists:  "用户已存在",
-	CodeEmailAlreadyExists: "邮箱已被注册",
-	CodeInviteCodeInvalid:  "邀请码无效",
-	CodeAccountLocked:      "账户已被锁定",
-	CodeSessionExpired:     "会话已过期",
-
-	// 业务逻辑错误
-	CodeOperationFailed:       "操作失败",
-	CodeResourceBusy:          "资源繁忙，请稍后再试",
-	CodeInsufficientFunds:     "余额不足",
-	CodeLimitExceeded:         "超出限制",
-	CodeInvalidOperation:      "无效操作",
-	CodeDataInconsistent:      "数据不一致",
-	CodeBusinessRuleViolation: "违反业务规则",
-
-	// 服务器错误
-	CodeInternalError:      "内部服务器错误",
-	CodeDatabaseError:      "数据库错误",
-	CodeRedisError:         "Redis错误",
-	CodeExternalAPIError:   "外部服务错误",
-	CodeServiceUnavailable: "服务暂时不可用",
-	CodeGatewayTimeout:     "网关超时",
-	CodeConfigError:        "配置错误",
+	CodeSuccess:         "操作成功",
+	CodeError:           "操作失败",
+	CodeAuth:            "认证失败",
+	CodeForbidden:       "禁止访问",
+	CodeNotFound:        "资源不存在",
+	CodeValidation:      "数据验证失败",
+	CodeServer:          "服务器内部错误",
+	CodeDatabaseError:   "数据库操作失败",
+	CodeRedisError:      "Redis操作失败",
+	CodeInvalidParams:   "参数错误",
+	CodeOperationFailed: "操作失败",
+	CodeUserNotFound:    "用户不存在",
+	CodeUserAlreadyExists: "用户已存在",
+	CodeValidationFailed: "验证失败",
+	CodeAccountLocked:   "账户已被锁定",
 }
 
 // Response 统一响应结构
 type Response struct {
-	Code    int         `json:"code"`    // 响应码
-	Message string      `json:"message"` // 响应消息
-	Data    interface{} `json:"data"`    // 响应数据
+	Code      int         `json:"code"`
+	Message   string      `json:"message"`
+	Data      interface{} `json:"data,omitempty"`
+	Timestamp int64       `json:"timestamp"`
 }
 
 // Success 成功响应
 func Success(c *gin.Context, data interface{}) {
-	response := Response{
-		Code:    CodeSuccess,
-		Message: ResponseMessage[CodeSuccess],
-		Data:    data,
-	}
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, Response{
+		Code:      CodeSuccess,
+		Message:   ResponseMessage[CodeSuccess],
+		Data:      data,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
 // SuccessWithMessage 带自定义消息的成功响应
 func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
-	response := Response{
-		Code:    CodeSuccess,
-		Message: message,
-		Data:    data,
-	}
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, Response{
+		Code:      CodeSuccess,
+		Message:   message,
+		Data:      data,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
 // Error 错误响应
 func Error(c *gin.Context, code int) {
-	message, exists := ResponseMessage[code]
-	if !exists {
+	message := ResponseMessage[code]
+	if message == "" {
 		message = "未知错误"
 	}
 
-	response := Response{
-		Code:    code,
-		Message: message,
-		Data:    nil,
-	}
-
-	// 根据错误码确定HTTP状态码
-	httpStatus := getHTTPStatus(code)
-	c.JSON(httpStatus, response)
+	c.JSON(getHTTPStatus(code), Response{
+		Code:      code,
+		Message:   message,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
 // ErrorWithMessage 带自定义消息的错误响应
 func ErrorWithMessage(c *gin.Context, code int, message string) {
-	response := Response{
-		Code:    code,
-		Message: message,
-		Data:    nil,
-	}
-
-	httpStatus := getHTTPStatus(code)
-	c.JSON(httpStatus, response)
+	c.JSON(getHTTPStatus(code), Response{
+		Code:      code,
+		Message:   message,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
 // ErrorWithData 带数据的错误响应
 func ErrorWithData(c *gin.Context, code int, data interface{}) {
-	message, exists := ResponseMessage[code]
-	if !exists {
+	message := ResponseMessage[code]
+	if message == "" {
 		message = "未知错误"
 	}
 
-	response := Response{
-		Code:    code,
-		Message: message,
-		Data:    data,
-	}
-
-	httpStatus := getHTTPStatus(code)
-	c.JSON(httpStatus, response)
+	c.JSON(getHTTPStatus(code), Response{
+		Code:      code,
+		Message:   message,
+		Data:      data,
+		Timestamp: time.Now().Unix(),
+	})
 }
 
-// getHTTPStatus 根据业务错误码获取HTTP状态码
+// getHTTPStatus 根据错误码获取HTTP状态码
 func getHTTPStatus(code int) int {
-	switch {
-	case code == CodeSuccess:
+	switch code {
+	case CodeSuccess:
 		return http.StatusOK
-	case code >= 1000 && code < 2000:
-		return http.StatusBadRequest
-	case code >= 2000 && code < 2100:
+	case CodeAuth:
 		return http.StatusUnauthorized
-	case code >= 3000 && code < 4000:
+	case CodeForbidden:
+		return http.StatusForbidden
+	case CodeNotFound:
+		return http.StatusNotFound
+	case CodeValidation:
 		return http.StatusUnprocessableEntity
-	case code >= 5000 && code < 6000:
+	case CodeServer:
 		return http.StatusInternalServerError
 	default:
-		return http.StatusInternalServerError
+		return http.StatusBadRequest
 	}
 }
 
@@ -200,17 +135,17 @@ func getHTTPStatus(code int) int {
 
 // InvalidParams 参数错误
 func InvalidParams(c *gin.Context) {
-	Error(c, CodeInvalidParams)
+	Error(c, CodeValidation)
 }
 
 // InvalidParamsWithMessage 带消息的参数错误
 func InvalidParamsWithMessage(c *gin.Context, message string) {
-	ErrorWithMessage(c, CodeInvalidParams, message)
+	ErrorWithMessage(c, CodeValidation, message)
 }
 
 // Unauthorized 未授权
 func Unauthorized(c *gin.Context) {
-	Error(c, CodeUnauthorized)
+	Error(c, CodeAuth)
 }
 
 // Forbidden 禁止访问
@@ -225,7 +160,7 @@ func NotFound(c *gin.Context) {
 
 // InternalError 内部服务器错误
 func InternalError(c *gin.Context) {
-	Error(c, CodeInternalError)
+	Error(c, CodeServer)
 }
 
 // DatabaseError 数据库错误
@@ -240,45 +175,40 @@ func RedisError(c *gin.Context) {
 
 // LoginFailed 登录失败
 func LoginFailed(c *gin.Context) {
-	Error(c, CodeLoginFailed)
+	ErrorWithMessage(c, CodeAuth, "邮箱或密码错误")
 }
 
 // UserNotFound 用户不存在
 func UserNotFound(c *gin.Context) {
-	Error(c, CodeUserNotFound)
+	ErrorWithMessage(c, CodeNotFound, "用户不存在")
 }
 
 // UserAlreadyExists 用户已存在
 func UserAlreadyExists(c *gin.Context) {
-	Error(c, CodeUserAlreadyExists)
+	ErrorWithMessage(c, CodeValidation, "用户已存在")
 }
 
 // EmailAlreadyExists 邮箱已存在
 func EmailAlreadyExists(c *gin.Context) {
-	Error(c, CodeEmailAlreadyExists)
+	ErrorWithMessage(c, CodeValidation, "邮箱已被注册")
 }
 
 // TokenExpired Token过期
 func TokenExpired(c *gin.Context) {
-	Error(c, CodeTokenExpired)
+	ErrorWithMessage(c, CodeAuth, "Token已过期")
 }
 
 // TokenInvalid Token无效
 func TokenInvalid(c *gin.Context) {
-	Error(c, CodeTokenInvalid)
+	ErrorWithMessage(c, CodeAuth, "Token无效")
 }
 
 // InviteCodeInvalid 邀请码无效
 func InviteCodeInvalid(c *gin.Context) {
-	Error(c, CodeInviteCodeInvalid)
+	ErrorWithMessage(c, CodeValidation, "邀请码无效")
 }
 
-// AccountLocked 账户被锁定
+// AccountLocked 账户锁定
 func AccountLocked(c *gin.Context) {
-	Error(c, CodeAccountLocked)
-}
-
-// SessionExpired 会话过期
-func SessionExpired(c *gin.Context) {
-	Error(c, CodeSessionExpired)
+	ErrorWithMessage(c, CodeAccountLocked, "账户已被锁定")
 }

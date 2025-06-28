@@ -9,17 +9,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware JWT认证中间件
+// AuthMiddleware 统一的JWT认证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 从请求头获取Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "缺少认证令牌",
-				"error":   "MISSING_TOKEN",
-			})
+			utils.Unauthorized(c)
 			c.Abort()
 			return
 		}
@@ -27,11 +23,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 检查Bearer前缀
 		tokenParts := strings.Split(authHeader, " ")
 		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "无效的认证格式",
-				"error":   "INVALID_TOKEN_FORMAT",
-			})
+			utils.TokenInvalid(c)
 			c.Abort()
 			return
 		}
@@ -41,12 +33,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 验证令牌
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": "无效的令牌",
-				"error":   "INVALID_TOKEN",
-				"details": err.Error(),
-			})
+			utils.TokenInvalid(c)
 			c.Abort()
 			return
 		}
@@ -66,7 +53,6 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		// 从请求头获取Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// 没有token，继续执行，但不设置用户信息
 			c.Next()
 			return
 		}
@@ -74,7 +60,6 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		// 检查Bearer前缀
 		tokenParts := strings.Split(authHeader, " ")
 		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			// token格式错误，继续执行，但不设置用户信息
 			c.Next()
 			return
 		}
@@ -84,7 +69,6 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 		// 验证令牌
 		claims, err := utils.ValidateToken(tokenString)
 		if err != nil {
-			// token无效，继续执行，但不设置用户信息
 			c.Next()
 			return
 		}

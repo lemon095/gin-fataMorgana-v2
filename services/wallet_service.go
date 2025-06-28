@@ -206,6 +206,91 @@ func (s *WalletService) Recharge(uid string, amount float64, description string,
 	return s.CreateTransaction(transaction)
 }
 
+// RechargeApply 充值申请（生成pending订单，不变动余额）
+func (s *WalletService) RechargeApply(uid string, amount float64, description string, operatorUid string) (string, error) {
+	ctx := context.Background()
+
+	// 获取钱包
+	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
+	if err != nil {
+		return "", fmt.Errorf("获取钱包失败: %w", err)
+	}
+
+	if amount <= 0 {
+		return "", fmt.Errorf("充值金额必须大于0")
+	}
+
+	// 生成充值流水号
+	transactionNo := utils.GenerateRechargeNo()
+
+	// 创建充值pending流水
+	transaction := &models.WalletTransaction{
+		TransactionNo: transactionNo,
+		Uid:           uid,
+		Type:          models.TransactionTypeRecharge,
+		Amount:        amount,
+		BalanceBefore: wallet.Balance,
+		BalanceAfter:  wallet.Balance, // 充值未到账，余额不变
+		FrozenBefore:  wallet.FrozenBalance,
+		FrozenAfter:   wallet.FrozenBalance,
+		Status:        models.TransactionStatusPending,
+		Description:   description,
+		OperatorUid:   operatorUid,
+	}
+
+	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
+		return "", fmt.Errorf("创建充值订单失败: %w", err)
+	}
+
+	return transactionNo, nil
+}
+
+// RechargeConfirm 充值确认（到账，变更余额，状态变success）
+func (s *WalletService) RechargeConfirm(transactionNo string, operatorUid string) error {
+	ctx := context.Background()
+
+	// 获取充值订单
+	transaction, err := s.walletRepo.GetTransactionByNo(ctx, transactionNo)
+	if err != nil {
+		return fmt.Errorf("获取充值订单失败: %w", err)
+	}
+
+	if transaction.Type != models.TransactionTypeRecharge {
+		return fmt.Errorf("订单类型错误")
+	}
+
+	if transaction.Status == models.TransactionStatusSuccess {
+		return nil // 幂等：已到账直接返回
+	}
+	if transaction.Status != models.TransactionStatusPending {
+		return fmt.Errorf("充值订单状态不正确")
+	}
+
+	// 获取钱包
+	wallet, err := s.walletRepo.FindWalletByUid(ctx, transaction.Uid)
+	if err != nil {
+		return fmt.Errorf("获取钱包失败: %w", err)
+	}
+
+	// 增加余额
+	wallet.Balance += transaction.Amount
+
+	// 更新钱包
+	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
+		return fmt.Errorf("更新钱包失败: %w", err)
+	}
+
+	// 更新充值订单状态为success
+	transaction.Status = models.TransactionStatusSuccess
+	transaction.BalanceAfter = wallet.Balance
+	transaction.OperatorUid = operatorUid
+	if err := s.walletRepo.UpdateTransaction(ctx, transaction); err != nil {
+		return fmt.Errorf("更新充值订单失败: %w", err)
+	}
+
+	return nil
+}
+
 // WithdrawRequest 提现申请请求
 type WithdrawRequest struct {
 	Uid         string  `json:"uid" binding:"required"`

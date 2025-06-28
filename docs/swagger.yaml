@@ -1,0 +1,117 @@
+basePath: /
+definitions:
+  models.UserRegisterRequest:
+    properties:
+      confirm_password:
+        type: string
+      email:
+        type: string
+      invite_code:
+        description: 邀请码
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - confirm_password
+    - email
+    - invite_code
+    - password
+    type: object
+  models.UserResponse:
+    properties:
+      bank_card_info:
+        type: string
+      created_at:
+        type: string
+      credit_score:
+        type: integer
+      email:
+        type: string
+      experience:
+        type: integer
+      has_group_buy_qualification:
+        type: boolean
+      id:
+        type: integer
+      invited_by:
+        type: string
+      phone:
+        type: string
+      status:
+        type: integer
+      uid:
+        type: string
+      username:
+        type: string
+    type: object
+  utils.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+      timestamp:
+        type: integer
+    type: object
+host: localhost:9001
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Gin-FataMorgana 是一个基于Gin框架的Go Web服务，提供用户认证、钱包管理、健康监控等功能
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Gin-FataMorgana API
+  version: "1.0"
+paths:
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 用户注册接口，需要提供邮箱、密码和邀请码
+      parameters:
+      - description: 注册请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.UserResponse'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "422":
+          description: 验证失败
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: 用户注册
+      tags:
+      - 认证
+securityDefinitions:
+  BearerAuth:
+    description: '请输入 "Bearer " 加上JWT token，例如: "Bearer abcde12345"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

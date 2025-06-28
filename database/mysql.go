@@ -17,51 +17,59 @@ import (
 
 var DB *gorm.DB
 
-// InitMySQL 初始化MySQL连接
+// InitMySQL 初始化MySQL数据库连接
 func InitMySQL() error {
 	cfg := config.GlobalConfig.Database
 
-	// 简化的DSN连接字符串，兼容老版本MySQL
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=10s&readTimeout=30s&writeTimeout=30s",
-		cfg.Username,
-		cfg.Password,
-		cfg.Host,
-		cfg.Port,
-		cfg.DBName,
-	)
+	// 获取数据库连接字符串
+	dsn := cfg.GetDSN()
 
-	var err error
-	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
+	// 配置GORM
+	gormConfig := &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
-		// 数据库优化配置
-		DisableForeignKeyConstraintWhenMigrating: true,  // 禁用外键约束
-		PrepareStmt:                              true,  // 启用预处理语句缓存
-		SkipDefaultTransaction:                   true,  // 跳过默认事务，提升性能
-		DryRun:                                   false, // 生产环境禁用DryRun
-	})
+	}
+
+	// 连接数据库
+	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
-		return fmt.Errorf("连接MySQL失败: %w", err)
+		return fmt.Errorf("连接数据库失败: %w", err)
 	}
 
 	// 获取底层的sql.DB对象
-	sqlDB, err := DB.DB()
+	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("获取数据库连接失败: %w", err)
+		return fmt.Errorf("获取数据库实例失败: %w", err)
 	}
 
-	// 优化的连接池参数
-	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)                                  // 最大空闲连接数
-	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)                                  // 最大打开连接数
-	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Hour) // 连接最大生存时间
-	sqlDB.SetConnMaxIdleTime(time.Duration(cfg.ConnMaxIdleTime) * time.Hour) // 空闲连接最大生存时间
-
-	// 测试连接
-	if err := sqlDB.Ping(); err != nil {
-		return fmt.Errorf("MySQL连接测试失败: %w", err)
+	// 设置连接池参数（从配置文件读取）
+	maxIdleConns := cfg.MaxIdleConns
+	if maxIdleConns == 0 {
+		maxIdleConns = 10 // 默认值
+	}
+	
+	maxOpenConns := cfg.MaxOpenConns
+	if maxOpenConns == 0 {
+		maxOpenConns = 100 // 默认值
+	}
+	
+	connMaxLifetime := time.Duration(cfg.ConnMaxLifetime) * time.Second
+	if connMaxLifetime == 0 {
+		connMaxLifetime = time.Hour // 默认值
+	}
+	
+	connMaxIdleTime := time.Duration(cfg.ConnMaxIdleTime) * time.Second
+	if connMaxIdleTime == 0 {
+		connMaxIdleTime = 30 * time.Minute // 默认值
 	}
 
-	log.Printf("MySQL连接成功 - 数据库: %s, 主机: %s:%d", cfg.DBName, cfg.Host, cfg.Port)
-	log.Printf("连接池配置 - 最大连接数: %d, 最大空闲连接数: %d", cfg.MaxOpenConns, cfg.MaxIdleConns)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetConnMaxLifetime(connMaxLifetime)
+	sqlDB.SetConnMaxIdleTime(connMaxIdleTime)
+
+	DB = db
+	log.Printf("MySQL数据库连接成功 - 连接池配置: 最大空闲=%d, 最大连接=%d, 连接最大生存时间=%v, 连接空闲超时=%v", 
+		maxIdleConns, maxOpenConns, connMaxLifetime, connMaxIdleTime)
 	return nil
 }
 
@@ -74,22 +82,16 @@ func AutoMigrate() error {
 	// 自动迁移表结构
 	err := DB.AutoMigrate(
 		&models.User{},
-		&models.UserLoginLog{},
 		&models.Wallet{},
 		&models.WalletTransaction{},
 		&models.AdminUser{},
-		// 在这里添加其他模型
+		&models.UserLoginLog{},
 	)
 	if err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
-	// 添加表注释
-	if err := addTableComments(); err != nil {
-		log.Printf("添加表注释失败: %v", err)
-	}
-
-	log.Println("数据库表迁移成功")
+	log.Println("数据库表迁移完成")
 	return nil
 }
 
@@ -107,7 +109,7 @@ func addTableComments() error {
 		"wallets":              "钱包表 - 存储用户钱包信息，包括余额、冻结余额、总收入、总支出等",
 		"wallet_transactions":  "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出、冻结、解冻等操作",
 		"user_login_logs":      "用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等",
-		"admin_users":          "管理员用户表 - 存储后台管理员信息，包括角色权限、邀请码管理等",
+		"admin_users":          "管理员用户表 - 存储后台管理员信息，角色权限(1:业务员 2:主管 3:经理 4:超级管理员)、邀请码管理等",
 	}
 
 	// 为每个表添加注释
@@ -125,20 +127,13 @@ func addTableComments() error {
 
 // CloseDB 关闭数据库连接
 func CloseDB() error {
-	if DB == nil {
-		return nil
+	if DB != nil {
+		sqlDB, err := DB.DB()
+		if err != nil {
+			return fmt.Errorf("获取数据库实例失败: %w", err)
+		}
+		return sqlDB.Close()
 	}
-
-	sqlDB, err := DB.DB()
-	if err != nil {
-		return fmt.Errorf("获取数据库实例失败: %w", err)
-	}
-
-	if err := sqlDB.Close(); err != nil {
-		return fmt.Errorf("关闭数据库连接失败: %w", err)
-	}
-
-	log.Println("数据库连接已关闭")
 	return nil
 }
 
@@ -172,19 +167,12 @@ func HealthCheck() error {
 		return fmt.Errorf("数据库未初始化")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
 	sqlDB, err := DB.DB()
 	if err != nil {
 		return fmt.Errorf("获取数据库实例失败: %w", err)
 	}
 
-	if err := sqlDB.PingContext(ctx); err != nil {
-		return fmt.Errorf("数据库健康检查失败: %w", err)
-	}
-
-	return nil
+	return sqlDB.Ping()
 }
 
 // Transaction 事务包装器

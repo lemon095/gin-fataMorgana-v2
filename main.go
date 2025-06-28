@@ -1,3 +1,23 @@
+// @title           Gin-FataMorgana API
+// @version         1.0
+// @description     Gin-FataMorgana 是一个基于Gin框架的Go Web服务，提供用户认证、钱包管理、健康监控等功能
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:9001
+// @BasePath  /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description 请输入 "Bearer " 加上JWT token，例如: "Bearer abcde12345"
+
 package main
 
 import (
@@ -17,6 +37,8 @@ import (
 	"gin-fataMorgana/utils"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -37,6 +59,10 @@ func main() {
 
 	// 初始化雪花算法
 	utils.InitSnowflake()
+
+	// 启动幂等键清理器
+	ctx := context.Background()
+	go utils.StartIdempotencyCleaner(ctx)
 
 	// 初始化MySQL数据库
 	if err := database.InitMySQL(); err != nil {
@@ -83,32 +109,27 @@ func main() {
 			"status":  "running",
 			"version": "1.0.0",
 		})
-	}) // 首页
+	})
+
+	// Swagger文档
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 健康检查
-	r.GET("/health", func(c *gin.Context) {
-		utils.Success(c, gin.H{
-			"status":  "healthy",
-			"service": "gin-fataMorgana",
-		})
-	}) // 健康检查
+	r.GET("/health", healthController.HealthCheck)
 
 	// 系统健康检查路由组
 	health := r.Group("/health")
 	{
-		health.GET("/check", healthController.HealthCheck)           // 系统健康检查
-		health.GET("/database", healthController.DatabaseHealth)     // 数据库健康检查
-		health.GET("/redis", healthController.RedisHealth)           // Redis健康检查
-		health.GET("/stats", healthController.DatabaseStats)         // 数据库统计信息
-		health.GET("/query-stats", healthController.QueryStats)      // 查询统计信息
-		health.GET("/optimization", healthController.PerformanceOptimization) // 性能优化建议
+		health.GET("/check", healthController.HealthCheck)       // 系统健康检查
+		health.GET("/database", healthController.DatabaseHealth) // 数据库健康检查
+		health.GET("/redis", healthController.RedisHealth)       // Redis健康检查
 	}
 
 	// 认证相关路由组
 	auth := r.Group("/auth")
 	{
-		auth.POST("/register", authController.Register)           // 用户注册
-		auth.POST("/login", authController.Login)                 // 用户登录
+		auth.POST("/register", middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册
+		auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录
 		auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌
 		auth.POST("/logout", authController.Logout)               // 用户登出
 		auth.GET("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息
@@ -131,8 +152,10 @@ func main() {
 		wallet.Use(middleware.AuthMiddleware()) // 需要认证
 		wallet.GET("/info", walletController.GetWallet)                    // 获取钱包信息
 		wallet.GET("/transactions", walletController.GetUserTransactions)      // 获取资金记录
-		wallet.POST("/withdraw", walletController.RequestWithdraw)             // 申请提现
+		wallet.POST("/withdraw", middleware.WithdrawRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现
 		wallet.GET("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总
+		wallet.POST("/recharge-apply", walletController.RechargeApply)         // 充值申请
+		wallet.POST("/recharge-confirm", walletController.RechargeConfirm)     // 充值确认
 	}
 
 	// 管理员路由组

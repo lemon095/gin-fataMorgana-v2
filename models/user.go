@@ -1,6 +1,7 @@
 package models
 
 import (
+	"gin-fataMorgana/utils"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -108,8 +109,8 @@ func (u *User) ToResponse() UserResponse {
 		ID:                      u.ID,
 		Uid:                     u.Uid,
 		Username:                u.Username,
-		Email:                   u.Email,
-		Phone:                   u.Phone,
+		Email:                   utils.MaskEmail(u.Email),
+		Phone:                   utils.MaskPhone(u.Phone),
 		BankCardInfo:            u.BankCardInfo,
 		Experience:              u.Experience,
 		CreditScore:             u.CreditScore,
