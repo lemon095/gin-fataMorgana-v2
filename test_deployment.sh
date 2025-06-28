@@ -4,7 +4,7 @@
 echo "🔍 验证部署状态..."
 
 # 设置基础URL
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -87,7 +87,7 @@ check_network() {
     echo -e "\n${BLUE}=== 检查网络连接 ===${NC}"
     
     # 检查端口是否开放
-    for port in 80 8080 3306 6379; do
+    for port in 80 9001 3306 6379; do
         if netstat -tuln 2>/dev/null | grep -q ":$port "; then
             echo -e "${GREEN}✅ 端口 $port 已开放${NC}"
         else

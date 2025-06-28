@@ -4,7 +4,7 @@
 echo "🔧 测试Bug修复效果..."
 
 # 设置基础URL
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 
 # 颜色定义
 RED='\033[0;31m'

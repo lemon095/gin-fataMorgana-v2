@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 测试登录态校验功能
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 
 echo "🧪 开始测试登录态校验功能..."
 echo ""

@@ -4,7 +4,7 @@
 echo "🧪 测试拼单资格字段功能"
 echo "================================"
 
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 
 # 测试用户注册
 echo "1. 测试用户注册..."

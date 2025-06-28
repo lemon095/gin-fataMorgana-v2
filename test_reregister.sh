@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 测试删除状态用户重新注册功能
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 
 echo "=== 测试删除状态用户重新注册功能 ==="
 echo

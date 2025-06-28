@@ -8,7 +8,7 @@ echo ""
 # 测试正常注册
 echo "📝 测试1: 正常用户注册"
 echo "注册用户: test1@example.com"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test1@example.com",
@@ -21,7 +21,7 @@ echo ""
 # 测试重复邮箱注册
 echo "📝 测试2: 重复邮箱注册"
 echo "尝试重复注册: test1@example.com"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test1@example.com",
@@ -34,7 +34,7 @@ echo ""
 # 测试正常登录
 echo "🔐 测试3: 正常用户登录"
 echo "登录用户: test1@example.com"
-LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8080/auth/login \
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test1@example.com",
@@ -49,13 +49,13 @@ echo ""
 
 # 测试获取用户信息
 echo "👤 测试4: 获取用户信息"
-curl -s -X GET http://localhost:8080/api/profile \
+curl -s -X GET http://localhost:9001/api/profile \
   -H "Authorization: Bearer $TOKEN" | jq .
 echo ""
 
 # 测试错误密码登录
 echo "🔐 测试5: 错误密码登录"
-curl -s -X POST http://localhost:8080/auth/login \
+curl -s -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test1@example.com",
@@ -65,7 +65,7 @@ echo ""
 
 # 测试不存在的用户登录
 echo "🔐 测试6: 不存在的用户登录"
-curl -s -X POST http://localhost:8080/auth/login \
+curl -s -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "nonexistent@example.com",
@@ -76,7 +76,7 @@ echo ""
 # 测试参数错误注册
 echo "📝 测试7: 参数错误注册"
 echo "密码不匹配"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test2@example.com",
@@ -87,7 +87,7 @@ curl -s -X POST http://localhost:8080/auth/register \
 echo ""
 
 echo "📝 测试8: 邮箱格式错误"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "invalid-email",
@@ -100,7 +100,7 @@ echo ""
 # 测试刷新token
 echo "🔄 测试9: 刷新Token"
 REFRESH_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.data.tokens.refresh_token')
-curl -s -X POST http://localhost:8080/auth/refresh \
+curl -s -X POST http://localhost:9001/auth/refresh \
   -H "Content-Type: application/json" \
   -d "{
     \"refresh_token\": \"$REFRESH_TOKEN\"

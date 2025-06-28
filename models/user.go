@@ -30,6 +30,11 @@ func (User) TableName() string {
 	return "users"
 }
 
+// TableComment 表注释
+func (User) TableComment() string {
+	return "用户表 - 存储用户基本信息、认证信息、银行卡信息、经验值、信用分等"
+}
+
 // UserRegisterRequest 用户注册请求
 type UserRegisterRequest struct {
 	Email           string `json:"email" binding:"required,email"`

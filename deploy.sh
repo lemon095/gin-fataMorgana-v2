@@ -149,7 +149,7 @@ wait_for_services() {
     log_info "等待应用就绪..."
     timeout=60
     while [ $timeout -gt 0 ]; do
-        if curl -f http://localhost:8080/health &> /dev/null; then
+        if curl -f http://localhost:9001/health &> /dev/null; then
             log_success "应用已就绪"
             break
         fi
@@ -168,7 +168,7 @@ health_check() {
     log_info "执行健康检查..."
     
     # 检查应用健康状态
-    if curl -f http://localhost:8080/health &> /dev/null; then
+    if curl -f http://localhost:9001/health &> /dev/null; then
         log_success "应用健康检查通过"
     else
         log_error "应用健康检查失败"
@@ -210,9 +210,9 @@ show_status() {
     echo "=========================================="
     echo "          访问地址"
     echo "=========================================="
-    echo "应用地址: http://localhost:8080"
+    echo "应用地址: http://localhost:9001"
     echo "Nginx地址: http://localhost:80"
-    echo "健康检查: http://localhost:8080/health"
+    echo "健康检查: http://localhost:9001/health"
     echo ""
     echo "=========================================="
     echo "          默认账户"

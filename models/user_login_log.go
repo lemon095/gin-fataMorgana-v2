@@ -25,6 +25,11 @@ func (UserLoginLog) TableName() string {
 	return "user_login_logs"
 }
 
+// TableComment 表注释
+func (UserLoginLog) TableComment() string {
+	return "用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等"
+}
+
 // UserLoginLogResponse 登录记录响应
 type UserLoginLogResponse struct {
 	ID         uint      `json:"id"`

@@ -8,17 +8,17 @@ echo ""
 # 测试基础接口
 echo "📋 测试基础接口:"
 echo "1. 首页接口:"
-curl -s http://localhost:8080/ | jq .
+curl -s http://localhost:9001/ | jq .
 echo ""
 
 echo "2. 健康检查接口:"
-curl -s http://localhost:8080/health | jq .
+curl -s http://localhost:9001/health | jq .
 echo ""
 
 # 测试注册接口
 echo "📝 测试用户注册接口:"
 echo "1. 正常注册:"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -29,7 +29,7 @@ curl -s -X POST http://localhost:8080/auth/register \
 echo ""
 
 echo "2. 重复邮箱注册:"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -40,7 +40,7 @@ curl -s -X POST http://localhost:8080/auth/register \
 echo ""
 
 echo "3. 参数错误注册:"
-curl -s -X POST http://localhost:8080/auth/register \
+curl -s -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "invalid-email",
@@ -53,7 +53,7 @@ echo ""
 # 测试登录接口
 echo "🔐 测试用户登录接口:"
 echo "1. 正常登录:"
-curl -s -X POST http://localhost:8080/auth/login \
+curl -s -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -62,7 +62,7 @@ curl -s -X POST http://localhost:8080/auth/login \
 echo ""
 
 echo "2. 错误密码登录:"
-curl -s -X POST http://localhost:8080/auth/login \
+curl -s -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -71,7 +71,7 @@ curl -s -X POST http://localhost:8080/auth/login \
 echo ""
 
 echo "3. 不存在的用户登录:"
-curl -s -X POST http://localhost:8080/auth/login \
+curl -s -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "nonexistent@example.com",
@@ -82,17 +82,17 @@ echo ""
 # 测试会话接口
 echo "💬 测试会话接口:"
 echo "1. 检查登录状态:"
-curl -s http://localhost:8080/session/status | jq .
+curl -s http://localhost:9001/session/status | jq .
 echo ""
 
 echo "2. 获取用户信息(未登录):"
-curl -s http://localhost:8080/session/user | jq .
+curl -s http://localhost:9001/session/user | jq .
 echo ""
 
 # 测试公共接口
 echo "🌐 测试公共接口:"
 echo "1. 公共信息(未登录):"
-curl -s http://localhost:8080/public/info | jq .
+curl -s http://localhost:9001/public/info | jq .
 echo ""
 
 echo "✅ 测试完成！"

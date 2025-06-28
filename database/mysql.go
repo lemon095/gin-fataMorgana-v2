@@ -21,8 +21,8 @@ var DB *gorm.DB
 func InitMySQL() error {
 	cfg := config.GlobalConfig.Database
 
-	// 优化的DSN连接字符串，包含更多缓存和性能参数
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&interpolateParams=true&cachePrepStmts=true&prepStmtCacheSize=256&prepStmtCacheSqlLimit=2048&rejectReadOnly=true&timeout=10s&readTimeout=30s&writeTimeout=30s&multiStatements=true&autocommit=true",
+	// 简化的DSN连接字符串，兼容老版本MySQL
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=10s&readTimeout=30s&writeTimeout=30s",
 		cfg.Username,
 		cfg.Password,
 		cfg.Host,
@@ -84,7 +84,42 @@ func AutoMigrate() error {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
+	// 添加表注释
+	if err := addTableComments(); err != nil {
+		log.Printf("添加表注释失败: %v", err)
+	}
+
 	log.Println("数据库表迁移成功")
+	return nil
+}
+
+// addTableComments 添加表注释
+func addTableComments() error {
+	// 获取数据库连接
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+
+	// 表注释映射
+	tableComments := map[string]string{
+		"users":                "用户表 - 存储用户基本信息、认证信息、银行卡信息、经验值、信用分等",
+		"wallets":              "钱包表 - 存储用户钱包信息，包括余额、冻结余额、总收入、总支出等",
+		"wallet_transactions":  "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出、冻结、解冻等操作",
+		"user_login_logs":      "用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等",
+		"admin_users":          "管理员用户表 - 存储后台管理员信息，包括角色权限、邀请码管理等",
+	}
+
+	// 为每个表添加注释
+	for tableName, comment := range tableComments {
+		query := fmt.Sprintf("ALTER TABLE `%s` COMMENT = '%s'", tableName, comment)
+		if _, err := sqlDB.Exec(query); err != nil {
+			log.Printf("为表 %s 添加注释失败: %v", tableName, err)
+		} else {
+			log.Printf("为表 %s 添加注释成功", tableName)
+		}
+	}
+
 	return nil
 }
 

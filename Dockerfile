@@ -1,5 +1,5 @@
 # 使用官方Go镜像作为构建环境
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -48,11 +48,11 @@ RUN mkdir -p /app/logs && chown -R appuser:appgroup /app
 USER appuser
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 9001
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:9001/health || exit 1
 
 # 启动应用
 CMD ["./gin-fataMorgana"] 

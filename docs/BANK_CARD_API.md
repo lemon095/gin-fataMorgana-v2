@@ -243,7 +243,7 @@
 ### 绑定银行卡
 
 ```bash
-curl -X POST "http://localhost:8080/api/bind-bank-card" \
+curl -X POST "http://localhost:9001/api/bind-bank-card" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -258,7 +258,7 @@ curl -X POST "http://localhost:8080/api/bind-bank-card" \
 ### 获取银行卡信息
 
 ```bash
-curl -X GET "http://localhost:8080/api/bank-card-info?uid=12345678" \
+curl -X GET "http://localhost:9001/api/bank-card-info?uid=12345678" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 

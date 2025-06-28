@@ -54,6 +54,11 @@ func (WalletTransaction) TableName() string {
 	return "wallet_transactions"
 }
 
+// TableComment 表注释
+func (WalletTransaction) TableComment() string {
+	return "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出、冻结、解冻等操作"
+}
+
 // WalletTransactionResponse 交易流水响应
 type WalletTransactionResponse struct {
 	ID             uint      `json:"id"`

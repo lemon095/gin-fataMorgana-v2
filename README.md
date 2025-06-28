@@ -69,9 +69,9 @@ make stop
 
 ### 部署后访问
 
-- **应用地址**: http://localhost:8080
+- **应用地址**: http://localhost:9001
 - **Nginx地址**: http://localhost:80
-- **健康检查**: http://localhost:8080/health
+- **健康检查**: http://localhost:9001/health
 
 ### 默认账户
 
@@ -109,7 +109,7 @@ cp config/config.example.yaml config/config.yaml
 go run main.go
 ```
 
-服务将在 `http://localhost:8080` 启动
+服务将在 `http://localhost:9001` 启动
 
 ### 构建可执行文件
 
@@ -198,7 +198,7 @@ docker-compose down
 docker build -t gin-fataMorgana .
 
 # 运行容器
-docker run -d -p 8080:8080 --name gin-app gin-fataMorgana
+docker run -d -p 9001:9001 --name gin-app gin-fataMorgana
 ```
 
 ## 🔧 开发工具
@@ -243,13 +243,13 @@ make restore file=backups/backup_20240101_120000.sql
 
 ```bash
 # 应用健康检查
-curl http://localhost:8080/health
+curl http://localhost:9001/health
 
 # 数据库健康检查
-curl http://localhost:8080/health/database
+curl http://localhost:9001/health/database
 
 # Redis健康检查
-curl http://localhost:8080/health/redis
+curl http://localhost:9001/health/redis
 ```
 
 ### 日志管理
@@ -269,13 +269,13 @@ docker-compose logs -f redis
 
 ```bash
 # 查看数据库统计
-curl http://localhost:8080/health/stats
+curl http://localhost:9001/health/stats
 
 # 查看查询统计
-curl http://localhost:8080/health/query-stats
+curl http://localhost:9001/health/query-stats
 
 # 性能优化建议
-curl http://localhost:8080/health/optimization
+curl http://localhost:9001/health/optimization
 ```
 
 ## 🛡️ 安全特性
@@ -363,7 +363,7 @@ cp config/config.yaml config/config.yaml.backup
 1. **端口冲突**
    ```bash
    # 检查端口占用
-   lsof -i :8080
+   lsof -i :9001
    
    # 修改配置文件中的端口
    ```

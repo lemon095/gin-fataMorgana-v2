@@ -153,13 +153,13 @@ GET /health/optimization    # 性能优化建议
 
 ```bash
 # 查看数据库统计信息
-curl http://localhost:8080/health/db-stats
+curl http://localhost:9001/health/db-stats
 
 # 查看查询统计信息
-curl http://localhost:8080/health/query-stats
+curl http://localhost:9001/health/query-stats
 
 # 查看性能优化建议
-curl http://localhost:8080/health/optimization
+curl http://localhost:9001/health/optimization
 ```
 
 ## 8. 配置示例

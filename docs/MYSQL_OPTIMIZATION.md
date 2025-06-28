@@ -331,10 +331,10 @@ func ProcessLargeDataset() {
 ### 压力测试
 ```bash
 # 使用ab进行压力测试
-ab -n 1000 -c 100 http://localhost:8080/api/users
+ab -n 1000 -c 100 http://localhost:9001/api/users
 
 # 使用wrk进行压力测试
-wrk -t12 -c400 -d30s http://localhost:8080/api/users
+wrk -t12 -c400 -d30s http://localhost:9001/api/users
 ```
 
 ### 数据库性能测试

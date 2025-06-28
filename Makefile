@@ -83,7 +83,7 @@ db-seed: ## 数据库种子数据
 # 健康检查
 health: ## 健康检查
 	@echo "执行健康检查..."
-	curl -f http://localhost:8080/health || echo "健康检查失败"
+	curl -f http://localhost:9001/health || echo "健康检查失败"
 
 # 开发工具
 dev-setup: ## 开发环境设置
@@ -104,7 +104,7 @@ prod-setup: ## 生产环境设置
 monitor: ## 监控服务状态
 	@echo "监控服务状态..."
 	@echo "应用状态:"
-	curl -s http://localhost:8080/health | jq '.' 2>/dev/null || echo "应用未响应"
+	curl -s http://localhost:9001/health | jq '.' 2>/dev/null || echo "应用未响应"
 	@echo ""
 	@echo "Docker服务状态:"
 	$(DOCKER_COMPOSE) ps

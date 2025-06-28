@@ -220,7 +220,7 @@ SELECT * FROM users WHERE deleted_at IS NOT NULL;
 ### 2. 手动测试
 ```bash
 # 1. 注册用户
-curl -X POST http://localhost:8080/auth/register \
+curl -X POST http://localhost:9001/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -230,7 +230,7 @@ curl -X POST http://localhost:8080/auth/register \
   }'
 
 # 2. 登录用户
-curl -X POST http://localhost:8080/auth/login \
+curl -X POST http://localhost:9001/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",

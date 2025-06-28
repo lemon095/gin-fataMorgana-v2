@@ -27,6 +27,11 @@ func (AdminUser) TableName() string {
 	return "admin_users"
 }
 
+// TableComment 表注释
+func (AdminUser) TableComment() string {
+	return "管理员用户表 - 存储后台管理员信息，包括角色权限、邀请码管理等"
+}
+
 // 管理员角色常量
 const (
 	RoleSuperAdmin = "超级管理员" // 超级管理员

@@ -3,7 +3,7 @@
 # 数据库性能测试脚本
 # 用于测试数据库优化效果
 
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 TEST_COUNT=100
 
 echo "🚀 开始数据库性能测试..."

@@ -2,7 +2,7 @@
 
 # 银行卡校验功能测试脚本
 
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 TEST_UID="12345678"
 
 echo "🧪 开始测试银行卡校验功能..."

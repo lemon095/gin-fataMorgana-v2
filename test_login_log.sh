@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 登录记录功能测试脚本
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 
 echo "=== 登录记录功能测试 ==="
 echo

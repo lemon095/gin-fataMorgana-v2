@@ -24,6 +24,11 @@ func (Wallet) TableName() string {
 	return "wallets"
 }
 
+// TableComment 表注释
+func (Wallet) TableComment() string {
+	return "钱包表 - 存储用户钱包信息，包括余额、冻结余额、总收入、总支出等"
+}
+
 // WalletResponse 钱包响应
 type WalletResponse struct {
 	ID               uint      `json:"id"`

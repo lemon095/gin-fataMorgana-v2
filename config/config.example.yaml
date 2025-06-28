@@ -1,8 +1,8 @@
 # 服务器配置
 server:
   host: "0.0.0.0"
-  port: 8080
-  domain: "localhost:8080"
+  port: 9001
+  domain: "localhost:9001"
   mode: "debug" # debug, release
 
 # 数据库配置

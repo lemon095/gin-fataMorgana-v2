@@ -2,7 +2,7 @@
 
 # 余额不足和多笔提现测试脚本
 
-BASE_URL="http://localhost:8080"
+BASE_URL="http://localhost:9001"
 TEST_UID="12345678"
 
 echo "🧪 开始测试余额不足和多笔提现情况..."
