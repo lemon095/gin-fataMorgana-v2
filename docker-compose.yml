@@ -18,8 +18,10 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=Test!#$1234.hjdgsag
       - SERVER_MODE=release
+      - JWT_SECRET=your-super-secret-jwt-key-here
     volumes:
       - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml
     networks:
       - gin-network
     healthcheck:
