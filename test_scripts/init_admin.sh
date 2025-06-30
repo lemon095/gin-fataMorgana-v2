@@ -13,7 +13,7 @@ if ! command -v mysql &> /dev/null; then
 fi
 
 # 从配置文件读取数据库信息
-CONFIG_FILE="config/config.yaml"
+CONFIG_FILE="config.yaml"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "❌ 错误: 配置文件 $CONFIG_FILE 不存在"
     exit 1

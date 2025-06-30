@@ -4,14 +4,14 @@
 echo "=== 用户注册脚本 ==="
 
 # 检查配置文件
-if [ ! -f "config/config.yaml" ]; then
-    echo "❌ 配置文件不存在，请先复制 config.example.yaml 为 config.yaml"
+if [ ! -f "config.yaml" ]; then
+    echo "❌ 配置文件不存在，请先创建 config.yaml"
     exit 1
 fi
 
 # 获取服务器地址
 SERVER_HOST="localhost"
-SERVER_PORT=$(grep "port:" config/config.yaml | head -1 | awk '{print $2}')
+SERVER_PORT=$(grep "port:" config.yaml | head -1 | awk '{print $2}')
 
 # 设置默认值
 SERVER_PORT=${SERVER_PORT:-9001}
@@ -43,9 +43,9 @@ echo
 echo "🔍 检查服务状态..."
 if ! curl -s "http://$SERVER_HOST:$SERVER_PORT/health" > /dev/null; then
     echo "❌ 服务未运行，请先启动服务:"
-    echo "   make run"
+    echo "   ./dev.sh start"
     echo "   或者"
-    echo "   go run main.go"
+    echo "   ./prod.sh start"
     exit 1
 fi
 echo "✅ 服务运行正常"
@@ -187,6 +187,7 @@ echo "  用户1: $USER1_USERNAME ($USER1_EMAIL) - 密码: $PASSWORD"
 echo "  用户2: $USER2_USERNAME ($USER2_EMAIL) - 密码: $PASSWORD"
 echo
 echo "💡 提示:"
-echo "   - 使用 'make run' 启动服务"
+echo "   - 使用 './dev.sh start' 启动本地开发服务"
+echo "   - 使用 './prod.sh start' 启动生产服务"
 echo "   - 使用 'curl' 或 Postman 测试API"
 echo "   - 查看日志: tail -f logs/app.log" 
