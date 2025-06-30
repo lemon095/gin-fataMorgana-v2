@@ -32,6 +32,42 @@ make run
 ./deploy.sh
 ```
 
+## 🗄️ 数据库管理
+
+### 自动迁移
+项目支持自动数据库迁移，会在启动时自动创建和更新表结构：
+
+```bash
+# 手动执行迁移
+make db-migrate
+
+# 或者使用迁移工具
+go run cmd/migrate/main.go
+```
+
+### 初始化数据
+```bash
+# 初始化管理员账户和邀请码
+make db-seed
+```
+
+### 迁移测试
+```bash
+# 测试迁移功能
+./test_migration.sh
+```
+
+### 数据库表结构
+项目包含以下核心表：
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `users` | 用户表 | uid, username, email, password, bank_card_info, status |
+| `wallets` | 钱包表 | uid, balance, frozen_balance, total_income, total_expense |
+| `wallet_transactions` | 交易流水表 | transaction_no, uid, type, amount, status |
+| `admin_users` | 邀请码管理表 | admin_id, username, my_invite_code, role, status |
+| `user_login_logs` | 登录日志表 | uid, login_time, login_ip, status |
+
 ## 📁 项目结构
 
 ```

@@ -91,6 +91,11 @@ func AutoMigrate() error {
 		return fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
+	// 添加表注释
+	if err := addTableComments(); err != nil {
+		log.Printf("添加表注释失败: %v", err)
+	}
+
 	log.Println("数据库表迁移完成")
 	return nil
 }
@@ -109,7 +114,7 @@ func addTableComments() error {
 		"wallets":              "钱包表 - 存储用户钱包信息，包括余额、冻结余额、总收入、总支出等",
 		"wallet_transactions":  "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出、冻结、解冻等操作",
 		"user_login_logs":      "用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等",
-		"admin_users":          "管理员用户表 - 存储后台管理员信息，角色权限(1:业务员 2:主管 3:经理 4:超级管理员)、邀请码管理等",
+		"admin_users":          "邀请码管理表 - 存储邀请码信息，用于用户注册时的邀请码校验，默认角色为业务员(4)",
 	}
 
 	// 为每个表添加注释

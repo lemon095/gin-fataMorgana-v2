@@ -24,6 +24,7 @@ const (
 	CodeUserAlreadyExists = 1006 // 用户已存在
 	CodeValidationFailed = 1007 // 验证失败
 	CodeAccountLocked   = 1008 // 账户锁定
+	CodeRegisterClosed  = 1009 // 注册关闭
 )
 
 // ResponseMessage 完整的响应消息映射
@@ -43,6 +44,7 @@ var ResponseMessage = map[int]string{
 	CodeUserAlreadyExists: "用户已存在",
 	CodeValidationFailed: "验证失败",
 	CodeAccountLocked:   "账户已被锁定",
+	CodeRegisterClosed:  "当前系统不允许注册",
 }
 
 // Response 统一响应结构

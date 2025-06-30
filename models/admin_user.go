@@ -2,22 +2,25 @@ package models
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // AdminUser 邀请码管理表（仅用于邀请码校验）
 type AdminUser struct {
-	ID           uint       `json:"id" gorm:"primaryKey;autoIncrement"`
-	AdminID      string     `json:"admin_id" gorm:"uniqueIndex;not null;size:8;comment:管理员唯一ID"`
-	Username     string     `json:"username" gorm:"not null;size:50;uniqueIndex;comment:用户名"`
-	Password     string     `json:"-" gorm:"not null;size:255;comment:密码哈希"`
-	Remark       string     `json:"remark" gorm:"size:500;comment:备注"`
-	Status       int        `json:"status" gorm:"default:1;comment:账户状态 1:正常 0:禁用"`
-	Avatar       string     `json:"avatar" gorm:"size:255;comment:头像URL"`
-	Role         int        `json:"role" gorm:"not null;default:1;comment:身份角色 1:超级管理员 2:经理 3:主管 4:业务员"`
-	MyInviteCode string     `json:"my_invite_code" gorm:"size:6;uniqueIndex;comment:我的邀请码"`
-	CreatedAt    time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt    *time.Time `json:"-" gorm:"index;comment:软删除时间"`
+	ID           uint           `gorm:"primarykey" json:"id"`
+	AdminID      uint           `gorm:"not null;uniqueIndex:idx_admin_users_admin_id;comment:管理员唯一ID" json:"admin_id"`
+	Username     string         `gorm:"size:50;not null;uniqueIndex:idx_admin_users_username;comment:用户名" json:"username"`
+	Password     string         `gorm:"size:255;not null;comment:密码哈希" json:"-"`
+	Remark       string         `gorm:"size:500;comment:备注" json:"remark"`
+	Status       int64          `gorm:"default:1;comment:账户状态 1:正常 0:禁用" json:"status"`
+	Avatar       string         `gorm:"size:255;comment:头像URL" json:"avatar"`
+	Role         int64          `gorm:"not null;default:4;comment:身份角色 1:超级管理员 2:经理 3:主管 4:业务员（默认业务员）" json:"role"`
+	MyInviteCode string         `gorm:"size:6;uniqueIndex:idx_admin_users_my_invite_code;comment:我的邀请码" json:"my_invite_code"`
+	ParentID     *uint          `gorm:"index:idx_admin_users_parent_id;comment:上级用户ID" json:"parent_id"`
+	CreatedAt    time.Time      `gorm:"type:datetime(3)" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"type:datetime(3)" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"type:datetime(3);index:idx_admin_users_deleted_at;comment:软删除时间" json:"-"`
 }
 
 // TableName 指定表名
@@ -30,16 +33,16 @@ func (AdminUser) TableComment() string {
 	return "邀请码管理表 - 存储邀请码信息，用于用户注册时的邀请码校验"
 }
 
-// 管理员角色常量（使用int枚举）
+// 管理员角色常量（使用int64枚举）
 const (
-	RoleSuperAdmin = 1 // 超级管理员
-	RoleManager    = 2 // 经理
-	RoleSupervisor = 3 // 主管
-	RoleSalesman   = 4 // 业务员
+	RoleSuperAdmin int64 = 1 // 超级管理员
+	RoleManager    int64 = 2 // 经理
+	RoleSupervisor int64 = 3 // 主管
+	RoleSalesman   int64 = 4 // 业务员
 )
 
 // 角色名称映射
-var RoleNames = map[int]string{
+var RoleNames = map[int64]string{
 	RoleSuperAdmin: "超级管理员",
 	RoleManager:    "经理",
 	RoleSupervisor: "主管",
@@ -57,13 +60,13 @@ func (a *AdminUser) GetRoleName() string {
 }
 
 // ValidateRoleID 验证角色ID是否有效
-func ValidateRoleID(roleID int) bool {
+func ValidateRoleID(roleID int64) bool {
 	_, exists := RoleNames[roleID]
 	return exists
 }
 
 // GetRoleIDByName 根据角色名称获取角色ID
-func GetRoleIDByName(roleName string) (int, bool) {
+func GetRoleIDByName(roleName string) (int64, bool) {
 	for roleID, name := range RoleNames {
 		if name == roleName {
 			return roleID, true

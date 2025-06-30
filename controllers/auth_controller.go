@@ -41,6 +41,14 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
+	// 如果结构体有BankCardInfo字段且为空，赋默认值
+	type bankCardInfoSetter interface {
+		SetBankCardInfoDefault()
+	}
+	if setter, ok := any(&req).(bankCardInfoSetter); ok {
+		setter.SetBankCardInfoDefault()
+	}
+
 	user, err := ac.userService.Register(&req)
 	if err != nil {
 		switch err.Error() {

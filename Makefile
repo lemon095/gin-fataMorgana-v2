@@ -73,7 +73,7 @@ deploy-prod: ## 一键部署（生产环境）
 # 数据库相关
 db-migrate: ## 数据库迁移
 	@echo "执行数据库迁移..."
-	$(GO) run main.go migrate
+	$(GO) run cmd/migrate/main.go
 
 db-seed: ## 数据库种子数据
 	@echo "插入种子数据..."

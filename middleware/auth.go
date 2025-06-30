@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
+	"gin-fataMorgana/database"
 	"gin-fataMorgana/utils"
 
 	"github.com/gin-gonic/gin"
@@ -115,6 +117,25 @@ func RequireAuth() gin.HandlerFunc {
 				"message": "需要登录才能访问此接口",
 				"error":   "LOGIN_REQUIRED",
 			})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// RegisterOpenMiddleware 检查注册开关
+func RegisterOpenMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := context.Background()
+		exists, err := database.RedisClient.Exists(ctx, "dmin_system_isOpen").Result()
+		if err != nil {
+			utils.ErrorWithMessage(c, utils.CodeOperationFailed, "系统繁忙，请稍后再试")
+			c.Abort()
+			return
+		}
+		if exists > 0 {
+			utils.ErrorWithMessage(c, utils.CodeRegisterClosed, "当前系统不允许注册")
 			c.Abort()
 			return
 		}

@@ -88,6 +88,11 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		Password:   req.Password,
 		Status:     1, // 默认启用
 		InvitedBy:  req.InviteCode,
+		BankCardInfo: "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}", // 无条件赋值
+	}
+	// 保险：防止意外为空
+	if user.BankCardInfo == "" {
+		user.BankCardInfo = "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}"
 	}
 
 	// 加密密码

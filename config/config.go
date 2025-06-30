@@ -1,6 +1,7 @@
 package config
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -62,42 +63,38 @@ type SnowflakeConfig struct {
 // GlobalConfig 全局配置实例
 var GlobalConfig *Config
 
-// LoadConfig 加载配置
+// LoadConfig 加载配置，支持-c/--config参数
 func LoadConfig() error {
-	// 设置配置文件路径
-	configPath := "config"
-	configName := "config"
-	configType := "yaml"
+	// 解析命令行参数
+	var configFile string
+	flag.StringVar(&configFile, "c", "", "配置文件路径")
+	flag.StringVar(&configFile, "config", "", "配置文件路径")
+	flag.Parse()
 
-	// 检查配置文件是否存在
-	configFile := filepath.Join(configPath, configName+"."+configType)
+	if configFile == "" {
+		configFile = filepath.Join("config", "config.yaml")
+	}
+
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		log.Printf("配置文件不存在: %s", configFile)
 		return fmt.Errorf("配置文件不存在: %s", configFile)
 	}
 
-	viper.SetConfigName(configName)
-	viper.SetConfigType(configType)
-	viper.AddConfigPath(configPath)
+	viper.SetConfigFile(configFile)
 
-	// 读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
 		return fmt.Errorf("读取配置文件失败: %w", err)
 	}
 
-	// 解析配置到结构体
 	GlobalConfig = &Config{}
 	if err := viper.Unmarshal(GlobalConfig); err != nil {
 		return fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
-	// 设置环境变量支持
 	viper.AutomaticEnv()
-
-	// 设置默认值
 	setDefaults()
 
-	log.Println("配置加载成功")
+	log.Printf("配置加载成功，使用文件: %s", configFile)
 	return nil
 }
 

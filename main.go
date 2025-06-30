@@ -128,7 +128,7 @@ func main() {
 	// 认证相关路由组
 	auth := r.Group("/auth")
 	{
-		auth.POST("/register", middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册
+		auth.POST("/register", middleware.RegisterOpenMiddleware(), middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册
 		auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录
 		auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌
 		auth.POST("/logout", authController.Logout)               // 用户登出

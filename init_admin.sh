@@ -43,7 +43,7 @@ echo
 # 生成管理员信息
 ADMIN_ID=$(date +%s | tail -c 8)
 ADMIN_USERNAME="admin_$(date +%Y%m%d)"
-ADMIN_PASSWORD="admin123456"
+ADMIN_PASSWORD="admin123"
 ADMIN_INVITE_CODE=$(cat /dev/urandom | tr -dc 'A-Z0-9' | fold -w 6 | head -n 1)
 
 echo "👤 管理员信息:"
@@ -53,7 +53,7 @@ echo "  邀请码: $ADMIN_INVITE_CODE"
 echo
 
 # 构建SQL语句
-SQL="INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES ('$ADMIN_ID', '$ADMIN_USERNAME', '$(echo -n "$ADMIN_PASSWORD" | openssl dgst -sha256 | cut -d' ' -f2)', '系统管理员', 1, 1, '$ADMIN_INVITE_CODE', NOW(), NOW());"
+SQL="INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES ($ADMIN_ID, '$ADMIN_USERNAME', '$(echo -n "$ADMIN_PASSWORD" | openssl dgst -sha256 | cut -d' ' -f2)', '系统管理员', 1, 4, '$ADMIN_INVITE_CODE', NOW(3), NOW(3));"
 
 echo "📝 执行SQL语句:"
 echo "$SQL"
