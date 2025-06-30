@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -63,7 +62,7 @@ type SnowflakeConfig struct {
 // GlobalConfig 全局配置实例
 var GlobalConfig *Config
 
-// LoadConfig 加载配置，支持-c/--config参数
+// LoadConfig 加载配置，支持-c/--config参数和环境变量
 func LoadConfig() error {
 	// 解析命令行参数
 	var configFile string
@@ -71,13 +70,20 @@ func LoadConfig() error {
 	flag.StringVar(&configFile, "config", "", "配置文件路径")
 	flag.Parse()
 
+	// 设置默认配置文件
 	if configFile == "" {
-		configFile = filepath.Join("config", "config.yaml")
+		configFile = "config.yaml"
 	}
 
+	// 检查配置文件是否存在
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		log.Printf("配置文件不存在: %s", configFile)
-		return fmt.Errorf("配置文件不存在: %s", configFile)
+		log.Printf("配置文件不存在: %s，使用默认配置", configFile)
+		// 如果配置文件不存在，使用默认配置
+		GlobalConfig = &Config{}
+		setDefaults()
+		overrideWithEnvVars()
+		log.Printf("使用默认配置和环境变量")
+		return nil
 	}
 
 	viper.SetConfigFile(configFile)
@@ -91,8 +97,11 @@ func LoadConfig() error {
 		return fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
-	viper.AutomaticEnv()
+	// 设置默认值
 	setDefaults()
+	
+	// 使用环境变量覆盖配置
+	overrideWithEnvVars()
 
 	log.Printf("配置加载成功，使用文件: %s", configFile)
 	return nil
@@ -107,7 +116,7 @@ func setDefaults() {
 		GlobalConfig.Server.Port = 9001
 	}
 	if GlobalConfig.Server.Mode == "" {
-		GlobalConfig.Server.Mode = "release"
+		GlobalConfig.Server.Mode = "debug"
 	}
 	if GlobalConfig.Database.Port == 0 {
 		GlobalConfig.Database.Port = 3306
@@ -130,6 +139,73 @@ func setDefaults() {
 	if GlobalConfig.Snowflake.DatacenterID == 0 {
 		GlobalConfig.Snowflake.DatacenterID = 1
 	}
+}
+
+// overrideWithEnvVars 使用环境变量覆盖配置
+func overrideWithEnvVars() {
+	// 服务器配置
+	if env := os.Getenv("GIN_MODE"); env != "" {
+		GlobalConfig.Server.Mode = env
+	}
+	if env := os.Getenv("SERVER_MODE"); env != "" {
+		GlobalConfig.Server.Mode = env
+	}
+
+	// 数据库配置
+	if env := os.Getenv("DATABASE_HOST"); env != "" {
+		GlobalConfig.Database.Host = env
+	}
+	if env := os.Getenv("MYSQL_HOST"); env != "" {
+		GlobalConfig.Database.Host = env
+	}
+	if env := os.Getenv("DATABASE_PORT"); env != "" {
+		if port := parsePort(env); port > 0 {
+			GlobalConfig.Database.Port = port
+		}
+	}
+	if env := os.Getenv("MYSQL_PORT"); env != "" {
+		if port := parsePort(env); port > 0 {
+			GlobalConfig.Database.Port = port
+		}
+	}
+	if env := os.Getenv("DATABASE_USERNAME"); env != "" {
+		GlobalConfig.Database.Username = env
+	}
+	if env := os.Getenv("MYSQL_USERNAME"); env != "" {
+		GlobalConfig.Database.Username = env
+	}
+	if env := os.Getenv("DATABASE_PASSWORD"); env != "" {
+		GlobalConfig.Database.Password = env
+	}
+	if env := os.Getenv("MYSQL_PASSWORD"); env != "" {
+		GlobalConfig.Database.Password = env
+	}
+	if env := os.Getenv("DATABASE_DBNAME"); env != "" {
+		GlobalConfig.Database.DBName = env
+	}
+	if env := os.Getenv("MYSQL_DATABASE"); env != "" {
+		GlobalConfig.Database.DBName = env
+	}
+
+	// Redis配置
+	if env := os.Getenv("REDIS_HOST"); env != "" {
+		GlobalConfig.Redis.Host = env
+	}
+	if env := os.Getenv("REDIS_PORT"); env != "" {
+		if port := parsePort(env); port > 0 {
+			GlobalConfig.Redis.Port = port
+		}
+	}
+	if env := os.Getenv("REDIS_PASSWORD"); env != "" {
+		GlobalConfig.Redis.Password = env
+	}
+}
+
+// parsePort 解析端口号
+func parsePort(s string) int {
+	var port int
+	fmt.Sscanf(s, "%d", &port)
+	return port
 }
 
 // GetDSN 获取数据库连接字符串
