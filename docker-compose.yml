@@ -2,7 +2,7 @@ services:
   # 主应用
   gin-fataMorgana:
     build: .
-    image: gin-fataMorgana:latest
+    image: gin-fatamorgana:latest
     container_name: gin-fataMorgana-app
     restart: unless-stopped
     ports:
