@@ -93,8 +93,8 @@ if echo "$ADMIN_RESPONSE" | grep -q '"code":200'; then
     else
         echo "❌ 管理员登录失败"
         echo "   错误信息: $LOGIN_RESPONSE"
-    fi
-    
+fi
+
 else
     echo "❌ 管理员用户创建失败"
     echo "   错误信息: $ADMIN_RESPONSE"
@@ -106,13 +106,13 @@ else
     echo "   4. 手动在数据库中创建管理员用户"
 fi
 
-echo
+    echo
 echo "📋 管理员信息总结:"
-echo "  用户名: $ADMIN_USERNAME"
+    echo "  用户名: $ADMIN_USERNAME"
 echo "  邮箱: $ADMIN_EMAIL"
-echo "  密码: $ADMIN_PASSWORD"
+    echo "  密码: $ADMIN_PASSWORD"
 echo "  邀请码: $DEFAULT_INVITE_CODE"
-echo
+    echo
 echo "💡 提示:"
 echo "   - 如果自动创建失败，请手动注册管理员用户"
 echo "   - 确保邀请码有效"
