@@ -5,11 +5,15 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
+
+// FakeActivityRequest 假数据请求参数
+type FakeActivityRequest struct {
+	Count int `json:"count" binding:"min=1,max=50"` // 返回数据条数，默认10条，最大50条
+}
 
 type FakeRealtimeActivity struct {
 	UID    string  `json:"uid"`
@@ -55,15 +59,22 @@ func generateFakeActivity() FakeRealtimeActivity {
 
 // GetFakeRealtimeActivities 假数据实时动态接口
 func GetFakeRealtimeActivities(c *gin.Context) {
-	n := 10 // 默认生成10条
-	if nParam := c.Query("n"); nParam != "" {
-		if v, err := strconv.Atoi(nParam); err == nil && v > 0 && v <= 50 {
-			n = v
-		}
+	var req FakeActivityRequest
+	
+	// 解析请求参数
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// 如果参数解析失败，使用默认值
+		req.Count = 10
 	}
+	
+	// 设置默认值和限制
+	if req.Count <= 0 || req.Count > 50 {
+		req.Count = 10
+	}
+	
 	rand.Seed(time.Now().UnixNano())
 	var list []FakeRealtimeActivity
-	for i := 0; i < n; i++ {
+	for i := 0; i < req.Count; i++ {
 		list = append(list, generateFakeActivity())
 	}
 	c.JSON(http.StatusOK, gin.H{

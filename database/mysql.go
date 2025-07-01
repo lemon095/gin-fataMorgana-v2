@@ -86,6 +86,7 @@ func AutoMigrate() error {
 		&models.WalletTransaction{},
 		&models.AdminUser{},
 		&models.UserLoginLog{},
+		&models.Order{},
 	)
 	if err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)

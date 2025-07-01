@@ -88,3 +88,8 @@ func GenerateUID() string {
 	}
 	return globalUIDGenerator.GenerateUID()
 }
+
+// GenerateOrderNo 生成订单号
+func GenerateOrderNo() string {
+	return "ORD" + GenerateUID()
+}

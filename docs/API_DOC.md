@@ -355,4 +355,68 @@
       "status": "healthy"
     }
   }
-  ``` 
+  ```
+
+---
+
+## 7. 任务热榜
+
+### 7.1 获取任务热榜
+- **接口**：`POST /api/v1/leaderboard/ranking`
+- **参数**（JSON）：
+  ```json
+  {
+    "user_id": 1001
+  }
+  ```
+- **返回**：
+  ```json
+  {
+    "code": 0,
+    "message": "获取热榜数据成功",
+    "data": {
+      "ranking_list": [
+        {
+          "rank": 1,
+          "user_id": 1001,
+          "username": "张三",
+          "amount": 15800.50,
+          "order_count": 156,
+          "profit": 3200.80,
+          "created_at": "2024-01-15 14:30:00"
+        },
+        {
+          "rank": 2,
+          "user_id": 1002,
+          "username": "李四",
+          "amount": 14200.30,
+          "order_count": 142,
+          "profit": 2850.60,
+          "created_at": "2024-01-15 13:45:00"
+        }
+      ],
+      "my_data": {
+        "rank": 1,
+        "user_id": 1001,
+        "is_ranked": true,
+        "entry": {
+          "rank": 1,
+          "user_id": 1001,
+          "username": "张三",
+          "amount": 15800.50,
+          "order_count": 156,
+          "profit": 3200.80,
+          "created_at": "2024-01-15 14:30:00"
+        }
+      }
+    }
+  }
+  ```
+
+**数据结构说明**：
+- `ranking_list`: 排行榜列表，包含排名、用户名、金额、完成单数、利润金额、时间
+- `my_data`: 当前用户数据
+  - `rank`: 排名（0表示未上榜）
+  - `user_id`: 用户ID
+  - `is_ranked`: 是否上榜
+  - `entry`: 上榜时的详细信息（未上榜时为null） 

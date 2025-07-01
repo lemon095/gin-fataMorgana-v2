@@ -35,7 +35,7 @@ func (hc *HealthController) HealthCheck(c *gin.Context) {
 		"services": gin.H{
 			"database": dbStatus,
 			"redis":    redisStatus,
-		},
+			},
 	}
 
 	if dbStatus == "unhealthy" || redisStatus == "unhealthy" {

@@ -129,6 +129,8 @@ func main() {
 	sessionController := controllers.NewSessionController()
 	healthController := controllers.NewHealthController()
 	walletController := controllers.NewWalletController()
+	orderController := controllers.NewOrderController()
+	leaderboardController := controllers.NewLeaderboardController()
 
 	// 定义路由
 	r.GET("/", func(c *gin.Context) {
@@ -195,6 +197,30 @@ func main() {
 			admin.Use(middleware.AuthMiddleware()) // 需要认证
 			admin.POST("/withdraw/confirm", walletController.ConfirmWithdraw) // 确认提现
 			admin.POST("/withdraw/cancel", walletController.CancelWithdraw)   // 取消提现
+		}
+
+		// 假数据接口路由组
+		fake := api.Group("/fake")
+		{
+			fake.POST("/activities", controllers.GetFakeRealtimeActivities) // 获取假数据实时动态
+		}
+
+		// 订单相关路由组
+		order := api.Group("/order")
+		{
+			order.Use(middleware.AuthMiddleware()) // 需要认证
+			order.POST("/list", orderController.GetOrderList)                    // 获取订单列表
+			order.POST("/create", orderController.CreateOrder)                   // 创建订单
+			order.POST("/detail", orderController.GetOrderDetail)                // 获取订单详情
+			order.POST("/stats", orderController.GetOrderStats)                  // 获取订单统计
+			order.POST("/by-status", orderController.GetOrdersByStatus)          // 根据状态获取订单
+			order.POST("/by-date", orderController.GetOrdersByDateRange)         // 根据日期范围获取订单
+		}
+
+		// 热榜相关路由组
+		leaderboard := api.Group("/leaderboard")
+		{
+			leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜
 		}
 	}
 
