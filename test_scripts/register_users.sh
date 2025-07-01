@@ -22,7 +22,7 @@ echo "  端口: $SERVER_PORT"
 echo
 
 # 邀请码和密码
-INVITE_CODE="RMB3IX"
+INVITE_CODE="7TRABJ"
 PASSWORD="123456"
 
 # 用户信息

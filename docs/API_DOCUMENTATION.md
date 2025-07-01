@@ -162,7 +162,7 @@ Gin-FataMorgana 是一个基于Gin框架的Go Web服务，提供用户认证、�
       "experience": 0,
       "credit_score": 100,
       "status": 1,
-      "invited_by": "INVITE123",
+      "invited_by": "7TRABJ",
       "has_group_buy_qualification": false,
       "created_at": "2025-01-01T00:00:00Z"
     }
@@ -262,7 +262,7 @@ Gin-FataMorgana 是一个基于Gin框架的Go Web服务，提供用户认证、�
       "experience": 0,
       "credit_score": 100,
       "status": 1,
-      "invited_by": "INVITE123",
+      "invited_by": "7TRABJ",
       "has_group_buy_qualification": false,
       "created_at": "2025-01-01T00:00:00Z"
     }
@@ -300,7 +300,7 @@ Gin-FataMorgana 是一个基于Gin框架的Go Web服务，提供用户认证、�
       "experience": 0,
       "credit_score": 100,
       "status": 1,
-      "invited_by": "INVITE123",
+      "invited_by": "7TRABJ",
       "has_group_buy_qualification": false,
       "created_at": "2025-01-01T00:00:00Z"
     }
@@ -902,7 +902,7 @@ curl -X POST http://localhost:9001/api/v1/auth/register \
     "email": "user@example.com",
     "password": "123456",
     "confirm_password": "123456",
-    "invite_code": "INVITE123"
+    "invite_code": "7TRABJ"
   }'
 
 # 2. 用户登录

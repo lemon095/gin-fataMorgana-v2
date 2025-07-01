@@ -10,7 +10,7 @@
     "email": "test@example.com",
     "password": "123456",
     "confirm_password": "123456",
-    "invite_code": "RMB3IX"
+    "invite_code": "7TRABJ"
   }
   ```
 - **返回**：
@@ -329,7 +329,7 @@
         {
           "id": 1,
           "username": "admin",
-          "my_invite_code": "RMB3IX",
+          "my_invite_code": "7TRABJ",
           "role": 1,
           "status": 1,
           "created_at": "2025-06-29T18:44:49.114+08:00"
