@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
@@ -137,6 +138,13 @@ func (ac *AuthController) RefreshToken(c *gin.Context) {
 
 // GetProfile 获取当前用户信息
 func (ac *AuthController) GetProfile(c *gin.Context) {
+	var req models.GetProfileRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		return
+	}
+
 	userID := middleware.GetCurrentUser(c)
 	if userID == 0 {
 		utils.Unauthorized(c)
@@ -202,27 +210,39 @@ func (ac *AuthController) BindBankCard(c *gin.Context) {
 
 // GetBankCardInfo 获取银行卡信息
 func (ac *AuthController) GetBankCardInfo(c *gin.Context) {
-	uid := c.Query("uid")
-	if uid == "" {
-		utils.InvalidParamsWithMessage(c, "用户ID不能为空")
+	var req models.GetBankCardRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
 		return
 	}
 
-	bankCardInfo, err := ac.userService.GetBankCardInfo(uid)
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	user, err := ac.userService.GetUserByID(userID)
 	if err != nil {
 		switch err.Error() {
 		case "用户不存在":
 			utils.UserNotFound(c)
-		case "账户已被删除":
+		case "用户已被删除":
 			utils.ErrorWithMessage(c, utils.CodeUserNotFound, err.Error())
-		case "账户已被禁用":
-			utils.AccountLocked(c)
-		case "用户未绑定银行卡":
-			utils.ErrorWithMessage(c, utils.CodeNotFound, err.Error())
 		default:
 			utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
 		}
 		return
+	}
+
+	// 解析银行卡信息
+	var bankCardInfo models.BankCardInfo
+	if user.BankCardInfo != "" {
+		if err := json.Unmarshal([]byte(user.BankCardInfo), &bankCardInfo); err != nil {
+			utils.ErrorWithMessage(c, utils.CodeOperationFailed, "银行卡信息解析失败")
+			return
+		}
 	}
 
 	utils.Success(c, gin.H{

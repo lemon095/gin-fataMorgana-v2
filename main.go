@@ -148,7 +148,7 @@ func main() {
 	// API v1 路由组 - 统一前缀
 	api := r.Group("/api/v1")
 	{
-		// 系统健康检查路由组
+		// 系统健康检查路由组（保持GET，便于监控）
 		health := api.Group("/health")
 		{
 			health.GET("/check", healthController.HealthCheck)       // 系统健康检查
@@ -163,16 +163,16 @@ func main() {
 			auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录
 			auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌
 			auth.POST("/logout", authController.Logout)               // 用户登出
-			auth.GET("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息
+			auth.POST("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息
 			auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard) // 绑定银行卡
-			auth.GET("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
+			auth.POST("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
 		}
 
 		// 会话管理路由组
 		session := api.Group("/session")
 		{
-			session.GET("/status", sessionController.CheckLoginStatus) // 检查登录状态
-			session.GET("/user", sessionController.GetCurrentUserInfo) // 获取当前用户信息
+			session.POST("/status", sessionController.CheckLoginStatus) // 检查登录状态
+			session.POST("/user", sessionController.GetCurrentUserInfo) // 获取当前用户信息
 			session.POST("/logout", sessionController.Logout)          // 用户登出
 			session.POST("/refresh", sessionController.RefreshSession) // 刷新会话
 		}
@@ -181,10 +181,10 @@ func main() {
 		wallet := api.Group("/wallet")
 		{
 			wallet.Use(middleware.AuthMiddleware()) // 需要认证
-			wallet.GET("/info", walletController.GetWallet)                    // 获取钱包信息
-			wallet.GET("/transactions", walletController.GetUserTransactions)      // 获取资金记录
+			wallet.POST("/info", walletController.GetWallet)                    // 获取钱包信息
+			wallet.POST("/transactions", walletController.GetUserTransactions)      // 获取资金记录
 			wallet.POST("/withdraw", middleware.WithdrawRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现
-			wallet.GET("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总
+			wallet.POST("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总
 			wallet.POST("/recharge-apply", walletController.RechargeApply)         // 充值申请
 			wallet.POST("/recharge-confirm", walletController.RechargeConfirm)     // 充值确认
 		}

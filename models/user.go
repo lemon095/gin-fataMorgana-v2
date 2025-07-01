@@ -87,6 +87,47 @@ type BankCardInfo struct {
 	CardHolder string `json:"card_holder"`
 }
 
+// GetProfileRequest 获取用户信息请求
+type GetProfileRequest struct {
+	// 空结构体，因为获取当前用户信息不需要额外参数
+}
+
+// GetBankCardRequest 获取银行卡信息请求
+type GetBankCardRequest struct {
+	// 空结构体，因为获取当前用户银行卡信息不需要额外参数
+}
+
+// GetSessionStatusRequest 获取会话状态请求
+type GetSessionStatusRequest struct {
+	// 空结构体，因为获取会话状态不需要额外参数
+}
+
+// GetSessionUserRequest 获取会话用户信息请求
+type GetSessionUserRequest struct {
+	// 空结构体，因为获取会话用户信息不需要额外参数
+}
+
+// GetWalletRequest 获取钱包信息请求
+type GetWalletRequest struct {
+	// 空结构体，因为获取当前用户钱包信息不需要额外参数
+}
+
+// GetTransactionsRequest 获取交易记录请求
+type GetTransactionsRequest struct {
+	Page     int `json:"page" binding:"min=1"`      // 页码，从1开始
+	PageSize int `json:"page_size" binding:"min=1,max=100"` // 每页大小，最大100
+}
+
+// GetWithdrawSummaryRequest 获取提现汇总请求
+type GetWithdrawSummaryRequest struct {
+	// 空结构体，因为获取提现汇总不需要额外参数
+}
+
+// HealthCheckRequest 健康检查请求
+type HealthCheckRequest struct {
+	// 空结构体，健康检查不需要参数
+}
+
 // HashPassword 加密密码
 func (u *User) HashPassword() error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)

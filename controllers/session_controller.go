@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"gin-fataMorgana/middleware"
+	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,13 @@ func NewSessionController() *SessionController {
 
 // CheckLoginStatus 检查登录状态
 func (sc *SessionController) CheckLoginStatus(c *gin.Context) {
+	var req models.GetSessionStatusRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		return
+	}
+
 	status := middleware.GetLoginStatus(c)
 
 	utils.SuccessWithMessage(c, "获取登录状态成功", status)
@@ -26,6 +34,13 @@ func (sc *SessionController) CheckLoginStatus(c *gin.Context) {
 
 // GetCurrentUserInfo 获取当前用户信息
 func (sc *SessionController) GetCurrentUserInfo(c *gin.Context) {
+	var req models.GetSessionUserRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		return
+	}
+
 	if !middleware.IsAuthenticated(c) {
 		utils.Unauthorized(c)
 		return

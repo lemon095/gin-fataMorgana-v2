@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"gin-fataMorgana/middleware"
+	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
 	"strconv"
@@ -24,36 +25,29 @@ func NewWalletController() *WalletController {
 
 // GetUserTransactions 获取用户资金记录
 func (wc *WalletController) GetUserTransactions(c *gin.Context) {
-	// 获取参数
-	uid := c.Query("uid")
-	if uid == "" {
-		utils.InvalidParamsWithMessage(c, "用户ID不能为空")
+	var req models.GetTransactionsRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
 		return
 	}
 
-	// 获取分页参数
-	pageStr := c.DefaultQuery("page", "1")
-	pageSizeStr := c.DefaultQuery("page_size", "10")
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-		page = 1
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
 	}
 
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil || pageSize <= 0 {
-		pageSize = 10
-	}
-
-	// 构建请求
-	req := &services.GetUserTransactionsRequest{
-		Uid:      uid,
-		Page:     page,
-		PageSize: pageSize,
+	// 构建服务请求
+	serviceReq := &services.GetUserTransactionsRequest{
+		Uid:      strconv.FormatUint(uint64(userID), 10),
+		Page:     req.Page,
+		PageSize: req.PageSize,
 	}
 
 	// 调用服务
-	response, err := wc.walletService.GetUserTransactions(req)
+	response, err := wc.walletService.GetUserTransactions(serviceReq)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
@@ -64,12 +58,21 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 
 // GetWallet 获取钱包信息
 func (wc *WalletController) GetWallet(c *gin.Context) {
-	uid := c.Param("uid")
-	if uid == "" {
-		utils.InvalidParamsWithMessage(c, "用户ID不能为空")
+	var req models.GetWalletRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
 		return
 	}
 
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	uid := strconv.FormatUint(uint64(userID), 10)
 	wallet, err := wc.walletService.GetWallet(uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
@@ -207,12 +210,21 @@ func (wc *WalletController) CancelWithdraw(c *gin.Context) {
 
 // GetWithdrawSummary 获取提现汇总信息
 func (wc *WalletController) GetWithdrawSummary(c *gin.Context) {
-	uid := c.Query("uid")
-	if uid == "" {
-		utils.InvalidParamsWithMessage(c, "用户ID不能为空")
+	var req models.GetWithdrawSummaryRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
 		return
 	}
 
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	uid := strconv.FormatUint(uint64(userID), 10)
 	summary, err := wc.walletService.GetWithdrawSummary(uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
