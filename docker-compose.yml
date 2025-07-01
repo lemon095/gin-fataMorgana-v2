@@ -9,12 +9,12 @@ services:
       - "9001:9001"
     environment:
       - GIN_MODE=release
-      - DATABASE_HOST=172.31.38.229
+      - DATABASE_HOST=172.31.46.166
       - DATABASE_PORT=3306
       - DATABASE_USERNAME=root
       - DATABASE_PASSWORD=shgytywe!#%65926328
       - DATABASE_DBNAME=future
-      - REDIS_HOST=172.31.38.229
+      - REDIS_HOST=172.31.46.166
       - REDIS_PORT=6379
       - REDIS_PASSWORD=Test!#$1234.hjdgsag
       - SERVER_MODE=release

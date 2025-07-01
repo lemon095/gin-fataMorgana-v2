@@ -6,9 +6,62 @@
 COMPOSE_FILE="docker-compose.yml"
 SERVICE_NAME="gin-fataMorgana"
 
+# 拉取最新代码
+pull_latest_code() {
+    echo "📥 拉取最新代码..."
+    
+    # 检查是否在git仓库中
+    if [ ! -d ".git" ]; then
+        echo "⚠️  当前目录不是git仓库，跳过代码拉取"
+        return 0
+    fi
+    
+    # 检查git命令是否可用
+    if ! command -v git &> /dev/null; then
+        echo "⚠️  git命令不可用，跳过代码拉取"
+        return 0
+    fi
+    
+    # 获取当前分支
+    CURRENT_BRANCH=$(git branch --show-current)
+    echo "📍 当前分支: $CURRENT_BRANCH"
+    
+    # 保存当前工作目录
+    PWD_BACKUP=$(pwd)
+    
+    # 拉取最新代码
+    if git pull origin $CURRENT_BRANCH; then
+        echo "✅ 代码拉取成功"
+        
+        # 检查是否有新提交
+        if git log --oneline -1 | grep -q "$(git rev-parse HEAD)"; then
+            echo "📝 代码已是最新版本"
+        else
+            echo "🔄 检测到新代码，需要重新构建镜像"
+            return 1
+        fi
+    else
+        echo "❌ 代码拉取失败"
+        return 1
+    fi
+    
+    return 0
+}
+
 case "$1" in
     start)
         echo "🚀 启动生产环境服务..."
+        
+        # 拉取最新代码
+        pull_latest_code
+        NEED_REBUILD=$?
+        
+        # 如果有新代码，重新构建镜像
+        if [ $NEED_REBUILD -eq 1 ]; then
+            echo "🔨 重新构建镜像..."
+            docker compose -f $COMPOSE_FILE build --no-cache
+        fi
+        
         docker compose -f $COMPOSE_FILE up -d
         echo "✅ 启动完成！访问地址: http://localhost:9001"
         echo "💡 请确保MySQL和Redis服务已启动并可访问"
@@ -20,7 +73,21 @@ case "$1" in
         ;;
     restart)
         echo "🔄 重启生产环境服务..."
+        
+        # 拉取最新代码
+        pull_latest_code
+        NEED_REBUILD=$?
+        
+        # 停止服务
         docker compose -f $COMPOSE_FILE down
+        
+        # 如果有新代码，重新构建镜像
+        if [ $NEED_REBUILD -eq 1 ]; then
+            echo "🔨 重新构建镜像..."
+            docker compose -f $COMPOSE_FILE build --no-cache
+        fi
+        
+        # 启动服务
         docker compose -f $COMPOSE_FILE up -d
         echo "✅ 重启完成！"
         ;;
@@ -38,11 +105,21 @@ case "$1" in
     update)
         echo "🔄 零停机更新服务..."
         
+        # 拉取最新代码
+        pull_latest_code
+        NEED_REBUILD=$?
+        
         # 检查当前服务状态
         if ! docker compose -f $COMPOSE_FILE ps | grep -q "Up"; then
             echo "⚠️  服务未运行，直接启动新版本..."
             docker compose -f $COMPOSE_FILE down
-            docker compose -f $COMPOSE_FILE build --no-cache
+            
+            # 如果有新代码，重新构建镜像
+            if [ $NEED_REBUILD -eq 1 ]; then
+                echo "🔨 重新构建镜像..."
+                docker compose -f $COMPOSE_FILE build --no-cache
+            fi
+            
             docker compose -f $COMPOSE_FILE up -d
             echo "✅ 更新完成！"
             exit 0
@@ -51,9 +128,11 @@ case "$1" in
         echo "📋 当前服务状态:"
         docker compose -f $COMPOSE_FILE ps
         
-        # 构建新镜像
-        echo "🔨 构建新版本镜像..."
-        docker compose -f $COMPOSE_FILE build --no-cache
+        # 如果有新代码，重新构建镜像
+        if [ $NEED_REBUILD -eq 1 ]; then
+            echo "🔨 构建新版本镜像..."
+            docker compose -f $COMPOSE_FILE build --no-cache
+        fi
         
         # 使用Docker Compose的滚动更新功能
         echo "🚀 执行零停机更新..."
@@ -90,22 +169,23 @@ case "$1" in
         echo "❓ 使用方法: $0 {start|stop|restart|logs|status|update|backup|clean}"
         echo ""
         echo "命令说明:"
-        echo "  start   - 启动生产环境服务"
+        echo "  start   - 启动生产环境服务（自动拉取代码）"
         echo "  stop    - 停止生产环境服务"
-        echo "  restart - 重启生产环境服务"
+        echo "  restart - 重启生产环境服务（自动拉取代码）"
         echo "  logs    - 查看服务日志"
         echo "  status  - 查看服务状态"
-        echo "  update  - 零停机更新服务"
+        echo "  update  - 零停机更新服务（自动拉取代码）"
         echo "  backup  - 数据库备份提示"
         echo "  clean   - 清理Docker资源"
         echo ""
         echo "📝 配置说明:"
         echo "  - 服务端口: 9001"
-        echo "  - MySQL连接: 172.31.38.229:3306"
-        echo "  - Redis连接: 172.31.38.229:6379"
+        echo "  - MySQL连接: 172.31.46.166:3306"
+        echo "  - Redis连接: 172.31.46.166:6379"
         echo "  - 模式: release"
         echo ""
         echo "⚠️  注意: 请确保MySQL和Redis服务已启动并可访问"
+        echo "💡 提示: start/restart/update 命令会自动拉取最新代码"
         exit 1
         ;;
 esac 
