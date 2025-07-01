@@ -1,4 +1,4 @@
-basePath: /
+basePath: /api/v1
 definitions:
   models.UserRegisterRequest:
     properties:
@@ -71,28 +71,31 @@ info:
 paths:
   /auth/register:
     post:
+      description: 用户注册接口，需要提供邮箱、密码和邀请码
       consumes:
       - application/json
-      description: 用户注册接口，需要提供邮箱、密码和邀请码
+      produces:
+      - application/json
+      tags:
+      - 认证
+      summary: 用户注册
       parameters:
       - description: 注册请求参数
-        in: body
         name: request
+        in: body
         required: true
         schema:
           $ref: '#/definitions/models.UserRegisterRequest'
-      produces:
-      - application/json
       responses:
         "200":
           description: 注册成功
           schema:
             allOf:
             - $ref: '#/definitions/utils.Response'
-            - properties:
+            - type: object
+              properties:
                 data:
                   $ref: '#/definitions/models.UserResponse'
-              type: object
         "400":
           description: 参数错误
           schema:
@@ -105,9 +108,6 @@ paths:
           description: 服务器错误
           schema:
             $ref: '#/definitions/utils.Response'
-      summary: 用户注册
-      tags:
-      - 认证
 securityDefinitions:
   BearerAuth:
     description: '请输入 "Bearer " 加上JWT token，例如: "Bearer abcde12345"'

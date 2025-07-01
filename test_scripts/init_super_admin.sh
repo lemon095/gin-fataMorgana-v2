@@ -47,21 +47,59 @@ echo "  密码: $SUPER_ADMIN_PASSWORD"
 echo "  角色: 超级管理员 (role=1)"
 echo
 
-# 使用默认邀请码
-DEFAULT_INVITE_CODE="SUPER123"
+# 检查数据库中是否有超级管理员邀请码
+echo "🔍 检查现有邀请码..."
 
-echo "📝 使用邀请码: $DEFAULT_INVITE_CODE"
+# 尝试使用常见的邀请码
+COMMON_INVITE_CODES=("SUPER123" "ADMIN123" "ROOT123" "MASTER123")
+
+INVITE_CODE_FOUND=""
+for code in "${COMMON_INVITE_CODES[@]}"; do
+    echo "  尝试邀请码: $code"
+    
+    # 测试邀请码是否有效
+    TEST_RESPONSE=$(curl -s -X POST "http://$SERVER_HOST:$SERVER_PORT/api/v1/auth/register" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"email\": \"test_$(date +%s)@example.com\",
+        \"password\": \"test123\",
+        \"confirm_password\": \"test123\",
+        \"invite_code\": \"$code\"
+      }")
+    
+    if echo "$TEST_RESPONSE" | grep -q '"code":200'; then
+        echo "  ✅ 找到有效邀请码: $code"
+        INVITE_CODE_FOUND="$code"
+        break
+    else
+        echo "  ❌ 邀请码无效: $code"
+    fi
+done
+
+if [ -z "$INVITE_CODE_FOUND" ]; then
+    echo "❌ 未找到有效的邀请码"
+    echo
+    echo "🔧 需要手动创建超级管理员邀请码，请执行以下SQL:"
+    echo "mysql -h 172.31.46.166 -P 3306 -u root -p future"
+    echo
+    echo "INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES (1, 'super_admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', '超级管理员', 1, 1, 'SUPER123', NOW(3), NOW(3));"
+    echo
+    echo "然后重新运行此脚本"
+    exit 1
+fi
+
+echo "📝 使用邀请码: $INVITE_CODE_FOUND"
 
 # 通过注册接口创建超级管理员
 echo "📝 创建超级管理员用户..."
 
-SUPER_ADMIN_RESPONSE=$(curl -s -X POST "http://$SERVER_HOST:$SERVER_PORT/auth/register" \
+SUPER_ADMIN_RESPONSE=$(curl -s -X POST "http://$SERVER_HOST:$SERVER_PORT/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d "{
     \"email\": \"$SUPER_ADMIN_EMAIL\",
     \"password\": \"$SUPER_ADMIN_PASSWORD\",
     \"confirm_password\": \"$SUPER_ADMIN_PASSWORD\",
-    \"invite_code\": \"$DEFAULT_INVITE_CODE\"
+    \"invite_code\": \"$INVITE_CODE_FOUND\"
   }")
 
 echo "注册响应: $SUPER_ADMIN_RESPONSE"
@@ -76,7 +114,7 @@ if echo "$SUPER_ADMIN_RESPONSE" | grep -q '"code":200'; then
     
     # 测试登录
     echo "🔐 测试超级管理员登录..."
-    LOGIN_RESPONSE=$(curl -s -X POST "http://$SERVER_HOST:$SERVER_PORT/auth/login" \
+    LOGIN_RESPONSE=$(curl -s -X POST "http://$SERVER_HOST:$SERVER_PORT/api/v1/auth/login" \
       -H "Content-Type: application/json" \
       -d "{
         \"email\": \"$SUPER_ADMIN_EMAIL\",
@@ -90,7 +128,7 @@ if echo "$SUPER_ADMIN_RESPONSE" | grep -q '"code":200'; then
         
         # 获取用户信息验证角色
         echo "🔍 验证用户角色..."
-        USER_INFO_RESPONSE=$(curl -s -X GET "http://$SERVER_HOST:$SERVER_PORT/auth/profile" \
+        USER_INFO_RESPONSE=$(curl -s -X GET "http://$SERVER_HOST:$SERVER_PORT/api/v1/auth/profile" \
           -H "Authorization: Bearer $SUPER_ADMIN_TOKEN")
         
         echo "用户信息: $USER_INFO_RESPONSE"
@@ -111,7 +149,7 @@ else
     echo "   4. 手动在数据库中创建超级管理员用户"
     echo
     echo "🔧 手动创建超级管理员的SQL:"
-    echo "INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES (1, 'super_admin', 'hashed_password', '超级管理员', 1, 1, 'SUPER123', NOW(3), NOW(3));"
+    echo "INSERT INTO admin_users (admin_id, username, password, remark, status, role, my_invite_code, created_at, updated_at) VALUES (1, 'super_admin', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', '超级管理员', 1, 1, 'SUPER123', NOW(3), NOW(3));"
 fi
 
 echo
@@ -120,7 +158,7 @@ echo "  用户名: $SUPER_ADMIN_USERNAME"
 echo "  邮箱: $SUPER_ADMIN_EMAIL"
 echo "  密码: $SUPER_ADMIN_PASSWORD"
 echo "  角色: 超级管理员 (role=1)"
-echo "  邀请码: $DEFAULT_INVITE_CODE"
+echo "  邀请码: $INVITE_CODE_FOUND"
 echo
 echo "💡 提示:"
 echo "   - 超级管理员拥有最高权限"

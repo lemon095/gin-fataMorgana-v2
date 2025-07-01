@@ -13,12 +13,12 @@ echo ""
 
 # 2. 检查未登录状态
 echo "2. 检查未登录状态..."
-curl -s "$BASE_URL/session/status" | jq .
+curl -s "$BASE_URL/api/v1/session/status" | jq .
 echo ""
 
 # 3. 注册用户
 echo "3. 注册新用户..."
-REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/register" \
+REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -32,7 +32,7 @@ echo ""
 
 # 4. 用户登录
 echo "4. 用户登录..."
-LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/auth/login" \
+LOGIN_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -51,47 +51,47 @@ if [ "$ACCESS_TOKEN" != "null" ] && [ "$ACCESS_TOKEN" != "" ]; then
 
     # 5. 检查登录状态
     echo "5. 检查登录状态..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/session/status" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/session/status" | jq .
     echo ""
 
     # 6. 获取用户信息
     echo "6. 获取用户信息..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/session/user" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/session/user" | jq .
     echo ""
 
     # 7. 访问需要认证的接口
     echo "7. 访问需要认证的接口..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/profile" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/auth/profile" | jq .
     echo ""
 
     # 8. 访问可选认证的接口
     echo "8. 访问可选认证的接口..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/public/info" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/health/check" | jq .
     echo ""
 
     # 9. 测试无token访问需要认证的接口
     echo "9. 测试无token访问需要认证的接口..."
-    curl -s "$BASE_URL/api/profile" | jq .
+    curl -s "$BASE_URL/api/v1/auth/profile" | jq .
     echo ""
 
     # 10. 测试无token访问可选认证的接口
     echo "10. 测试无token访问可选认证的接口..."
-    curl -s "$BASE_URL/public/info" | jq .
+    curl -s "$BASE_URL/api/v1/health/check" | jq .
     echo ""
 
     # 11. 刷新会话
     echo "11. 刷新会话..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/session/refresh" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/session/refresh" | jq .
     echo ""
 
     # 12. 用户登出
     echo "12. 用户登出..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/session/logout" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/session/logout" | jq .
     echo ""
 
     # 13. 登出后再次检查状态
     echo "13. 登出后再次检查状态..."
-    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/session/status" | jq .
+    curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "$BASE_URL/api/v1/session/status" | jq .
     echo ""
 
 else

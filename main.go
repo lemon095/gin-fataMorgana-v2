@@ -11,7 +11,7 @@
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 
 // @host      localhost:9001
-// @BasePath  /
+// @BasePath  /api/v1
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -142,56 +142,60 @@ func main() {
 	// Swagger文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// 健康检查
+	// 健康检查（保持原有路径，方便监控）
 	r.GET("/health", healthController.HealthCheck)
 
-	// 系统健康检查路由组
-	health := r.Group("/health")
+	// API v1 路由组 - 统一前缀
+	api := r.Group("/api/v1")
 	{
-		health.GET("/check", healthController.HealthCheck)       // 系统健康检查
-		health.GET("/database", healthController.DatabaseHealth) // 数据库健康检查
-		health.GET("/redis", healthController.RedisHealth)       // Redis健康检查
-	}
+		// 系统健康检查路由组
+		health := api.Group("/health")
+		{
+			health.GET("/check", healthController.HealthCheck)       // 系统健康检查
+			health.GET("/database", healthController.DatabaseHealth) // 数据库健康检查
+			health.GET("/redis", healthController.RedisHealth)       // Redis健康检查
+		}
 
-	// 认证相关路由组
-	auth := r.Group("/auth")
-	{
-		auth.POST("/register", middleware.RegisterOpenMiddleware(), middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册
-		auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录
-		auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌
-		auth.POST("/logout", authController.Logout)               // 用户登出
-		auth.GET("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息
-		auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard) // 绑定银行卡
-		auth.GET("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
-	}
+		// 认证相关路由组
+		auth := api.Group("/auth")
+		{
+			auth.POST("/register", middleware.RegisterOpenMiddleware(), middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册
+			auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录
+			auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌
+			auth.POST("/logout", authController.Logout)               // 用户登出
+			auth.GET("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息
+			auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard) // 绑定银行卡
+			auth.GET("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
+		}
 
-	// 会话管理路由组
-	session := r.Group("/session")
-	{
-		session.GET("/status", sessionController.CheckLoginStatus) // 检查登录状态
-		session.GET("/user", sessionController.GetCurrentUserInfo) // 获取当前用户信息
-		session.POST("/logout", sessionController.Logout)          // 用户登出
-		session.POST("/refresh", sessionController.RefreshSession) // 刷新会话
-	}
+		// 会话管理路由组
+		session := api.Group("/session")
+		{
+			session.GET("/status", sessionController.CheckLoginStatus) // 检查登录状态
+			session.GET("/user", sessionController.GetCurrentUserInfo) // 获取当前用户信息
+			session.POST("/logout", sessionController.Logout)          // 用户登出
+			session.POST("/refresh", sessionController.RefreshSession) // 刷新会话
+		}
 
-	// 钱包相关路由组
-	wallet := r.Group("/wallet")
-	{
-		wallet.Use(middleware.AuthMiddleware()) // 需要认证
-		wallet.GET("/info", walletController.GetWallet)                    // 获取钱包信息
-		wallet.GET("/transactions", walletController.GetUserTransactions)      // 获取资金记录
-		wallet.POST("/withdraw", middleware.WithdrawRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现
-		wallet.GET("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总
-		wallet.POST("/recharge-apply", walletController.RechargeApply)         // 充值申请
-		wallet.POST("/recharge-confirm", walletController.RechargeConfirm)     // 充值确认
-	}
+		// 钱包相关路由组
+		wallet := api.Group("/wallet")
+		{
+			wallet.Use(middleware.AuthMiddleware()) // 需要认证
+			wallet.GET("/info", walletController.GetWallet)                    // 获取钱包信息
+			wallet.GET("/transactions", walletController.GetUserTransactions)      // 获取资金记录
+			wallet.POST("/withdraw", middleware.WithdrawRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现
+			wallet.GET("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总
+			wallet.POST("/recharge-apply", walletController.RechargeApply)         // 充值申请
+			wallet.POST("/recharge-confirm", walletController.RechargeConfirm)     // 充值确认
+		}
 
-	// 管理员路由组
-	admin := r.Group("/admin")
-	{
-		admin.Use(middleware.AuthMiddleware()) // 需要认证
-		admin.POST("/withdraw/confirm", walletController.ConfirmWithdraw) // 确认提现
-		admin.POST("/withdraw/cancel", walletController.CancelWithdraw)   // 取消提现
+		// 管理员路由组
+		admin := api.Group("/admin")
+		{
+			admin.Use(middleware.AuthMiddleware()) // 需要认证
+			admin.POST("/withdraw/confirm", walletController.ConfirmWithdraw) // 确认提现
+			admin.POST("/withdraw/cancel", walletController.CancelWithdraw)   // 取消提现
+		}
 	}
 
 	// 创建HTTP服务器
