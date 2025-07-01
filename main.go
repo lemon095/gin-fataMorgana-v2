@@ -36,6 +36,7 @@ import (
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/utils"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -91,7 +92,34 @@ func main() {
 	// 创建默认的gin引擎
 	r := gin.Default()
 
+	// 配置CORS中间件
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{
+		"http://localhost:3000",           // React开发服务器
+		"http://localhost:8080",           // Vue开发服务器
+		"http://localhost:5173",           // Vite开发服务器
+		"https://colombiatkadmin.com",     // 生产环境前端
+		"http://colombiatkadmin.com",      // 生产环境前端（HTTP）
+		"https://www.colombiatkadmin.com", // 生产环境前端（带www）
+		"http://www.colombiatkadmin.com",  // 生产环境前端（带www，HTTP）
+	}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
+	corsConfig.AllowHeaders = []string{
+		"Origin",
+		"Content-Type",
+		"Accept",
+		"Authorization",
+		"X-Requested-With",
+		"X-CSRF-Token",
+		"X-API-Key",
+		"Cache-Control",
+		"Pragma",
+	}
+	corsConfig.AllowCredentials = true
+	corsConfig.MaxAge = 12 * time.Hour
+
 	// 添加中间件
+	r.Use(cors.New(corsConfig))           // CORS中间件
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(middleware.SessionMiddleware()) // 全局会话管理中间件
