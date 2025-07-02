@@ -93,15 +93,32 @@ func main() {
 	r := gin.Default()
 
 	// 配置CORS中间件
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{
-		"http://localhost:3000",           // React开发服务器
-		"http://localhost:8080",           // Vue开发服务器
-		"http://localhost:5173",           // Vite开发服务器
-		"https://colombiatkadmin.com",     // 生产环境前端
-		"http://colombiatkadmin.com",      // 生产环境前端（HTTP）
-		"https://www.colombiatkadmin.com", // 生产环境前端（带www）
-		"http://www.colombiatkadmin.com",  // 生产环境前端（带www，HTTP）
+	corsConfig := cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",           // React开发服务器
+			"http://localhost:8080",           // Vue开发服务器
+			"http://localhost:5173",           // Vite开发服务器
+			"https://colombiatkadmin.com",     // 生产环境前端
+			"http://colombiatkadmin.com",      // 生产环境前端（HTTP）
+			"https://www.colombiatkadmin.com", // 生产环境前端（带www）
+			"http://www.colombiatkadmin.com",  // 生产环境前端（带www，HTTP）
+		},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			"X-Requested-With",
+			"X-CSRF-Token",
+			"X-API-Key",
+			"Cache-Control",
+			"Pragma",
+			"Referer",
+			"User-Agent",
+		},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
 	corsConfig.AllowHeaders = []string{
@@ -114,12 +131,15 @@ func main() {
 		"X-API-Key",
 		"Cache-Control",
 		"Pragma",
+		"Referer",
+		"User-Agent",
 	}
 	corsConfig.AllowCredentials = true
 	corsConfig.MaxAge = 12 * time.Hour
 
 	// 添加中间件
-	r.Use(cors.New(corsConfig))           // CORS中间件
+	r.Use(middleware.CORSMiddleware())    // 自定义CORS中间件
+	r.Use(cors.New(corsConfig))           // 备用CORS中间件
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(middleware.SessionMiddleware()) // 全局会话管理中间件
@@ -162,18 +182,27 @@ func main() {
 			health.GET("/redis", healthController.RedisHealth)       // Redis连接健康检查
 		}
 
-		// ==================== 用户认证路由组 ====================
-		// 用户认证相关接口 - 注册、登录、令牌管理、用户信息
-		auth := api.Group("/auth")
-		{
-			auth.POST("/register", middleware.RegisterOpenMiddleware(), middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册 - 创建新用户账户
-			auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录 - 验证用户身份并生成令牌
-			auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌 - 延长用户登录状态
-			auth.POST("/logout", authController.Logout)               // 用户登出 - 清除用户登录状态
-			auth.POST("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息 - 获取当前用户详细资料
-			auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard) // 绑定银行卡 - 用户绑定提现银行卡
-			auth.POST("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息 - 查询用户绑定的银行卡
-		}
+			// ==================== 用户认证路由组 ====================
+	// 用户认证相关接口 - 注册、登录、令牌管理、用户信息
+	auth := api.Group("/auth")
+	{
+		// 添加OPTIONS路由处理CORS预检请求
+		auth.OPTIONS("/register", func(c *gin.Context) {
+			c.Header("Access-Control-Allow-Origin", "*")
+			c.Header("Access-Control-Allow-Methods", "POST, OPTIONS")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Status(200)
+		})
+		
+		auth.POST("/register", middleware.RegisterOpenMiddleware(), middleware.RegisterRateLimitMiddleware(), authController.Register)           // 用户注册 - 创建新用户账户
+		auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                 // 用户登录 - 验证用户身份并生成令牌
+		auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌 - 延长用户登录状态
+		auth.POST("/logout", authController.Logout)               // 用户登出 - 清除用户登录状态
+		auth.POST("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息 - 获取当前用户详细资料
+		auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard) // 绑定银行卡 - 用户绑定提现银行卡
+		auth.POST("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息 - 查询用户绑定的银行卡
+	}
 
 		// ==================== 会话管理路由组 ====================
 		// 用户会话管理接口 - 会话状态检查、用户信息获取
