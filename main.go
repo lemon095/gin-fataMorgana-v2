@@ -157,6 +157,7 @@ func main() {
 	amountConfigController := controllers.NewAmountConfigController()
 	announcementController := controllers.NewAnnouncementController()
 	groupBuyController := controllers.NewGroupBuyController()
+	shareController := controllers.NewShareController()
 
 	// ==================== 基础路由 ====================
 	// 首页 - 服务状态检查
@@ -284,6 +285,10 @@ func main() {
 			groupBuy.POST("/active-detail", groupBuyController.GetActiveGroupBuyDetail) // 获取活跃拼单详情 - 获取符合条件的拼单详情
 			groupBuy.POST("/join", middleware.AuthMiddleware(), groupBuyController.JoinGroupBuy) // 确认参与拼单 - 创建订单并更新拼单状态
 		}
+
+		// ==================== 分享链接路由组 ====================
+		// 分享链接接口 - 获取分享链接
+		api.POST("/share-link", shareController.GetShareLink)
 	}
 
 	// 创建HTTP服务器
