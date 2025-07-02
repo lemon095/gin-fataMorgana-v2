@@ -143,7 +143,7 @@ func (o *Order) GetRemainingTime() int64 {
 	if o.IsExpired() {
 		return 0
 	}
-	return int64(o.ExpireTime.Sub(time.Now()).Seconds())
+	return int64(time.Until(o.ExpireTime).Seconds())
 }
 
 // IsAllTasksCompleted 检查所有任务是否已完成
