@@ -9,6 +9,8 @@ import (
 const (
 	TransactionTypeRecharge   = "recharge"   // 充值
 	TransactionTypeWithdraw   = "withdraw"   // 提现
+	TransactionTypeOrderBuy   = "purchase"  // 购买
+	TransactionTypeGroupBuy   = "group_buy"  // 拼单
 	TransactionTypeIncome     = "income"     // 收入（返现、奖励等）
 	TransactionTypeExpense    = "expense"    // 支出（消费、服务费等）
 	TransactionTypeFreeze     = "freeze"     // 冻结
@@ -16,7 +18,6 @@ const (
 	TransactionTypeRefund     = "refund"     // 退款
 	TransactionTypeTransfer   = "transfer"   // 转账
 	TransactionTypeAdjustment = "adjustment" // 调整
-	TransactionTypeOrderBuy   = "order_buy"  // 购买订单
 )
 
 // TransactionStatus 交易状态枚举
@@ -117,6 +118,7 @@ func (t *WalletTransaction) GetTypeName() string {
 		TransactionTypeTransfer:   "转账",
 		TransactionTypeAdjustment: "调整",
 		TransactionTypeOrderBuy:   "购买订单",
+		TransactionTypeGroupBuy:   "拼单",
 	}
 	return typeNames[t.Type]
 }
@@ -157,7 +159,7 @@ func (t *WalletTransaction) GetAmountDisplay() string {
 	switch t.Type {
 	case TransactionTypeRecharge, TransactionTypeIncome, TransactionTypeRefund, TransactionTypeUnfreeze:
 		return "+" + formatAmount(t.Amount)
-	case TransactionTypeWithdraw, TransactionTypeExpense, TransactionTypeFreeze, TransactionTypeOrderBuy:
+	case TransactionTypeWithdraw, TransactionTypeExpense, TransactionTypeFreeze, TransactionTypeOrderBuy, TransactionTypeGroupBuy:
 		return "-" + formatAmount(t.Amount)
 	default:
 		return formatAmount(t.Amount)
@@ -173,13 +175,15 @@ func formatAmount(amount float64) string {
 //
 // 1. recharge (充值) - 用户从银行卡充值到钱包
 // 2. withdraw (提现) - 用户从钱包提现到银行卡
-// 3. income (收入) - 用户获得返现、奖励、收益等
-// 4. expense (支出) - 用户进行购物、消费、服务费等
-// 5. freeze (冻结) - 冻结部分余额（如订单支付）
-// 6. unfreeze (解冻) - 解冻冻结的余额（如订单取消）
-// 7. refund (退款) - 退款到钱包
-// 8. transfer (转账) - 用户间转账
-// 9. adjustment (调整) - 系统调整余额
+// 3. purchase (购买) - 用户购买订单
+// 4. group_buy (拼单) - 用户参与拼单
+// 5. income (收入) - 用户获得返现、奖励、收益等
+// 6. expense (支出) - 用户进行购物、消费、服务费等
+// 7. freeze (冻结) - 冻结部分余额（如订单支付）
+// 8. unfreeze (解冻) - 解冻冻结的余额（如订单取消）
+// 9. refund (退款) - 退款到钱包
+// 10. transfer (转账) - 用户间转账
+// 11. adjustment (调整) - 系统调整余额
 //
 // 交易状态说明：
 //
