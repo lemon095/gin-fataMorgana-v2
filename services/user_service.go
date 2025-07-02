@@ -464,3 +464,82 @@ func (s *UserService) GetBankCardInfo(uid string) (*models.BankCardInfo, error) 
 
 	return &bankCardInfo, nil
 }
+
+// ChangePassword 修改密码
+func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+	ctx := context.Background()
+
+	// 1. 根据用户ID获取用户信息
+	var user models.User
+	if err := s.userRepo.FindByID(ctx, userID, &user); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("用户不存在")
+		}
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 2. 检查用户是否已被删除
+	if user.DeletedAt != nil {
+		return errors.New("用户已被删除，无法修改密码")
+	}
+
+	// 3. 检查用户是否被禁用
+	if user.Status == 0 {
+		return errors.New("账户已被禁用，无法修改密码")
+	}
+
+	// 4. 验证旧密码是否正确
+	if !user.CheckPassword(oldPassword) {
+		return errors.New("当前密码错误")
+	}
+
+	// 5. 验证新密码格式
+	if err := s.validateNewPassword(newPassword); err != nil {
+		return err
+	}
+
+	// 6. 检查新密码是否与旧密码相同
+	if oldPassword == newPassword {
+		return errors.New("新密码不能与当前密码相同")
+	}
+
+	// 7. 更新密码
+	user.Password = newPassword
+	if err := user.HashPassword(); err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	user.UpdatedAt = time.Now()
+
+	// 8. 保存到数据库
+	if err := s.userRepo.Update(ctx, &user); err != nil {
+		return fmt.Errorf("更新密码失败: %w", err)
+	}
+
+	// 9. 可选：使所有现有token失效（这里可以通过Redis实现）
+	// 由于项目中没有token黑名单机制，这里暂时跳过
+	// 如果需要实现，可以在Redis中维护一个token黑名单
+
+	return nil
+}
+
+// validateNewPassword 验证新密码格式
+func (s *UserService) validateNewPassword(password string) error {
+	if password == "" {
+		return errors.New("新密码不能为空")
+	}
+
+	if len(password) < 6 {
+		return errors.New("新密码长度不能少于6位")
+	}
+
+	if len(password) > 50 {
+		return errors.New("新密码长度不能超过50位")
+	}
+
+	// 可以添加更多密码强度验证
+	// 例如：必须包含数字、字母、特殊字符等
+	// 这里暂时使用简单的长度验证
+
+	return nil
+}

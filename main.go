@@ -200,6 +200,7 @@ func main() {
 		auth.POST("/refresh", authController.RefreshToken)        // 刷新令牌 - 延长用户登录状态
 		auth.POST("/logout", authController.Logout)               // 用户登出 - 清除用户登录状态
 		auth.POST("/profile", middleware.AuthMiddleware(), authController.GetProfile) // 获取用户信息 - 获取当前用户详细资料
+		auth.POST("/change-password", middleware.AuthMiddleware(), authController.ChangePassword) // 修改密码 - 用户修改登录密码
 		auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard) // 绑定银行卡 - 用户绑定提现银行卡
 		auth.POST("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息 - 查询用户绑定的银行卡
 	}

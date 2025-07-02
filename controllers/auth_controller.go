@@ -277,3 +277,56 @@ func (ac *AuthController) GetBankCardInfo(c *gin.Context) {
 		"bank_card_info": bankCardInfo,
 	})
 }
+
+// ChangePassword 修改密码
+// @Summary 修改密码
+// @Description 用户修改登录密码
+// @Tags 用户认证
+// @Accept json
+// @Produce json
+// @Param request body models.ChangePasswordRequest true "修改密码请求"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /api/v1/auth/change-password [post]
+func (ac *AuthController) ChangePassword(c *gin.Context) {
+	// 绑定请求参数
+	var req models.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	// 调用服务层修改密码
+	err := ac.userService.ChangePassword(userID, req.OldPassword, req.NewPassword)
+	if err != nil {
+		switch err.Error() {
+		case "用户不存在":
+			utils.UserNotFound(c)
+		case "用户已被删除，无法修改密码":
+			utils.ErrorWithMessage(c, utils.CodeUserNotFound, err.Error())
+		case "账户已被禁用，无法修改密码":
+			utils.AccountLocked(c)
+		case "当前密码错误":
+			utils.ErrorWithMessage(c, utils.CodeValidationFailed, err.Error())
+		case "新密码不能与当前密码相同":
+			utils.ErrorWithMessage(c, utils.CodeValidationFailed, err.Error())
+		case "新密码不能为空", "新密码长度不能少于6位", "新密码长度不能超过50位":
+			utils.ErrorWithMessage(c, utils.CodeValidationFailed, err.Error())
+		default:
+			utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
+		}
+		return
+	}
+
+	// 返回成功响应
+	utils.SuccessWithMessage(c, "密码修改成功", nil)
+}

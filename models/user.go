@@ -92,6 +92,12 @@ type GetProfileRequest struct {
 	// 空结构体，因为获取当前用户信息不需要额外参数
 }
 
+// ChangePasswordRequest 修改密码请求
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`     // 旧密码
+	NewPassword string `json:"new_password" binding:"required,min=6"` // 新密码
+}
+
 // GetBankCardRequest 获取银行卡信息请求
 type GetBankCardRequest struct {
 	// 空结构体，因为获取当前用户银行卡信息不需要额外参数
