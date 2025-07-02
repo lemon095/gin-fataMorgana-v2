@@ -1,149 +1,160 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
+	"time"
 )
 
 // LeaderboardService 热榜服务
-type LeaderboardService struct{}
+type LeaderboardService struct {
+	leaderboardRepo *database.LeaderboardRepository
+}
 
 // NewLeaderboardService 创建热榜服务实例
 func NewLeaderboardService() *LeaderboardService {
-	return &LeaderboardService{}
+	return &LeaderboardService{
+		leaderboardRepo: database.NewLeaderboardRepository(),
+	}
 }
 
 // GetLeaderboard 获取任务热榜
-func (s *LeaderboardService) GetLeaderboard(userID int64) (*models.LeaderboardResponse, error) {
-	// 生成固定假数据
-	rankingList := s.generateMockData()
-	
-	// 查找当前用户的数据
-	myData := s.findMyData(userID, rankingList)
-	
-	return &models.LeaderboardResponse{
-		RankingList: rankingList,
-		MyData:      myData,
-	}, nil
-}
+func (s *LeaderboardService) GetLeaderboard(uid string) (*models.LeaderboardResponse, error) {
+	ctx := context.Background()
 
-// generateMockData 生成固定假数据
-func (s *LeaderboardService) generateMockData() []models.LeaderboardEntry {
-	// 创建固定假数据
-	mockData := []models.LeaderboardEntry{
-		{
-			Rank:       1,
-			UserID:     1001,
-			Username:   "张三",
-			Amount:     15800.50,
-			OrderCount: 156,
-			Profit:     3200.80,
-			CreatedAt:  "2024-01-15 14:30:00",
-		},
-		{
-			Rank:       2,
-			UserID:     1002,
-			Username:   "李四",
-			Amount:     14200.30,
-			OrderCount: 142,
-			Profit:     2850.60,
-			CreatedAt:  "2024-01-15 13:45:00",
-		},
-		{
-			Rank:       3,
-			UserID:     1003,
-			Username:   "王五",
-			Amount:     12800.75,
-			OrderCount: 128,
-			Profit:     2560.15,
-			CreatedAt:  "2024-01-15 12:20:00",
-		},
-		{
-			Rank:       4,
-			UserID:     1004,
-			Username:   "赵六",
-			Amount:     11500.20,
-			OrderCount: 115,
-			Profit:     2300.40,
-			CreatedAt:  "2024-01-15 11:15:00",
-		},
-		{
-			Rank:       5,
-			UserID:     1005,
-			Username:   "钱七",
-			Amount:     10200.80,
-			OrderCount: 102,
-			Profit:     2040.16,
-			CreatedAt:  "2024-01-15 10:30:00",
-		},
-		{
-			Rank:       6,
-			UserID:     1006,
-			Username:   "孙八",
-			Amount:     8900.45,
-			OrderCount: 89,
-			Profit:     1780.09,
-			CreatedAt:  "2024-01-15 09:45:00",
-		},
-		{
-			Rank:       7,
-			UserID:     1007,
-			Username:   "周九",
-			Amount:     7600.30,
-			OrderCount: 76,
-			Profit:     1520.06,
-			CreatedAt:  "2024-01-15 08:20:00",
-		},
-		{
-			Rank:       8,
-			UserID:     1008,
-			Username:   "吴十",
-			Amount:     6500.60,
-			OrderCount: 65,
-			Profit:     1300.12,
-			CreatedAt:  "2024-01-15 07:30:00",
-		},
-		{
-			Rank:       9,
-			UserID:     1009,
-			Username:   "郑十一",
-			Amount:     5400.25,
-			OrderCount: 54,
-			Profit:     1080.05,
-			CreatedAt:  "2024-01-15 06:15:00",
-		},
-		{
-			Rank:       10,
-			UserID:     1010,
-			Username:   "王十二",
-			Amount:     4300.90,
-			OrderCount: 43,
-			Profit:     860.18,
-			CreatedAt:  "2024-01-15 05:00:00",
-		},
-	}
-	
-	return mockData
-}
+	// 获取本周时间范围
+	weekStart, weekEnd := models.GetCurrentWeekRange()
 
-// findMyData 查找当前用户的数据
-func (s *LeaderboardService) findMyData(userID int64, rankingList []models.LeaderboardEntry) *models.MyLeaderboardData {
-	// 在排行榜中查找当前用户
-	for _, entry := range rankingList {
-		if entry.UserID == userID {
-			return &models.MyLeaderboardData{
-				Rank:     entry.Rank,
-				UserID:   userID,
-				IsRanked: true,
-				Entry:    &entry,
-			}
+	// 生成缓存key
+	cacheKey := fmt.Sprintf("leaderboard:weekly:%s", weekStart.Format("2006-01-02"))
+
+	// 尝试从缓存获取数据
+	var response *models.LeaderboardResponse
+	cachedData, err := database.RedisClient.Get(ctx, cacheKey).Result()
+	if err == nil && cachedData != "" {
+		// 缓存命中，解析数据
+		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
+			// 更新我的排名信息（因为每个用户的排名可能不同）
+			s.updateMyRankInfo(response, uid, weekStart, weekEnd)
+			return response, nil
 		}
 	}
-	
-	// 如果没上榜，返回未上榜状态
-	return &models.MyLeaderboardData{
-		Rank:     0,
-		UserID:   userID,
-		IsRanked: false,
-		Entry:    nil,
+
+	// 缓存未命中或解析失败，从数据库查询
+	response, err = s.buildLeaderboardResponse(uid, weekStart, weekEnd)
+	if err != nil {
+		return nil, fmt.Errorf("获取热榜数据失败: %w", err)
 	}
+
+	// 缓存数据（5分钟）
+	cacheExpire := time.Now().Add(5 * time.Minute)
+	response.CacheExpire = cacheExpire
+
+	cacheData, err := json.Marshal(response)
+	if err == nil {
+		database.RedisClient.Set(ctx, cacheKey, cacheData, 5*time.Minute)
+	}
+
+	return response, nil
+}
+
+// buildLeaderboardResponse 构建热榜响应
+func (s *LeaderboardService) buildLeaderboardResponse(uid string, weekStart, weekEnd time.Time) (*models.LeaderboardResponse, error) {
+	ctx := context.Background()
+
+	// 获取前10名用户数据
+	topUsers, err := s.leaderboardRepo.GetWeeklyLeaderboard(ctx, weekStart, weekEnd)
+	if err != nil {
+		return nil, fmt.Errorf("获取热榜数据失败: %w", err)
+	}
+
+	// 转换为响应格式
+	var topEntries []models.LeaderboardEntry
+	for i, user := range topUsers {
+		entry := models.LeaderboardEntry{
+			ID:          uint(i + 1),
+			Uid:         user.Uid,
+			Username:    models.MaskUsername(user.Username),
+			CompletedAt: user.CompletedAt,
+			OrderCount:  user.OrderCount,
+			TotalAmount: user.TotalAmount,
+			TotalProfit: user.TotalProfit,
+			Rank:        i + 1,
+			IsRank:      true,
+		}
+		topEntries = append(topEntries, entry)
+	}
+
+	// 获取我的排名信息
+	myRank := s.getMyRankInfo(uid, weekStart, weekEnd, topEntries)
+
+	response := &models.LeaderboardResponse{
+		WeekStart:   weekStart,
+		WeekEnd:     weekEnd,
+		MyRank:      myRank,
+		TopUsers:    topEntries,
+		CacheExpire: time.Now().Add(5 * time.Minute),
+	}
+
+	return response, nil
+}
+
+// getMyRankInfo 获取我的排名信息
+func (s *LeaderboardService) getMyRankInfo(uid string, weekStart, weekEnd time.Time, topEntries []models.LeaderboardEntry) *models.LeaderboardEntry {
+	ctx := context.Background()
+
+	// 检查是否在前10名中
+	for _, entry := range topEntries {
+		if entry.Uid == uid {
+			return &entry
+		}
+	}
+
+	// 不在前10名中，查询具体排名
+	userData, rank, err := s.leaderboardRepo.GetUserWeeklyRank(ctx, uid, weekStart, weekEnd)
+	if err != nil || userData == nil {
+		// 用户没有完成订单或查询失败
+		return &models.LeaderboardEntry{
+			ID:          999,
+			Uid:         uid,
+			Username:    "",
+			CompletedAt: time.Time{},
+			OrderCount:  0,
+			TotalAmount: 0,
+			TotalProfit: 0,
+			Rank:        999,
+			IsRank:      false,
+		}
+	}
+
+	// 用户有完成订单但不在前10名
+	return &models.LeaderboardEntry{
+		ID:          uint(rank),
+		Uid:         userData.Uid,
+		Username:    models.MaskUsername(userData.Username),
+		CompletedAt: userData.CompletedAt,
+		OrderCount:  userData.OrderCount,
+		TotalAmount: userData.TotalAmount,
+		TotalProfit: userData.TotalProfit,
+		Rank:        rank,
+		IsRank:      false,
+	}
+}
+
+// updateMyRankInfo 更新我的排名信息
+func (s *LeaderboardService) updateMyRankInfo(response *models.LeaderboardResponse, uid string, weekStart, weekEnd time.Time) {
+	// 检查是否在前10名中
+	for _, entry := range response.TopUsers {
+		if entry.Uid == uid {
+			response.MyRank = &entry
+			return
+		}
+	}
+
+	// 不在前10名中，查询具体排名
+	myRank := s.getMyRankInfo(uid, weekStart, weekEnd, response.TopUsers)
+	response.MyRank = myRank
 } 

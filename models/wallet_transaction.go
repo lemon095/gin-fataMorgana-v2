@@ -16,6 +16,7 @@ const (
 	TransactionTypeRefund     = "refund"     // 退款
 	TransactionTypeTransfer   = "transfer"   // 转账
 	TransactionTypeAdjustment = "adjustment" // 调整
+	TransactionTypeOrderBuy   = "order_buy"  // 购买订单
 )
 
 // TransactionStatus 交易状态枚举
@@ -35,13 +36,11 @@ type WalletTransaction struct {
 	Amount         float64   `json:"amount" gorm:"type:decimal(15,2);not null;comment:交易金额"`
 	BalanceBefore  float64   `json:"balance_before" gorm:"type:decimal(15,2);not null;comment:交易前余额"`
 	BalanceAfter   float64   `json:"balance_after" gorm:"type:decimal(15,2);not null;comment:交易后余额"`
-	FrozenBefore   float64   `json:"frozen_before" gorm:"type:decimal(15,2);default:0.00;comment:交易前冻结余额"`
-	FrozenAfter    float64   `json:"frozen_after" gorm:"type:decimal(15,2);default:0.00;comment:交易后冻结余额"`
 	Status         string    `json:"status" gorm:"not null;size:20;default:'success';index;comment:交易状态"`
 	Description    string    `json:"description" gorm:"size:200;comment:交易描述"`
 	Remark         string    `json:"remark" gorm:"size:500;comment:备注信息"`
 	RelatedOrderNo string    `json:"related_order_no" gorm:"size:32;index;comment:关联订单号"`
-	RelatedUid     string    `json:"related_uid" gorm:"size:8;index;comment:关联用户ID（转账时使用）"`
+
 	OperatorUid    string    `json:"operator_uid" gorm:"size:8;index;comment:操作员ID"`
 	IPAddress      string    `json:"ip_address" gorm:"size:45;comment:操作IP地址"`
 	UserAgent      string    `json:"user_agent" gorm:"size:500;comment:用户代理"`
@@ -56,7 +55,7 @@ func (WalletTransaction) TableName() string {
 
 // TableComment 表注释
 func (WalletTransaction) TableComment() string {
-	return "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出、冻结、解冻等操作"
+	return "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出等操作"
 }
 
 // WalletTransactionResponse 交易流水响应
@@ -69,14 +68,12 @@ type WalletTransactionResponse struct {
 	Amount         float64   `json:"amount"`
 	BalanceBefore  float64   `json:"balance_before"`
 	BalanceAfter   float64   `json:"balance_after"`
-	FrozenBefore   float64   `json:"frozen_before"`
-	FrozenAfter    float64   `json:"frozen_after"`
 	Status         string    `json:"status"`
 	StatusName     string    `json:"status_name"`
 	Description    string    `json:"description"`
 	Remark         string    `json:"remark"`
 	RelatedOrderNo string    `json:"related_order_no"`
-	RelatedUid     string    `json:"related_uid"`
+
 	OperatorUid    string    `json:"operator_uid"`
 	IPAddress      string    `json:"ip_address"`
 	UserAgent      string    `json:"user_agent"`
@@ -94,14 +91,12 @@ func (t *WalletTransaction) ToResponse() WalletTransactionResponse {
 		Amount:         t.Amount,
 		BalanceBefore:  t.BalanceBefore,
 		BalanceAfter:   t.BalanceAfter,
-		FrozenBefore:   t.FrozenBefore,
-		FrozenAfter:    t.FrozenAfter,
 		Status:         t.Status,
 		StatusName:     t.GetStatusName(),
 		Description:    t.Description,
 		Remark:         t.Remark,
 		RelatedOrderNo: t.RelatedOrderNo,
-		RelatedUid:     t.RelatedUid,
+
 		OperatorUid:    t.OperatorUid,
 		IPAddress:      t.IPAddress,
 		UserAgent:      t.UserAgent,
@@ -121,6 +116,7 @@ func (t *WalletTransaction) GetTypeName() string {
 		TransactionTypeRefund:     "退款",
 		TransactionTypeTransfer:   "转账",
 		TransactionTypeAdjustment: "调整",
+		TransactionTypeOrderBuy:   "购买订单",
 	}
 	return typeNames[t.Type]
 }
@@ -161,7 +157,7 @@ func (t *WalletTransaction) GetAmountDisplay() string {
 	switch t.Type {
 	case TransactionTypeRecharge, TransactionTypeIncome, TransactionTypeRefund, TransactionTypeUnfreeze:
 		return "+" + formatAmount(t.Amount)
-	case TransactionTypeWithdraw, TransactionTypeExpense, TransactionTypeFreeze:
+	case TransactionTypeWithdraw, TransactionTypeExpense, TransactionTypeFreeze, TransactionTypeOrderBuy:
 		return "-" + formatAmount(t.Amount)
 	default:
 		return formatAmount(t.Amount)

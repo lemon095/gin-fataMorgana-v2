@@ -87,6 +87,9 @@ func AutoMigrate() error {
 		&models.AdminUser{},
 		&models.UserLoginLog{},
 		&models.Order{},
+		&models.AmountConfig{},
+		&models.Announcement{},
+		&models.AnnouncementBanner{},
 	)
 	if err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)
@@ -116,6 +119,9 @@ func addTableComments() error {
 		"wallet_transactions":  "钱包交易流水表 - 记录所有钱包交易明细，包括充值、提现、收入、支出、冻结、解冻等操作",
 		"user_login_logs":      "用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等",
 		"admin_users":          "邀请码管理表 - 存储邀请码信息，用于用户注册时的邀请码校验，默认角色为业务员(4)",
+		"amount_config":        "金额配置表 - 存储充值、提现等操作的金额配置，支持排序和激活状态管理",
+		"announcements":        "公告表 - 存储系统公告信息，包括标题、内容、标签、状态等",
+		"announcement_banners": "公告图片表 - 存储公告相关的图片信息，支持排序和跳转链接",
 	}
 
 	// 为每个表添加注释

@@ -13,12 +13,14 @@ import (
 // WalletService 钱包服务
 type WalletService struct {
 	walletRepo *database.WalletRepository
+	userRepo   *database.UserRepository
 }
 
 // NewWalletService 创建钱包服务实例
 func NewWalletService() *WalletService {
 	return &WalletService{
 		walletRepo: database.NewWalletRepository(),
+		userRepo:   database.NewUserRepository(),
 	}
 }
 
@@ -109,13 +111,10 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 
 	// 创建新钱包
 	wallet := &models.Wallet{
-		Uid:           uid,
-		Balance:       0.00,
-		FrozenBalance: 0.00,
-		TotalIncome:   0.00,
-		TotalExpense:  0.00,
-		Status:        1,
-		Currency:      "CNY",
+		Uid:      uid,
+		Balance:  0.00,
+		Status:   1,
+		Currency: "CNY",
 	}
 
 	if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
@@ -168,46 +167,7 @@ func (s *WalletService) generateTransactionNo() string {
 }
 
 // Recharge 充值
-func (s *WalletService) Recharge(uid string, amount float64, description string, operatorUid string) error {
-	ctx := context.Background()
-
-	// 获取钱包
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
-	if err != nil {
-		return fmt.Errorf("获取钱包失败: %w", err)
-	}
-
-	// 记录交易前余额
-	balanceBefore := wallet.Balance
-
-	// 执行充值
-	wallet.Recharge(amount)
-
-	// 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return fmt.Errorf("更新钱包失败: %w", err)
-	}
-
-	// 创建交易记录
-	transaction := &models.WalletTransaction{
-		TransactionNo: s.generateTransactionNo(),
-		Uid:           uid,
-		Type:          models.TransactionTypeRecharge,
-		Amount:        amount,
-		BalanceBefore: balanceBefore,
-		BalanceAfter:  wallet.Balance,
-		FrozenBefore:  wallet.FrozenBalance,
-		FrozenAfter:   wallet.FrozenBalance,
-		Status:        models.TransactionStatusSuccess,
-		Description:   description,
-		OperatorUid:   operatorUid,
-	}
-
-	return s.CreateTransaction(transaction)
-}
-
-// RechargeApply 充值申请（生成pending订单，不变动余额）
-func (s *WalletService) RechargeApply(uid string, amount float64, description string, operatorUid string) (string, error) {
+func (s *WalletService) Recharge(uid string, amount float64, description string, operatorUid string) (string, error) {
 	ctx := context.Background()
 
 	// 获取钱包
@@ -216,79 +176,46 @@ func (s *WalletService) RechargeApply(uid string, amount float64, description st
 		return "", fmt.Errorf("获取钱包失败: %w", err)
 	}
 
+	// 检查钱包状态
+	if !wallet.IsActive() {
+		return "", fmt.Errorf("钱包已被冻结，无法充值")
+	}
+
+	// 检查充值金额是否合理
 	if amount <= 0 {
 		return "", fmt.Errorf("充值金额必须大于0")
 	}
 
-	// 生成充值流水号
-	transactionNo := utils.GenerateRechargeNo()
+	// 检查是否超过单笔充值限额（可选，这里设置100万）
+	if amount > 1000000 {
+		return "", fmt.Errorf("单笔充值金额不能超过100万元")
+	}
 
-	// 创建充值pending流水
+	// 记录交易前余额
+	balanceBefore := wallet.Balance
+
+	// 生成交易流水号
+	transactionNo := s.generateTransactionNo()
+
+	// 创建充值交易记录（不增加余额）
 	transaction := &models.WalletTransaction{
 		TransactionNo: transactionNo,
 		Uid:           uid,
 		Type:          models.TransactionTypeRecharge,
 		Amount:        amount,
-		BalanceBefore: wallet.Balance,
-		BalanceAfter:  wallet.Balance, // 充值未到账，余额不变
-		FrozenBefore:  wallet.FrozenBalance,
-		FrozenAfter:   wallet.FrozenBalance,
-		Status:        models.TransactionStatusPending,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceBefore, // 余额不变
+		Status:        models.TransactionStatusPending, // 设置为待处理状态
 		Description:   description,
 		OperatorUid:   operatorUid,
 	}
 
-	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
-		return "", fmt.Errorf("创建充值订单失败: %w", err)
+	// 创建交易记录
+	if err := s.CreateTransaction(transaction); err != nil {
+		return "", fmt.Errorf("创建充值申请失败: %w", err)
 	}
 
 	return transactionNo, nil
-}
-
-// RechargeConfirm 充值确认（到账，变更余额，状态变success）
-func (s *WalletService) RechargeConfirm(transactionNo string, operatorUid string) error {
-	ctx := context.Background()
-
-	// 获取充值订单
-	transaction, err := s.walletRepo.GetTransactionByNo(ctx, transactionNo)
-	if err != nil {
-		return fmt.Errorf("获取充值订单失败: %w", err)
-	}
-
-	if transaction.Type != models.TransactionTypeRecharge {
-		return fmt.Errorf("订单类型错误")
-	}
-
-	if transaction.Status == models.TransactionStatusSuccess {
-		return nil // 幂等：已到账直接返回
-	}
-	if transaction.Status != models.TransactionStatusPending {
-		return fmt.Errorf("充值订单状态不正确")
-	}
-
-	// 获取钱包
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, transaction.Uid)
-	if err != nil {
-		return fmt.Errorf("获取钱包失败: %w", err)
-	}
-
-	// 增加余额
-	wallet.Balance += transaction.Amount
-
-	// 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return fmt.Errorf("更新钱包失败: %w", err)
-	}
-
-	// 更新充值订单状态为success
-	transaction.Status = models.TransactionStatusSuccess
-	transaction.BalanceAfter = wallet.Balance
-	transaction.OperatorUid = operatorUid
-	if err := s.walletRepo.UpdateTransaction(ctx, transaction); err != nil {
-		return fmt.Errorf("更新充值订单失败: %w", err)
-	}
-
-	return nil
 }
 
 // WithdrawRequest 提现申请请求
@@ -297,6 +224,7 @@ type WithdrawRequest struct {
 	Amount      float64 `json:"amount" binding:"required,gt=0"`
 	Description string  `json:"description"`
 	BankCardInfo string `json:"bank_card_info"` // 提现银行卡信息
+	Password    string  `json:"password" binding:"required"` // 登录密码
 }
 
 // WithdrawResponse 提现申请响应
@@ -310,6 +238,22 @@ type WithdrawResponse struct {
 // RequestWithdraw 申请提现（锁定金额）
 func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string) (*WithdrawResponse, error) {
 	ctx := context.Background()
+
+	// 验证用户密码
+	user, err := s.userRepo.FindByUid(ctx, req.Uid)
+	if err != nil {
+		return nil, fmt.Errorf("获取用户信息失败: %w", err)
+	}
+
+	// 检查用户状态
+	if !user.IsActive() {
+		return nil, fmt.Errorf("用户账户已被禁用，无法提现")
+	}
+
+	// 验证密码
+	if !user.CheckPassword(req.Password) {
+		return nil, fmt.Errorf("登录密码错误")
+	}
 
 	// 获取钱包
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, req.Uid)
@@ -332,13 +276,6 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 		return nil, fmt.Errorf("总余额不足，当前总余额: %.2f，申请提现: %.2f", wallet.Balance, req.Amount)
 	}
 
-	// 检查可用余额是否足够（考虑已冻结的金额）
-	availableBalance := wallet.GetAvailableBalance()
-	if availableBalance < req.Amount {
-		return nil, fmt.Errorf("可用余额不足，当前可用余额: %.2f，已冻结金额: %.2f，申请提现: %.2f", 
-			availableBalance, wallet.FrozenBalance, req.Amount)
-	}
-
 	// 检查是否超过单笔提现限额（可选，这里设置100万）
 	if req.Amount > 1000000 {
 		return nil, fmt.Errorf("单笔提现金额不能超过100万元")
@@ -353,11 +290,10 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 
 	// 记录交易前余额
 	balanceBefore := wallet.Balance
-	frozenBefore := wallet.FrozenBalance
 
-	// 锁定提现金额（冻结余额）
-	if err := wallet.FreezeBalance(req.Amount); err != nil {
-		return nil, fmt.Errorf("锁定提现金额失败: %w", err)
+	// 直接扣减余额
+	if err := wallet.Withdraw(req.Amount); err != nil {
+		return nil, fmt.Errorf("扣减余额失败: %w", err)
 	}
 
 	// 更新钱包
@@ -368,7 +304,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 	// 生成交易流水号
 	transactionNo := s.generateTransactionNo()
 
-	// 创建待处理的提现交易记录
+	// 创建提现交易记录
 	transaction := &models.WalletTransaction{
 		TransactionNo: transactionNo,
 		Uid:           req.Uid,
@@ -376,8 +312,6 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 		Amount:        req.Amount,
 		BalanceBefore: balanceBefore,
 		BalanceAfter:  wallet.Balance,
-		FrozenBefore:  frozenBefore,
-		FrozenAfter:   wallet.FrozenBalance,
 		Status:        models.TransactionStatusPending, // 设置为待处理状态
 		Description:   req.Description,
 		Remark:        req.BankCardInfo, // 将银行卡信息存储到备注字段
@@ -386,8 +320,8 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 
 	// 创建交易记录
 	if err := s.CreateTransaction(transaction); err != nil {
-		// 如果创建交易记录失败，需要回滚冻结的金额
-		wallet.UnfreezeBalance(req.Amount)
+		// 如果创建交易记录失败，需要回滚扣减的余额
+		wallet.Recharge(req.Amount)
 		s.walletRepo.UpdateWallet(ctx, wallet)
 		return nil, fmt.Errorf("创建提现申请失败: %w", err)
 	}
@@ -398,113 +332,6 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 		Status:        models.TransactionStatusPending,
 		Message:       "提现申请已提交，等待处理",
 	}, nil
-}
-
-// ConfirmWithdraw 确认提现（完成提现）
-func (s *WalletService) ConfirmWithdraw(transactionNo string, operatorUid string) error {
-	ctx := context.Background()
-
-	// 获取交易记录
-	transaction, err := s.walletRepo.GetTransactionByNo(ctx, transactionNo)
-	if err != nil {
-		return fmt.Errorf("获取交易记录失败: %w", err)
-	}
-
-	// 检查交易状态
-	if transaction.Status != models.TransactionStatusPending {
-		return fmt.Errorf("交易状态不正确，当前状态: %s", transaction.Status)
-	}
-
-	// 检查交易类型
-	if transaction.Type != models.TransactionTypeWithdraw {
-		return fmt.Errorf("交易类型不正确，当前类型: %s", transaction.Type)
-	}
-
-	// 获取钱包
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, transaction.Uid)
-	if err != nil {
-		return fmt.Errorf("获取钱包失败: %w", err)
-	}
-
-	// 执行提现（减少余额和冻结余额）
-	// 1. 减少冻结余额（解冻）
-	if err := wallet.UnfreezeBalance(transaction.Amount); err != nil {
-		return fmt.Errorf("解冻金额失败: %w", err)
-	}
-	
-	// 2. 减少总余额（扣减）
-	if err := wallet.Withdraw(transaction.Amount); err != nil {
-		return fmt.Errorf("扣减余额失败: %w", err)
-	}
-
-	// 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return fmt.Errorf("更新钱包失败: %w", err)
-	}
-
-	// 更新交易记录状态为成功
-	transaction.Status = models.TransactionStatusSuccess
-	transaction.BalanceAfter = wallet.Balance
-	transaction.FrozenAfter = wallet.FrozenBalance
-	transaction.OperatorUid = operatorUid
-
-	// 更新交易记录
-	if err := s.walletRepo.UpdateTransaction(ctx, transaction); err != nil {
-		return fmt.Errorf("更新交易记录失败: %w", err)
-	}
-
-	return nil
-}
-
-// CancelWithdraw 取消提现（解冻金额）
-func (s *WalletService) CancelWithdraw(transactionNo string, operatorUid string, reason string) error {
-	ctx := context.Background()
-
-	// 获取交易记录
-	transaction, err := s.walletRepo.GetTransactionByNo(ctx, transactionNo)
-	if err != nil {
-		return fmt.Errorf("获取交易记录失败: %w", err)
-	}
-
-	// 检查交易状态
-	if transaction.Status != models.TransactionStatusPending {
-		return fmt.Errorf("交易状态不正确，当前状态: %s", transaction.Status)
-	}
-
-	// 检查交易类型
-	if transaction.Type != models.TransactionTypeWithdraw {
-		return fmt.Errorf("交易类型不正确，当前类型: %s", transaction.Type)
-	}
-
-	// 获取钱包
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, transaction.Uid)
-	if err != nil {
-		return fmt.Errorf("获取钱包失败: %w", err)
-	}
-
-	// 只解冻金额，不扣减余额
-	if err := wallet.UnfreezeBalance(transaction.Amount); err != nil {
-		return fmt.Errorf("解冻金额失败: %w", err)
-	}
-
-	// 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return fmt.Errorf("更新钱包失败: %w", err)
-	}
-
-	// 更新交易记录状态为已取消
-	transaction.Status = models.TransactionStatusCancelled
-	transaction.BalanceAfter = wallet.Balance
-	transaction.FrozenAfter = wallet.FrozenBalance
-	transaction.OperatorUid = operatorUid
-	transaction.Remark = fmt.Sprintf("取消原因: %s", reason)
-
-	// 更新交易记录
-	if err := s.walletRepo.UpdateTransaction(ctx, transaction); err != nil {
-		return fmt.Errorf("更新交易记录失败: %w", err)
-	}
-
-	return nil
 }
 
 // checkDailyWithdrawLimit 检查每日提现限额
@@ -594,7 +421,6 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 	return map[string]interface{}{
 		"wallet_info": map[string]interface{}{
 			"total_balance":     wallet.Balance,
-			"frozen_balance":    wallet.FrozenBalance,
 			"available_balance": wallet.GetAvailableBalance(),
 		},
 		"today_withdraw": map[string]interface{}{
@@ -615,4 +441,25 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 			"remaining_today": 5000000.0 - todayPendingTotal - todaySuccessTotal,
 		},
 	}, nil
+}
+
+// GetTransactionDetailRequest 获取交易详情请求
+type GetTransactionDetailRequest struct {
+	TransactionNo string `json:"transaction_no" binding:"required"`
+}
+
+// GetTransactionDetail 获取交易详情
+func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (*models.WalletTransactionResponse, error) {
+	ctx := context.Background()
+
+	// 获取交易记录
+	transaction, err := s.walletRepo.GetTransactionByNo(ctx, req.TransactionNo)
+	if err != nil {
+		return nil, fmt.Errorf("获取交易详情失败: %w", err)
+	}
+
+	// 转换为响应格式
+	response := transaction.ToResponse()
+
+	return &response, nil
 }

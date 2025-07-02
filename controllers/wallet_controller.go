@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
@@ -99,7 +98,7 @@ func (wc *WalletController) CreateWallet(c *gin.Context) {
 	utils.Success(c, wallet.ToResponse())
 }
 
-// Recharge 充值
+// Recharge 充值申请
 func (wc *WalletController) Recharge(c *gin.Context) {
 	var req struct {
 		Uid         string  `json:"uid" binding:"required"`
@@ -119,13 +118,13 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 		operatorUidStr = strconv.FormatUint(uint64(operatorUid), 10)
 	}
 
-	err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description, operatorUidStr)
+	transactionNo, err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description, operatorUidStr)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
 	}
 
-	utils.SuccessWithMessage(c, "充值成功", nil)
+	utils.SuccessWithMessage(c, "充值申请已提交", gin.H{"transaction_no": transactionNo})
 }
 
 // RequestWithdraw 申请提现
@@ -151,61 +150,6 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 	}
 
 	utils.Success(c, response)
-}
-
-// ConfirmWithdraw 确认提现
-func (wc *WalletController) ConfirmWithdraw(c *gin.Context) {
-	var req struct {
-		TransactionNo string `json:"transaction_no" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
-		return
-	}
-
-	// 获取当前用户ID作为操作员
-	operatorUid := middleware.GetCurrentUser(c)
-	operatorUidStr := "system"
-	if operatorUid != 0 {
-		operatorUidStr = strconv.FormatUint(uint64(operatorUid), 10)
-	}
-
-	err := wc.walletService.ConfirmWithdraw(req.TransactionNo, operatorUidStr)
-	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
-		return
-	}
-
-	utils.SuccessWithMessage(c, "提现确认成功", nil)
-}
-
-// CancelWithdraw 取消提现
-func (wc *WalletController) CancelWithdraw(c *gin.Context) {
-	var req struct {
-		TransactionNo string `json:"transaction_no" binding:"required"`
-		Reason        string `json:"reason" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
-		return
-	}
-
-	// 获取当前用户ID作为操作员
-	operatorUid := middleware.GetCurrentUser(c)
-	operatorUidStr := "system"
-	if operatorUid != 0 {
-		operatorUidStr = strconv.FormatUint(uint64(operatorUid), 10)
-	}
-
-	err := wc.walletService.CancelWithdraw(req.TransactionNo, operatorUidStr, req.Reason)
-	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
-		return
-	}
-
-	utils.SuccessWithMessage(c, "提现取消成功", nil)
 }
 
 // GetWithdrawSummary 获取提现汇总信息
@@ -234,47 +178,37 @@ func (wc *WalletController) GetWithdrawSummary(c *gin.Context) {
 	utils.Success(c, summary)
 }
 
-// RechargeApply 充值申请
-func (wc *WalletController) RechargeApply(c *gin.Context) {
-	var req struct {
-		Uid         string  `json:"uid" binding:"required"`
-		Amount      float64 `json:"amount" binding:"required,gt=0"`
-		Description string  `json:"description"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
-		return
-	}
-	operatorUid := middleware.GetCurrentUser(c)
-	operatorUidStr := "system"
-	if operatorUid != 0 {
-		operatorUidStr = fmt.Sprintf("%d", operatorUid)
-	}
-	transactionNo, err := wc.walletService.RechargeApply(req.Uid, req.Amount, req.Description, operatorUidStr)
-	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
-		return
-	}
-	utils.SuccessWithMessage(c, "充值申请已提交", gin.H{"transaction_no": transactionNo})
-}
-
-// RechargeConfirm 充值确认
-func (wc *WalletController) RechargeConfirm(c *gin.Context) {
+// GetTransactionDetail 获取交易详情
+func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 	var req struct {
 		TransactionNo string `json:"transaction_no" binding:"required"`
 	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
 		return
 	}
-	operatorUid := middleware.GetCurrentUser(c)
-	operatorUidStr := "system"
-	if operatorUid != 0 {
-		operatorUidStr = fmt.Sprintf("%d", operatorUid)
-	}
-	if err := wc.walletService.RechargeConfirm(req.TransactionNo, operatorUidStr); err != nil {
-		utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
+
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
 		return
 	}
-	utils.SuccessWithMessage(c, "充值已到账", nil)
+
+	// 构建服务请求
+	serviceReq := &services.GetTransactionDetailRequest{
+		TransactionNo: req.TransactionNo,
+	}
+
+	// 调用服务
+	response, err := wc.walletService.GetTransactionDetail(serviceReq)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		return
+	}
+
+	utils.Success(c, response)
 }
+
+

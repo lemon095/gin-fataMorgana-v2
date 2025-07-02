@@ -131,6 +131,8 @@ func main() {
 	walletController := controllers.NewWalletController()
 	orderController := controllers.NewOrderController()
 	leaderboardController := controllers.NewLeaderboardController()
+	amountConfigController := controllers.NewAmountConfigController()
+	announcementController := controllers.NewAnnouncementController()
 
 	// 定义路由
 	r.GET("/", func(c *gin.Context) {
@@ -185,18 +187,27 @@ func main() {
 			wallet.Use(middleware.AuthMiddleware()) // 需要认证
 			wallet.POST("/info", walletController.GetWallet)                    // 获取钱包信息
 			wallet.POST("/transactions", walletController.GetUserTransactions)      // 获取资金记录
+			wallet.POST("/transaction-detail", walletController.GetTransactionDetail) // 获取交易详情
 			wallet.POST("/withdraw", middleware.WithdrawRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现
 			wallet.POST("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总
-			wallet.POST("/recharge-apply", walletController.RechargeApply)         // 充值申请
-			wallet.POST("/recharge-confirm", walletController.RechargeConfirm)     // 充值确认
+			wallet.POST("/recharge", walletController.Recharge)                   // 充值申请
+		}
+
+		// 订单相关路由组
+		order := api.Group("/order")
+		{
+			order.Use(middleware.AuthMiddleware()) // 需要认证
+			order.POST("/create", orderController.CreateOrder)                    // 创建订单
+			order.POST("/list", orderController.GetOrderList)                     // 获取订单列表
+			order.POST("/detail", orderController.GetOrderDetail)                 // 获取订单详情
+			order.POST("/stats", orderController.GetOrderStats)                   // 获取订单统计
 		}
 
 		// 管理员路由组
 		admin := api.Group("/admin")
 		{
 			admin.Use(middleware.AuthMiddleware()) // 需要认证
-			admin.POST("/withdraw/confirm", walletController.ConfirmWithdraw) // 确认提现
-			admin.POST("/withdraw/cancel", walletController.CancelWithdraw)   // 取消提现
+			// 提现确认和取消接口已移除
 		}
 
 		// 假数据接口路由组
@@ -205,22 +216,24 @@ func main() {
 			fake.POST("/activities", controllers.GetFakeRealtimeActivities) // 获取假数据实时动态
 		}
 
-		// 订单相关路由组
-		order := api.Group("/order")
-		{
-			order.Use(middleware.AuthMiddleware()) // 需要认证
-			order.POST("/list", orderController.GetOrderList)                    // 获取订单列表
-			order.POST("/create", orderController.CreateOrder)                   // 创建订单
-			order.POST("/detail", orderController.GetOrderDetail)                // 获取订单详情
-			order.POST("/stats", orderController.GetOrderStats)                  // 获取订单统计
-			order.POST("/by-status", orderController.GetOrdersByStatus)          // 根据状态获取订单
-			order.POST("/by-date", orderController.GetOrdersByDateRange)         // 根据日期范围获取订单
-		}
-
 		// 热榜相关路由组
 		leaderboard := api.Group("/leaderboard")
 		{
 			leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜
+		}
+
+		// 金额配置相关路由组
+		amountConfig := api.Group("/amount-config")
+		{
+			amountConfig.Use(middleware.AuthMiddleware()) // 需要认证
+			amountConfig.POST("/list", amountConfigController.GetAmountConfigsByType) // 根据类型获取金额配置列表
+			amountConfig.GET("/:id", amountConfigController.GetAmountConfigByID)      // 根据ID获取金额配置详情
+		}
+
+		// 公告相关路由组
+		announcements := api.Group("/announcements")
+		{
+			announcements.POST("/list", announcementController.GetAnnouncementList) // 获取公告列表
 		}
 	}
 

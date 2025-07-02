@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"time"
 )
 
@@ -10,20 +11,35 @@ const (
 	OrderStatusSuccess   = "success"   // 成功
 	OrderStatusFailed    = "failed"    // 失败
 	OrderStatusCancelled = "cancelled" // 已取消
+	OrderStatusExpired   = "expired"   // 已过期
 )
 
-// Order 订单模型
+// TaskStatus 任务完成状态枚举
+const (
+	TaskStatusPending = "pending" // 待完成
+	TaskStatusSuccess = "success" // 已完成
+)
+
+// Order 订单表
 type Order struct {
-	ID          uint      `json:"id" gorm:"primaryKey;autoIncrement"`
-	OrderNo     string    `json:"order_no" gorm:"uniqueIndex;not null;size:32;comment:订单编号"`
-	Uid         string    `json:"uid" gorm:"not null;size:8;index;comment:用户唯一ID"`
-	BuyAmount   float64   `json:"buy_amount" gorm:"type:decimal(15,2);not null;comment:买入金额"`
-	ProfitAmount float64  `json:"profit_amount" gorm:"type:decimal(15,2);default:0.00;comment:利润金额"`
-	Status      string    `json:"status" gorm:"not null;size:20;default:'pending';index;comment:订单状态"`
-	Description string    `json:"description" gorm:"size:200;comment:订单描述"`
-	Remark      string    `json:"remark" gorm:"size:500;comment:备注信息"`
-	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime;index;comment:创建时间"`
-	UpdatedAt   time.Time `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
+	ID                    uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	OrderNo               string    `json:"order_no" gorm:"uniqueIndex;not null;size:32;comment:订单编号"`
+	Uid                   string    `json:"uid" gorm:"not null;size:8;index;comment:用户唯一ID"`
+	Amount                float64   `json:"amount" gorm:"type:decimal(15,2);not null;comment:订单金额"`
+	ProfitAmount          float64   `json:"profit_amount" gorm:"type:decimal(15,2);not null;comment:利润金额"`
+	Status                string    `json:"status" gorm:"not null;size:20;default:'pending';index;comment:订单状态"`
+	ExpireTime            time.Time `json:"expire_time" gorm:"not null;index;comment:订单剩余时间"`
+	LikeCount             int       `json:"like_count" gorm:"not null;default:0;comment:点赞数"`
+	ShareCount            int       `json:"share_count" gorm:"not null;default:0;comment:转发数"`
+	FollowCount           int       `json:"follow_count" gorm:"not null;default:0;comment:关注数"`
+	FavoriteCount         int       `json:"favorite_count" gorm:"not null;default:0;comment:收藏数"`
+	LikeStatus            string    `json:"like_status" gorm:"not null;size:20;default:'pending';comment:点赞完成状态"`
+	ShareStatus           string    `json:"share_status" gorm:"not null;size:20;default:'pending';comment:转发完成状态"`
+	FollowStatus          string    `json:"follow_status" gorm:"not null;size:20;default:'pending';comment:关注完成状态"`
+	FavoriteStatus        string    `json:"favorite_status" gorm:"not null;size:20;default:'pending';comment:收藏完成状态"`
+	AuditorUid            string    `json:"auditor_uid" gorm:"size:8;index;comment:审核员ID"`
+	CreatedAt             time.Time `json:"created_at" gorm:"autoCreateTime;index;comment:创建时间"`
+	UpdatedAt             time.Time `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 // TableName 指定表名
@@ -33,36 +49,66 @@ func (Order) TableName() string {
 
 // TableComment 表注释
 func (Order) TableComment() string {
-	return "订单表 - 记录用户订单信息，包括买入金额、利润金额等"
+	return "订单表 - 记录用户创建的订单信息，包括任务要求和完成状态"
 }
 
 // OrderResponse 订单响应
 type OrderResponse struct {
-	ID           uint      `json:"id"`
-	OrderNo      string    `json:"order_no"`
-	Uid          string    `json:"uid"`
-	BuyAmount    float64   `json:"buy_amount"`
-	ProfitAmount float64   `json:"profit_amount"`
-	Status       string    `json:"status"`
-	StatusName   string    `json:"status_name"`
-	Description  string    `json:"description"`
-	Remark       string    `json:"remark"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID                    uint      `json:"id"`
+	OrderNo               string    `json:"order_no"`
+	Uid                   string    `json:"uid"`
+	Amount                float64   `json:"amount"`
+	ProfitAmount          float64   `json:"profit_amount"`
+	Status                string    `json:"status"`
+	StatusName            string    `json:"status_name"`
+	ExpireTime            time.Time `json:"expire_time"`
+	LikeCount             int       `json:"like_count"`
+	ShareCount            int       `json:"share_count"`
+	FollowCount           int       `json:"follow_count"`
+	FavoriteCount         int       `json:"favorite_count"`
+	LikeStatus            string    `json:"like_status"`
+	LikeStatusName        string    `json:"like_status_name"`
+	ShareStatus           string    `json:"share_status"`
+	ShareStatusName       string    `json:"share_status_name"`
+	FollowStatus          string    `json:"follow_status"`
+	FollowStatusName      string    `json:"follow_status_name"`
+	FavoriteStatus        string    `json:"favorite_status"`
+	FavoriteStatusName    string    `json:"favorite_status_name"`
+	AuditorUid            string    `json:"auditor_uid"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+	IsExpired             bool      `json:"is_expired"`
+	RemainingTime         int64     `json:"remaining_time"` // 剩余时间（秒）
 }
 
 // ToResponse 转换为响应格式
 func (o *Order) ToResponse() OrderResponse {
 	return OrderResponse{
-		ID:           o.ID,
-		OrderNo:      o.OrderNo,
-		Uid:          o.Uid,
-		BuyAmount:    o.BuyAmount,
-		ProfitAmount: o.ProfitAmount,
-		Status:       o.Status,
-		StatusName:   o.GetStatusName(),
-		Description:  o.Description,
-		Remark:       o.Remark,
-		CreatedAt:    o.CreatedAt,
+		ID:                 o.ID,
+		OrderNo:            o.OrderNo,
+		Uid:                o.Uid,
+		Amount:             o.Amount,
+		ProfitAmount:       o.ProfitAmount,
+		Status:             o.Status,
+		StatusName:         o.GetStatusName(),
+		ExpireTime:         o.ExpireTime,
+		LikeCount:          o.LikeCount,
+		ShareCount:         o.ShareCount,
+		FollowCount:        o.FollowCount,
+		FavoriteCount:      o.FavoriteCount,
+		LikeStatus:         o.LikeStatus,
+		LikeStatusName:     o.GetTaskStatusName(o.LikeStatus),
+		ShareStatus:        o.ShareStatus,
+		ShareStatusName:    o.GetTaskStatusName(o.ShareStatus),
+		FollowStatus:       o.FollowStatus,
+		FollowStatusName:   o.GetTaskStatusName(o.FollowStatus),
+		FavoriteStatus:     o.FavoriteStatus,
+		FavoriteStatusName: o.GetTaskStatusName(o.FavoriteStatus),
+		AuditorUid:         o.AuditorUid,
+		CreatedAt:          o.CreatedAt,
+		UpdatedAt:          o.UpdatedAt,
+		IsExpired:          o.IsExpired(),
+		RemainingTime:      o.GetRemainingTime(),
 	}
 }
 
@@ -73,33 +119,162 @@ func (o *Order) GetStatusName() string {
 		OrderStatusSuccess:   "成功",
 		OrderStatusFailed:    "失败",
 		OrderStatusCancelled: "已取消",
+		OrderStatusExpired:   "已过期",
 	}
 	return statusNames[o.Status]
 }
 
-// IsSuccess 检查订单是否成功
-func (o *Order) IsSuccess() bool {
-	return o.Status == OrderStatusSuccess
+// GetTaskStatusName 获取任务状态名称
+func (o *Order) GetTaskStatusName(status string) string {
+	statusNames := map[string]string{
+		TaskStatusPending: "待完成",
+		TaskStatusSuccess: "已完成",
+	}
+	return statusNames[status]
 }
 
-// IsPending 检查订单是否待处理
-func (o *Order) IsPending() bool {
-	return o.Status == OrderStatusPending
+// IsExpired 检查订单是否已过期
+func (o *Order) IsExpired() bool {
+	return time.Now().After(o.ExpireTime)
 }
 
-// IsFailed 检查订单是否失败
-func (o *Order) IsFailed() bool {
-	return o.Status == OrderStatusFailed
+// GetRemainingTime 获取剩余时间（秒）
+func (o *Order) GetRemainingTime() int64 {
+	if o.IsExpired() {
+		return 0
+	}
+	return int64(o.ExpireTime.Sub(time.Now()).Seconds())
 }
 
-// IsCancelled 检查订单是否已取消
-func (o *Order) IsCancelled() bool {
-	return o.Status == OrderStatusCancelled
+// IsAllTasksCompleted 检查所有任务是否已完成
+func (o *Order) IsAllTasksCompleted() bool {
+	return o.LikeStatus == TaskStatusSuccess &&
+		o.ShareStatus == TaskStatusSuccess &&
+		o.FollowStatus == TaskStatusSuccess &&
+		o.FavoriteStatus == TaskStatusSuccess
 }
 
-// GetTotalAmount 获取订单总金额（买入金额 + 利润金额）
-func (o *Order) GetTotalAmount() float64 {
-	return o.BuyAmount + o.ProfitAmount
+// IsAllTasksZero 检查所有任务数是否都为0
+func (o *Order) IsAllTasksZero() bool {
+	return o.LikeCount == 0 && o.ShareCount == 0 && o.FollowCount == 0 && o.FavoriteCount == 0
+}
+
+// HasAnyTask 检查是否有任何任务
+func (o *Order) HasAnyTask() bool {
+	return o.LikeCount > 0 || o.ShareCount > 0 || o.FollowCount > 0 || o.FavoriteCount > 0
+}
+
+// InitializeTaskStatuses 初始化任务状态
+func (o *Order) InitializeTaskStatuses() {
+	// 如果点赞数为0，设置为已完成
+	if o.LikeCount == 0 {
+		o.LikeStatus = TaskStatusSuccess
+	} else {
+		o.LikeStatus = TaskStatusPending
+	}
+
+	// 如果转发数为0，设置为已完成
+	if o.ShareCount == 0 {
+		o.ShareStatus = TaskStatusSuccess
+	} else {
+		o.ShareStatus = TaskStatusPending
+	}
+
+	// 如果关注数为0，设置为已完成
+	if o.FollowCount == 0 {
+		o.FollowStatus = TaskStatusSuccess
+	} else {
+		o.FollowStatus = TaskStatusPending
+	}
+
+	// 如果收藏数为0，设置为已完成
+	if o.FavoriteCount == 0 {
+		o.FavoriteStatus = TaskStatusSuccess
+	} else {
+		o.FavoriteStatus = TaskStatusPending
+	}
+}
+
+// ValidateOrderData 验证订单数据
+func (o *Order) ValidateOrderData() error {
+	// 检查总金额不能为0
+	if o.Amount <= 0 {
+		return errors.New("订单金额必须大于0")
+	}
+
+	// 检查利润金额不能为负数
+	if o.ProfitAmount < 0 {
+		return errors.New("利润金额不能为负数")
+	}
+
+	// 检查不能所有任务都为0
+	if o.IsAllTasksZero() {
+		return errors.New("至少需要有一个任务数量大于0")
+	}
+
+	// 检查任务数量不能为负数
+	if o.LikeCount < 0 || o.ShareCount < 0 || o.FollowCount < 0 || o.FavoriteCount < 0 {
+		return errors.New("任务数量不能为负数")
+	}
+
+	return nil
+}
+
+// CreateOrderRequest 创建订单请求
+type CreateOrderRequest struct {
+	Amount         float64 `json:"amount" binding:"required,gt=0"`
+	ProfitAmount   float64 `json:"profit_amount" binding:"required,gte=0"`
+	LikeCount      int     `json:"like_count" binding:"gte=0"`
+	ShareCount     int     `json:"share_count" binding:"gte=0"`
+	FollowCount    int     `json:"follow_count" binding:"gte=0"`
+	FavoriteCount  int     `json:"favorite_count" binding:"gte=0"`
+}
+
+// OrderStatusType 订单状态类型枚举
+const (
+	OrderStatusTypeInProgress = 1 // 进行中
+	OrderStatusTypeCompleted  = 2 // 已完成
+	OrderStatusTypeAll        = 3 // 全部
+)
+
+// GetOrderListRequest 获取订单列表请求
+type GetOrderListRequest struct {
+	Page     int `json:"page" binding:"min=1"`
+	PageSize int `json:"page_size" binding:"min=1,max=100"`
+	Status   int  `json:"status" binding:"min=1,max=3"` // 1:进行中 2:已完成 3:全部
+}
+
+// GetStatusByType 根据状态类型获取对应的状态值
+func GetStatusByType(statusType int) string {
+	switch statusType {
+	case OrderStatusTypeInProgress:
+		return OrderStatusPending
+	case OrderStatusTypeCompleted:
+		return OrderStatusSuccess
+	case OrderStatusTypeAll:
+		return "" // 空字符串表示查询全部
+	default:
+		return ""
+	}
+}
+
+// GetStatusTypeName 获取状态类型名称
+func GetStatusTypeName(statusType int) string {
+	switch statusType {
+	case OrderStatusTypeInProgress:
+		return "进行中"
+	case OrderStatusTypeCompleted:
+		return "已完成"
+	case OrderStatusTypeAll:
+		return "全部"
+	default:
+		return "未知"
+	}
+}
+
+// GetOrderDetailRequest 获取订单详情请求
+type GetOrderDetailRequest struct {
+	OrderNo string `json:"order_no" binding:"required"`
 }
 
 // OrderListRequest 订单列表请求

@@ -32,18 +32,52 @@ func (r *OrderRepository) FindOrderByOrderNo(ctx context.Context, orderNo string
 	return &order, nil
 }
 
+// GetUserOrders 获取用户订单列表
+func (r *OrderRepository) GetUserOrders(ctx context.Context, uid string, page, pageSize int, statusType int) ([]models.Order, int64, error) {
+	var orders []models.Order
+	var total int64
+
+	// 构建查询条件
+	conditions := map[string]interface{}{"uid": uid}
+	
+	// 根据状态类型添加状态过滤条件
+	status := models.GetStatusByType(statusType)
+	if status != "" {
+		conditions["status"] = status
+	}
+
+	// 获取总数
+	err := r.db.WithContext(ctx).Model(&models.Order{}).Where(conditions).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 计算偏移量
+	offset := (page - 1) * pageSize
+
+	// 获取分页数据
+	query := r.db.WithContext(ctx).Where(conditions).Order("created_at DESC").Offset(offset).Limit(pageSize)
+	err = query.Find(&orders).Error
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return orders, total, nil
+}
+
 // UpdateOrder 更新订单
 func (r *OrderRepository) UpdateOrder(ctx context.Context, order *models.Order) error {
 	return r.Update(ctx, order)
 }
 
-// GetUserOrders 获取用户订单列表
-func (r *OrderRepository) GetUserOrders(ctx context.Context, uid string, page, pageSize int) ([]models.Order, int64, error) {
+// GetOrdersByStatus 根据状态获取订单列表
+func (r *OrderRepository) GetOrdersByStatus(ctx context.Context, status string, page, pageSize int) ([]models.Order, int64, error) {
 	var orders []models.Order
 	var total int64
 
 	// 获取总数
-	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Count(&total).Error
+	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("status = ?", status).Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -53,7 +87,7 @@ func (r *OrderRepository) GetUserOrders(ctx context.Context, uid string, page, p
 
 	// 获取分页数据
 	err = r.db.WithContext(ctx).
-		Where("uid = ?", uid).
+		Where("status = ?", status).
 		Order("created_at DESC").
 		Offset(offset).
 		Limit(pageSize).
@@ -66,117 +100,68 @@ func (r *OrderRepository) GetUserOrders(ctx context.Context, uid string, page, p
 	return orders, total, nil
 }
 
-// GetOrdersByStatus 根据状态获取用户订单
-func (r *OrderRepository) GetOrdersByStatus(ctx context.Context, uid, status string, page, pageSize int) ([]models.Order, int64, error) {
+// GetExpiredOrders 获取已过期的订单
+func (r *OrderRepository) GetExpiredOrders(ctx context.Context) ([]models.Order, error) {
 	var orders []models.Order
-	var total int64
-
-	// 获取总数
-	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, status).Count(&total).Error
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 计算偏移量
-	offset := (page - 1) * pageSize
-
-	// 获取分页数据
-	err = r.db.WithContext(ctx).
-		Where("uid = ? AND status = ?", uid, status).
-		Order("created_at DESC").
-		Offset(offset).
-		Limit(pageSize).
+	err := r.db.WithContext(ctx).
+		Where("status = ? AND expire_time < NOW()", models.OrderStatusPending).
 		Find(&orders).Error
-
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return orders, total, nil
+	return orders, err
 }
 
-// GetOrdersByDateRange 根据日期范围获取用户订单
-func (r *OrderRepository) GetOrdersByDateRange(ctx context.Context, uid string, startDate, endDate string, page, pageSize int) ([]models.Order, int64, error) {
-	var orders []models.Order
-	var total int64
-
-	// 获取总数
-	err := r.db.WithContext(ctx).Model(&models.Order{}).
-		Where("uid = ? AND DATE(created_at) BETWEEN ? AND ?", uid, startDate, endDate).
-		Count(&total).Error
-	if err != nil {
-		return nil, 0, err
+// GetOrderStats 获取订单统计信息
+func (r *OrderRepository) GetOrderStats(ctx context.Context, uid string) (map[string]interface{}, error) {
+	var stats struct {
+		TotalOrders    int64   `json:"total_orders"`
+		PendingOrders  int64   `json:"pending_orders"`
+		SuccessOrders  int64   `json:"success_orders"`
+		FailedOrders   int64   `json:"failed_orders"`
+		TotalAmount    float64 `json:"total_amount"`
+		TotalProfit    float64 `json:"total_profit"`
 	}
-
-	// 计算偏移量
-	offset := (page - 1) * pageSize
-
-	// 获取分页数据
-	err = r.db.WithContext(ctx).
-		Where("uid = ? AND DATE(created_at) BETWEEN ? AND ?", uid, startDate, endDate).
-		Order("created_at DESC").
-		Offset(offset).
-		Limit(pageSize).
-		Find(&orders).Error
-
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return orders, total, nil
-}
-
-// GetUserOrderStats 获取用户订单统计
-func (r *OrderRepository) GetUserOrderStats(ctx context.Context, uid string) (map[string]interface{}, error) {
-	stats := make(map[string]interface{})
 
 	// 总订单数
-	var totalOrders int64
-	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Count(&totalOrders).Error
+	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Count(&stats.TotalOrders).Error
 	if err != nil {
 		return nil, err
 	}
-	stats["total_orders"] = totalOrders
-
-	// 成功订单数
-	var successOrders int64
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusSuccess).Count(&successOrders).Error
-	if err != nil {
-		return nil, err
-	}
-	stats["success_orders"] = successOrders
 
 	// 待处理订单数
-	var pendingOrders int64
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusPending).Count(&pendingOrders).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusPending).Count(&stats.PendingOrders).Error
 	if err != nil {
 		return nil, err
 	}
-	stats["pending_orders"] = pendingOrders
+
+	// 成功订单数
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusSuccess).Count(&stats.SuccessOrders).Error
+	if err != nil {
+		return nil, err
+	}
 
 	// 失败订单数
-	var failedOrders int64
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusFailed).Count(&failedOrders).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusFailed).Count(&stats.FailedOrders).Error
 	if err != nil {
 		return nil, err
 	}
-	stats["failed_orders"] = failedOrders
 
-	// 总买入金额
-	var totalBuyAmount float64
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Select("COALESCE(SUM(buy_amount), 0)").Scan(&totalBuyAmount).Error
+	// 总金额
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Select("COALESCE(SUM(amount), 0)").Where("uid = ?", uid).Scan(&stats.TotalAmount).Error
 	if err != nil {
 		return nil, err
 	}
-	stats["total_buy_amount"] = totalBuyAmount
 
-	// 总利润金额
-	var totalProfitAmount float64
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Select("COALESCE(SUM(profit_amount), 0)").Scan(&totalProfitAmount).Error
+	// 总利润
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Select("COALESCE(SUM(profit_amount), 0)").Where("uid = ?", uid).Scan(&stats.TotalProfit).Error
 	if err != nil {
 		return nil, err
 	}
-	stats["total_profit_amount"] = totalProfitAmount
 
-	return stats, nil
+	return map[string]interface{}{
+		"total_orders":   stats.TotalOrders,
+		"pending_orders": stats.PendingOrders,
+		"success_orders": stats.SuccessOrders,
+		"failed_orders":  stats.FailedOrders,
+		"total_amount":   stats.TotalAmount,
+		"total_profit":   stats.TotalProfit,
+	}, nil
 } 
