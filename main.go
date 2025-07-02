@@ -156,6 +156,7 @@ func main() {
 	leaderboardController := controllers.NewLeaderboardController()
 	amountConfigController := controllers.NewAmountConfigController()
 	announcementController := controllers.NewAnnouncementController()
+	groupBuyController := controllers.NewGroupBuyController()
 
 	// ==================== 基础路由 ====================
 	// 首页 - 服务状态检查
@@ -273,6 +274,14 @@ func main() {
 		announcements := api.Group("/announcements")
 		{
 			announcements.POST("/list", announcementController.GetAnnouncementList) // 获取公告列表 - 查询系统公告信息（支持分页）
+		}
+
+		// ==================== 拼单管理路由组 ====================
+		// 拼单管理接口 - 拼单相关操作
+		groupBuy := api.Group("/groupBuy") 
+		{
+			groupBuy.POST("/active-detail", groupBuyController.GetActiveGroupBuyDetail) // 获取活跃拼单详情 - 获取符合条件的拼单详情
+			groupBuy.POST("/join", middleware.AuthMiddleware(), groupBuyController.JoinGroupBuy) // 确认参与拼单 - 创建订单并更新拼单状态
 		}
 	}
 

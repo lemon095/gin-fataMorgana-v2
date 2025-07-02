@@ -25,6 +25,9 @@ const (
 	CodeValidationFailed = 1007 // 验证失败
 	CodeAccountLocked   = 1008 // 账户锁定
 	CodeRegisterClosed  = 1009 // 注册关闭
+	CodeGroupBuyNotFound = 1010 // 拼单不存在
+	CodeGroupBuyExpired = 1011 // 拼单已过期
+	CodeGroupBuyOccupied = 1012 // 拼单已被占用
 )
 
 // ResponseMessage 完整的响应消息映射
@@ -45,6 +48,9 @@ var ResponseMessage = map[int]string{
 	CodeValidationFailed: "验证失败",
 	CodeAccountLocked:   "账户已被锁定",
 	CodeRegisterClosed:  "当前系统不允许注册",
+	CodeGroupBuyNotFound: "拼单不存在或已被删除",
+	CodeGroupBuyExpired: "拼单已超过截止时间",
+	CodeGroupBuyOccupied: "拼单已被其他用户参与",
 }
 
 // Response 统一响应结构
