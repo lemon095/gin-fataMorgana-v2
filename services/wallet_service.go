@@ -130,7 +130,17 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取钱包信息失败: %w", err)
+		// 钱包不存在，自动创建
+		wallet = &models.Wallet{
+			Uid:      uid,
+			Balance:  0.00,
+			Status:   1,
+			Currency: "CNY",
+		}
+		
+		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
+			return nil, fmt.Errorf("创建钱包失败: %w", err)
+		}
 	}
 
 	return wallet, nil
@@ -170,10 +180,20 @@ func (s *WalletService) generateTransactionNo() string {
 func (s *WalletService) Recharge(uid string, amount float64, description string, operatorUid string) (string, error) {
 	ctx := context.Background()
 
-	// 获取钱包
+	// 获取钱包，如果不存在则自动创建
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		return "", fmt.Errorf("获取钱包失败: %w", err)
+		// 钱包不存在，自动创建
+		wallet = &models.Wallet{
+			Uid:      uid,
+			Balance:  0.00,
+			Status:   1,
+			Currency: "CNY",
+		}
+		
+		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
+			return "", fmt.Errorf("创建钱包失败: %w", err)
+		}
 	}
 
 	// 检查钱包状态
@@ -255,10 +275,20 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 		return nil, fmt.Errorf("登录密码错误")
 	}
 
-	// 获取钱包
+	// 获取钱包，如果不存在则自动创建
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, req.Uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取钱包失败: %w", err)
+		// 钱包不存在，自动创建
+		wallet = &models.Wallet{
+			Uid:      req.Uid,
+			Balance:  0.00,
+			Status:   1,
+			Currency: "CNY",
+		}
+		
+		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
+			return nil, fmt.Errorf("创建钱包失败: %w", err)
+		}
 	}
 
 	// 检查钱包状态

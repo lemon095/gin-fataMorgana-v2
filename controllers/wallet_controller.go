@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"gin-fataMorgana/database"
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
@@ -111,12 +113,30 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID作为操作员
-	operatorUid := middleware.GetCurrentUser(c)
-	operatorUidStr := "system"
-	if operatorUid != 0 {
-		operatorUidStr = strconv.FormatUint(uint64(operatorUid), 10)
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
 	}
+
+	// 根据user_id查询uid，确保只能操作自己的钱包
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 校验uid是否与当前登录用户匹配
+	if req.Uid != user.Uid {
+		utils.ErrorWithMessage(c, utils.CodeForbidden, "只能操作自己的钱包")
+		return
+	}
+
+	// 获取当前用户ID作为操作员
+	operatorUidStr := user.Uid
 
 	transactionNo, err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description, operatorUidStr)
 	if err != nil {
@@ -136,12 +156,30 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID作为操作员
-	operatorUid := middleware.GetCurrentUser(c)
-	operatorUidStr := "system"
-	if operatorUid != 0 {
-		operatorUidStr = strconv.FormatUint(uint64(operatorUid), 10)
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
 	}
+
+	// 根据user_id查询uid，确保只能操作自己的钱包
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 校验uid是否与当前登录用户匹配
+	if req.Uid != user.Uid {
+		utils.ErrorWithMessage(c, utils.CodeForbidden, "只能操作自己的钱包")
+		return
+	}
+
+	// 获取当前用户ID作为操作员
+	operatorUidStr := user.Uid
 
 	response, err := wc.walletService.RequestWithdraw(&req, operatorUidStr)
 	if err != nil {

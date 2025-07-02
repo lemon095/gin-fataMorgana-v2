@@ -27,14 +27,16 @@ func InitJWT() {
 // Claims JWT声明
 type Claims struct {
 	UserID   uint   `json:"user_id"`
+	Uid      string `json:"uid"`
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
 // GenerateAccessToken 生成访问令牌
-func GenerateAccessToken(userID uint, username string) (string, error) {
+func GenerateAccessToken(userID uint, uid string, username string) (string, error) {
 	claims := Claims{
 		UserID:   userID,
+		Uid:      uid,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpiry)),
@@ -50,9 +52,10 @@ func GenerateAccessToken(userID uint, username string) (string, error) {
 }
 
 // GenerateRefreshToken 生成刷新令牌
-func GenerateRefreshToken(userID uint, username string) (string, error) {
+func GenerateRefreshToken(userID uint, uid string, username string) (string, error) {
 	claims := Claims{
 		UserID:   userID,
+		Uid:      uid,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenExpiry)),
