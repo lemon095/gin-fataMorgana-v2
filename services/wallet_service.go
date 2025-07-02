@@ -199,7 +199,7 @@ func (s *WalletService) generateTransactionNo() string {
 }
 
 // Recharge 充值
-func (s *WalletService) Recharge(uid string, amount float64, description string, operatorUid string) (string, error) {
+func (s *WalletService) Recharge(uid string, amount float64, description string) (string, error) {
 	ctx := context.Background()
 
 	// 获取钱包，如果不存在则自动创建
@@ -260,7 +260,7 @@ func (s *WalletService) Recharge(uid string, amount float64, description string,
 		BalanceAfter:  balanceBefore, // 余额不变
 		Status:        models.TransactionStatusPending, // 设置为待处理状态
 		Description:   description,
-		OperatorUid:   operatorUid,
+		OperatorUid:   "", // 申请时为空，后台处理时由管理员设置
 	}
 
 	// 创建交易记录
@@ -273,11 +273,8 @@ func (s *WalletService) Recharge(uid string, amount float64, description string,
 
 // WithdrawRequest 提现申请请求
 type WithdrawRequest struct {
-	Uid         string  `json:"uid" binding:"required"`
-	Amount      float64 `json:"amount" binding:"required,gt=0"`
-	Description string  `json:"description"`
-	BankCardInfo string `json:"bank_card_info"` // 提现银行卡信息
-	Password    string  `json:"password" binding:"required"` // 登录密码
+	Amount   float64 `json:"amount" binding:"required,gt=0"` // 提现金额
+	Password string  `json:"password" binding:"required"`    // 登录密码
 }
 
 // WithdrawResponse 提现申请响应
@@ -289,11 +286,11 @@ type WithdrawResponse struct {
 }
 
 // RequestWithdraw 申请提现（锁定金额）
-func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string) (*WithdrawResponse, error) {
+func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*WithdrawResponse, error) {
 	ctx := context.Background()
 
 	// 验证用户密码
-	user, err := s.userRepo.FindByUid(ctx, req.Uid)
+	user, err := s.userRepo.FindByUid(ctx, uid)
 	if err != nil {
 		return nil, fmt.Errorf("获取用户信息失败: %w", err)
 	}
@@ -314,10 +311,10 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 	}
 
 	// 获取钱包，如果不存在则自动创建
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, req.Uid)
+	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
 		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
-		user, err := s.userRepo.FindByUid(ctx, req.Uid)
+		user, err := s.userRepo.FindByUid(ctx, uid)
 		if err != nil {
 			return nil, fmt.Errorf("用户不存在: %w", err)
 		}
@@ -329,7 +326,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 
 		// 自动创建钱包
 		wallet = &models.Wallet{
-			Uid:      req.Uid,
+			Uid:      uid,
 			Balance:  0.00,
 			Status:   1,
 			Currency: "CNY",
@@ -352,7 +349,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 
 	// 检查总余额是否足够
 	if wallet.Balance < req.Amount {
-		return nil, fmt.Errorf("总余额不足，当前总余额: %.2f，申请提现: %.2f", wallet.Balance, req.Amount)
+		return nil, fmt.Errorf("余额不足，当前余额: %.2f元，申请提现: %.2f元", wallet.Balance, req.Amount)
 	}
 
 	// 检查是否超过单笔提现限额（可选，这里设置100万）
@@ -363,7 +360,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 	// 检查是否超过每日提现限额（可选，这里设置500万）
 	// 这里可以添加每日提现限额的检查逻辑
 	// dailyWithdrawLimit := 5000000.0
-	// if err := s.checkDailyWithdrawLimit(ctx, req.Uid, req.Amount, dailyWithdrawLimit); err != nil {
+	// if err := s.checkDailyWithdrawLimit(ctx, uid, req.Amount, dailyWithdrawLimit); err != nil {
 	//     return nil, err
 	// }
 
@@ -383,18 +380,27 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 	// 生成交易流水号
 	transactionNo := s.generateTransactionNo()
 
+	// 获取用户银行卡信息用于备注
+	bankCardInfo := ""
+	if user.BankCardInfo != "" {
+		var bankCard models.BankCardInfo
+		if err := utils.JSONToStruct(user.BankCardInfo, &bankCard); err == nil {
+			bankCardInfo = fmt.Sprintf("%s-%s", bankCard.BankName, utils.MaskBankCard(bankCard.CardNumber))
+		}
+	}
+
 	// 创建提现交易记录
 	transaction := &models.WalletTransaction{
 		TransactionNo: transactionNo,
-		Uid:           req.Uid,
+		Uid:           uid,
 		Type:          models.TransactionTypeWithdraw,
 		Amount:        req.Amount,
 		BalanceBefore: balanceBefore,
 		BalanceAfter:  wallet.Balance,
 		Status:        models.TransactionStatusPending, // 设置为待处理状态
-		Description:   req.Description,
-		Remark:        req.BankCardInfo, // 将银行卡信息存储到备注字段
-		OperatorUid:   operatorUid,
+		Description:   "提现", // 服务端写死
+		Remark:        bankCardInfo, // 将银行卡信息存储到备注字段
+		OperatorUid:   "", // 申请时为空，后台处理时由管理员设置
 	}
 
 	// 创建交易记录

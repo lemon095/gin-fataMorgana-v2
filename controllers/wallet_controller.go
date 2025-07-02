@@ -151,10 +151,7 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID作为操作员
-	operatorUidStr := user.Uid
-
-	transactionNo, err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description, operatorUidStr)
+	transactionNo, err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
@@ -188,16 +185,7 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 		return
 	}
 
-	// 校验uid是否与当前登录用户匹配
-	if req.Uid != user.Uid {
-		utils.ErrorWithMessage(c, utils.CodeForbidden, "只能操作自己的钱包")
-		return
-	}
-
-	// 获取当前用户ID作为操作员
-	operatorUidStr := user.Uid
-
-	response, err := wc.walletService.RequestWithdraw(&req, operatorUidStr)
+	response, err := wc.walletService.RequestWithdraw(&req, user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
