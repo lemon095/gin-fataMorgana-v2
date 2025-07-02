@@ -90,6 +90,7 @@ func AutoMigrate() error {
 		&models.AmountConfig{},
 		&models.Announcement{},
 		&models.AnnouncementBanner{},
+		&models.GroupBuy{},
 	)
 	if err != nil {
 		return fmt.Errorf("数据库迁移失败: %w", err)
@@ -98,6 +99,12 @@ func AutoMigrate() error {
 	// 添加表注释
 	if err := addTableComments(); err != nil {
 		log.Printf("添加表注释失败: %v", err)
+	}
+
+	// 为拼单表添加注释
+	sqlDB, err := DB.DB()
+	if err == nil {
+		_, _ = sqlDB.Exec("ALTER TABLE `group_buys` COMMENT = '拼单表 - 记录拼单信息，包括参与人数、付款金额、截止时间等'")
 	}
 
 	log.Println("数据库表迁移完成")
