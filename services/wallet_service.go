@@ -109,6 +109,17 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 		return existingWallet, nil // 钱包已存在，直接返回
 	}
 
+	// 检查用户是否存在且状态正常
+	user, err := s.userRepo.FindByUid(ctx, uid)
+	if err != nil {
+		return nil, fmt.Errorf("用户不存在: %w", err)
+	}
+
+	// 检查用户状态
+	if !user.IsActive() {
+		return nil, fmt.Errorf("用户账户已被禁用，无法创建钱包")
+	}
+
 	// 创建新钱包
 	wallet := &models.Wallet{
 		Uid:      uid,
@@ -130,7 +141,18 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		// 钱包不存在，自动创建
+		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
+		user, err := s.userRepo.FindByUid(ctx, uid)
+		if err != nil {
+			return nil, fmt.Errorf("用户不存在: %w", err)
+		}
+
+		// 检查用户状态
+		if !user.IsActive() {
+			return nil, fmt.Errorf("用户账户已被禁用，无法创建钱包")
+		}
+
+		// 自动创建钱包
 		wallet = &models.Wallet{
 			Uid:      uid,
 			Balance:  0.00,
@@ -183,7 +205,18 @@ func (s *WalletService) Recharge(uid string, amount float64, description string,
 	// 获取钱包，如果不存在则自动创建
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		// 钱包不存在，自动创建
+		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
+		user, err := s.userRepo.FindByUid(ctx, uid)
+		if err != nil {
+			return "", fmt.Errorf("用户不存在: %w", err)
+		}
+
+		// 检查用户状态
+		if !user.IsActive() {
+			return "", fmt.Errorf("用户账户已被禁用，无法创建钱包")
+		}
+
+		// 自动创建钱包
 		wallet = &models.Wallet{
 			Uid:      uid,
 			Balance:  0.00,
@@ -275,10 +308,26 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 		return nil, fmt.Errorf("登录密码错误")
 	}
 
+	// 检查用户是否绑定了银行卡
+	if !s.hasValidBankCard(user) {
+		return nil, fmt.Errorf("请先绑定银行卡后再进行提现操作")
+	}
+
 	// 获取钱包，如果不存在则自动创建
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, req.Uid)
 	if err != nil {
-		// 钱包不存在，自动创建
+		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
+		user, err := s.userRepo.FindByUid(ctx, req.Uid)
+		if err != nil {
+			return nil, fmt.Errorf("用户不存在: %w", err)
+		}
+
+		// 检查用户状态
+		if !user.IsActive() {
+			return nil, fmt.Errorf("用户账户已被禁用，无法创建钱包")
+		}
+
+		// 自动创建钱包
 		wallet = &models.Wallet{
 			Uid:      req.Uid,
 			Balance:  0.00,
@@ -362,6 +411,30 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, operatorUid string
 		Status:        models.TransactionStatusPending,
 		Message:       "提现申请已提交，等待处理",
 	}, nil
+}
+
+// hasValidBankCard 检查用户是否绑定了有效的银行卡
+func (s *WalletService) hasValidBankCard(user *models.User) bool {
+	// 检查银行卡信息是否为空
+	if user.BankCardInfo == "" || user.BankCardInfo == "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}" {
+		return false
+	}
+
+	// 解析银行卡信息
+	var bankCardInfo models.BankCardInfo
+	if err := utils.JSONToStruct(user.BankCardInfo, &bankCardInfo); err != nil {
+		return false
+	}
+
+	// 检查银行卡信息是否完整
+	if bankCardInfo.CardNumber == "" || 
+	   bankCardInfo.CardHolder == "" || 
+	   bankCardInfo.BankName == "" || 
+	   bankCardInfo.CardType == "" {
+		return false
+	}
+
+	return true
 }
 
 // checkDailyWithdrawLimit 检查每日提现限额

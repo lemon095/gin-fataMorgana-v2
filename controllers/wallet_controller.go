@@ -7,7 +7,6 @@ import (
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,9 +39,18 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 		return
 	}
 
+	// 根据user_id查询uid，确保获取正确的uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
 	// 构建服务请求
 	serviceReq := &services.GetUserTransactionsRequest{
-		Uid:      strconv.FormatUint(uint64(userID), 10),
+		Uid:      user.Uid,
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}
@@ -73,8 +81,16 @@ func (wc *WalletController) GetWallet(c *gin.Context) {
 		return
 	}
 
-	uid := strconv.FormatUint(uint64(userID), 10)
-	wallet, err := wc.walletService.GetWallet(uid)
+	// 根据user_id查询uid，确保获取正确的uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	wallet, err := wc.walletService.GetWallet(user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
@@ -206,8 +222,16 @@ func (wc *WalletController) GetWithdrawSummary(c *gin.Context) {
 		return
 	}
 
-	uid := strconv.FormatUint(uint64(userID), 10)
-	summary, err := wc.walletService.GetWithdrawSummary(uid)
+	// 根据user_id查询uid，确保获取正确的uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	summary, err := wc.walletService.GetWithdrawSummary(user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
