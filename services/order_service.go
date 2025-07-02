@@ -26,7 +26,7 @@ func NewOrderService() *OrderService {
 
 // CreateOrderRequest 创建订单请求
 type CreateOrderRequest struct {
-	Uid          string  `json:"uid" binding:"required"`
+	Uid          string  `json:"uid"` // 从token中获取，不需要在请求中传递
 	Amount       float64 `json:"amount" binding:"required,gt=0"`
 	ProfitAmount float64 `json:"profit_amount" binding:"required,gte=0"`
 	LikeCount    int     `json:"like_count" binding:"gte=0"`

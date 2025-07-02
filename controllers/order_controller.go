@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"context"
+	"gin-fataMorgana/database"
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
@@ -66,8 +68,29 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	uid := strconv.FormatUint(uint64(userID), 10)
-	req.Uid = uid
+	// 根据user_id查询用户信息获取uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 检查用户是否已被删除
+	if user.DeletedAt != nil {
+		utils.ErrorWithMessage(c, utils.CodeUserNotFound, "账户已被删除，无法创建订单")
+		return
+	}
+
+	// 检查用户是否被禁用
+	if user.Status == 0 {
+		utils.ErrorWithMessage(c, utils.CodeAccountLocked, "账户已被禁用，无法创建订单")
+		return
+	}
+
+	// 使用从数据库获取的uid，而不是从请求参数中获取
+	req.Uid = user.Uid
 
 	// 获取当前用户ID作为操作员
 	operatorUid := middleware.GetCurrentUser(c)
