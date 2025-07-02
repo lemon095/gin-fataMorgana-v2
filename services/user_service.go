@@ -327,7 +327,6 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 
 // BindBankCardRequest 绑定银行卡请求
 type BindBankCardRequest struct {
-	Uid        string `json:"uid" binding:"required"`
 	BankName   string `json:"bank_name" binding:"required"`
 	CardHolder string `json:"card_holder" binding:"required"`
 	CardNumber string `json:"card_number" binding:"required"`
@@ -335,11 +334,11 @@ type BindBankCardRequest struct {
 }
 
 // BindBankCard 绑定银行卡
-func (s *UserService) BindBankCard(req *BindBankCardRequest) (*models.UserResponse, error) {
+func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*models.UserResponse, error) {
 	ctx := context.Background()
 
 	// 查找用户
-	user, err := s.userRepo.FindByUid(ctx, req.Uid)
+	user, err := s.userRepo.FindByUid(ctx, uid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("用户不存在")

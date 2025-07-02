@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
+	"gin-fataMorgana/database"
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
@@ -184,7 +186,23 @@ func (ac *AuthController) BindBankCard(c *gin.Context) {
 		return
 	}
 
-	user, err := ac.userService.BindBankCard(&req)
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	// 根据user_id查询uid，确保只能操作自己的账户
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	userResponse, err := ac.userService.BindBankCard(&req, user.Uid)
 	if err != nil {
 		switch err.Error() {
 		case "用户不存在":
@@ -204,7 +222,7 @@ func (ac *AuthController) BindBankCard(c *gin.Context) {
 	}
 
 	utils.SuccessWithMessage(c, "银行卡绑定成功", gin.H{
-		"user": user,
+		"user": userResponse,
 	})
 }
 
