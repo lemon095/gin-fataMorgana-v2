@@ -40,10 +40,29 @@ func (oc *OrderController) GetOrderList(c *gin.Context) {
 		return
 	}
 
-	uid := strconv.FormatUint(uint64(userID), 10)
+	// 根据user_id查询用户信息获取uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 检查用户是否已被删除
+	if user.DeletedAt != nil {
+		utils.ErrorWithMessage(c, utils.CodeUserNotFound, "账户已被删除，无法查询订单")
+		return
+	}
+
+	// 检查用户是否被禁用
+	if user.Status == 0 {
+		utils.ErrorWithMessage(c, utils.CodeAccountLocked, "账户已被禁用，无法查询订单")
+		return
+	}
 
 	// 获取订单列表
-	response, err := oc.orderService.GetOrderList(&req, uid)
+	response, err := oc.orderService.GetOrderList(&req, user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
@@ -125,10 +144,29 @@ func (oc *OrderController) GetOrderDetail(c *gin.Context) {
 		return
 	}
 
-	uid := strconv.FormatUint(uint64(userID), 10)
+	// 根据user_id查询用户信息获取uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 检查用户是否已被删除
+	if user.DeletedAt != nil {
+		utils.ErrorWithMessage(c, utils.CodeUserNotFound, "账户已被删除，无法查询订单")
+		return
+	}
+
+	// 检查用户是否被禁用
+	if user.Status == 0 {
+		utils.ErrorWithMessage(c, utils.CodeAccountLocked, "账户已被禁用，无法查询订单")
+		return
+	}
 
 	// 获取订单详情
-	response, err := oc.orderService.GetOrderDetail(&req, uid)
+	response, err := oc.orderService.GetOrderDetail(&req, user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
@@ -146,10 +184,29 @@ func (oc *OrderController) GetOrderStats(c *gin.Context) {
 		return
 	}
 
-	uid := strconv.FormatUint(uint64(userID), 10)
+	// 根据user_id查询用户信息获取uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 检查用户是否已被删除
+	if user.DeletedAt != nil {
+		utils.ErrorWithMessage(c, utils.CodeUserNotFound, "账户已被删除，无法查询订单统计")
+		return
+	}
+
+	// 检查用户是否被禁用
+	if user.Status == 0 {
+		utils.ErrorWithMessage(c, utils.CodeAccountLocked, "账户已被禁用，无法查询订单统计")
+		return
+	}
 
 	// 获取订单统计
-	response, err := oc.orderService.GetOrderStats(uid)
+	response, err := oc.orderService.GetOrderStats(user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
