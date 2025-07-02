@@ -223,7 +223,7 @@ func main() {
 			wallet.POST("/info", walletController.GetWallet)                    // 获取钱包信息 - 查询用户余额和钱包状态
 			wallet.POST("/transactions", walletController.GetUserTransactions)      // 获取资金记录 - 查询用户交易流水历史
 			wallet.POST("/transaction-detail", walletController.GetTransactionDetail) // 获取交易详情 - 根据流水号查询具体交易信息
-			wallet.POST("/withdraw", middleware.WithdrawRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现 - 用户申请从钱包提现到银行卡
+			wallet.POST("/withdraw", middleware.GeneralRateLimitMiddleware(), walletController.RequestWithdraw)             // 申请提现 - 用户申请从钱包提现到银行卡
 			wallet.POST("/withdraw-summary", walletController.GetWithdrawSummary)   // 获取提现汇总 - 查询用户提现统计信息
 			wallet.POST("/recharge", walletController.Recharge)                   // 充值申请 - 用户申请从银行卡充值到钱包
 		}
