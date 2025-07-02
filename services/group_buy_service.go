@@ -156,6 +156,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	groupBuy.Deadline = time.Now()
 	groupBuy.ParticipantUid = uid
 	groupBuy.UpdatedAt = time.Now()
+	groupBuy.Complete = "pending" // 进行中
 
 	err = s.groupBuyRepo.UpdateGroupBuy(ctx, groupBuy)
 	if err != nil {
