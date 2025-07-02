@@ -263,7 +263,7 @@ func main() {
 
 		// ==================== 金额配置路由组 ====================
 		// 系统金额配置接口 - 充值提现金额配置查询
-		amountConfig := api.Group("/amount-config")
+		amountConfig := api.Group("/amountConfig")
 		{
 			amountConfig.Use(middleware.AuthMiddleware()) // 需要认证
 			amountConfig.POST("/list", amountConfigController.GetAmountConfigsByType) // 根据类型获取金额配置列表 - 查询充值/提现金额选项
