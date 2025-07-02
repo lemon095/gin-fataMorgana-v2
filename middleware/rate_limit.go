@@ -65,6 +65,12 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 	limiter := NewRateLimiter(limit, window)
 
 	return func(c *gin.Context) {
+		// 跳过OPTIONS请求的限流检查
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
 		// 获取客户端IP
 		clientIP := c.ClientIP()
 		if clientIP == "" {

@@ -143,7 +143,6 @@ func main() {
 
 	// 添加中间件
 	r.Use(middleware.CORSMiddleware())    // 自定义CORS中间件
-	r.Use(cors.New(corsConfig))           // 备用CORS中间件
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 	r.Use(middleware.SessionMiddleware()) // 全局会话管理中间件
@@ -192,42 +191,6 @@ func main() {
 	{
 		// 添加OPTIONS路由处理CORS预检请求
 		auth.OPTIONS("/register", func(c *gin.Context) {
-			origin := c.Request.Header.Get("Origin")
-			
-			// 允许的域名列表
-			allowedOrigins := []string{
-				"http://localhost:3000",
-				"http://localhost:8080", 
-				"http://localhost:5173",
-				"https://colombiatkadmin.com",
-				"http://colombiatkadmin.com",
-				"https://www.colombiatkadmin.com",
-				"http://www.colombiatkadmin.com",
-				"https://colombiatk.com",
-				"http://colombiatk.com",
-				"https://www.colombiatk.com",
-				"http://www.colombiatk.com",
-			}
-			
-			// 检查Origin是否在允许列表中
-			allowed := false
-			for _, allowedOrigin := range allowedOrigins {
-				if origin == allowedOrigin {
-					allowed = true
-					break
-				}
-			}
-			
-			if allowed {
-				c.Header("Access-Control-Allow-Origin", origin)
-			} else {
-				c.Header("Access-Control-Allow-Origin", "*")
-			}
-			
-			c.Header("Access-Control-Allow-Methods", "POST, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept-Language")
-			c.Header("Access-Control-Allow-Credentials", "true")
-			c.Header("Access-Control-Max-Age", "43200")
 			c.Status(200)
 		})
 		

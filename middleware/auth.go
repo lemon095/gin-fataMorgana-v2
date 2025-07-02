@@ -127,6 +127,12 @@ func RequireAuth() gin.HandlerFunc {
 // RegisterOpenMiddleware 检查注册开关
 func RegisterOpenMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 跳过OPTIONS请求的注册开关检查
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
 		ctx := context.Background()
 		exists, err := database.RedisClient.Exists(ctx, "dmin_system_isOpen").Result()
 		if err != nil {
