@@ -182,13 +182,13 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 	s.recordSuccessfulLogin(ctx, user, loginIP, userAgent)
 
 	// 生成访问令牌
-	accessToken, err := utils.GenerateAccessToken(user.ID, user.Username)
+	accessToken, err := utils.GenerateAccessToken(user.ID, user.Uid, user.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	// 生成刷新令牌
-	refreshToken, err := utils.GenerateRefreshToken(user.ID, user.Username)
+	refreshToken, err := utils.GenerateRefreshToken(user.ID, user.Uid, user.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -231,13 +231,13 @@ func (s *UserService) RefreshToken(refreshToken string) (*models.TokenResponse, 
 	}
 
 	// 生成新的访问令牌
-	accessToken, err := utils.GenerateAccessToken(user.ID, user.Username)
+	accessToken, err := utils.GenerateAccessToken(user.ID, user.Uid, user.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	// 生成新的刷新令牌
-	newRefreshToken, err := utils.GenerateRefreshToken(user.ID, user.Username)
+	newRefreshToken, err := utils.GenerateRefreshToken(user.ID, user.Uid, user.Username)
 	if err != nil {
 		return nil, err
 	}
