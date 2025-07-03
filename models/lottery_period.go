@@ -53,6 +53,19 @@ func (lp *LotteryPeriod) IsPending() bool {
 	return time.Now().Before(lp.OrderStartTime)
 }
 
+// IsValidTimeRange 检查期数时间范围是否有效
+func (lp *LotteryPeriod) IsValidTimeRange() bool {
+	return lp.OrderStartTime.Before(lp.OrderEndTime)
+}
+
+// GetTimeRangeError 获取时间范围错误信息
+func (lp *LotteryPeriod) GetTimeRangeError() string {
+	if !lp.IsValidTimeRange() {
+		return "期数开始时间不能晚于结束时间"
+	}
+	return ""
+}
+
 // GetStatus 获取期数状态
 func (lp *LotteryPeriod) GetStatus() string {
 	if lp.IsPending() {
