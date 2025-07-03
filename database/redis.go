@@ -60,6 +60,18 @@ func GetKey(ctx context.Context, key string) (string, error) {
 	return RedisClient.Get(ctx, key).Result()
 }
 
+// GetKeyOrDefault 获取键值，如果键不存在则返回默认值
+func GetKeyOrDefault(ctx context.Context, key string, defaultValue string) (string, error) {
+	value, err := RedisClient.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return defaultValue, nil // 键不存在时返回默认值
+		}
+		return "", err // 其他错误仍然返回错误
+	}
+	return value, nil
+}
+
 // DelKey 删除键
 func DelKey(ctx context.Context, key string) error {
 	return RedisClient.Del(ctx, key).Err()

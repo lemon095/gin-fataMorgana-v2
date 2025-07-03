@@ -16,7 +16,7 @@ func NewShareService() *ShareService {
 
 // GetShareLink 获取分享链接
 func (s *ShareService) GetShareLink(ctx context.Context) (string, error) {
-	link, err := database.GetKey(ctx, ShareLinkKey)
+	link, err := database.GetKeyOrDefault(ctx, ShareLinkKey, "")
 	if err != nil {
 		return "", err
 	}
