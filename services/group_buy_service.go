@@ -253,7 +253,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 
 	// 14. 创建钱包流水记录
 	transaction := &models.WalletTransaction{
-		TransactionNo:  s.generateTransactionNo(),
+		TransactionNo:  utils.GenerateTransactionNo("GROUP"),
 		Uid:            uid,
 		Type:           models.TransactionTypeGroupBuy,
 		Amount:         groupBuy.PerPersonAmount,

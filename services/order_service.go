@@ -109,7 +109,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	order.InitializeTaskStatuses()
 
 	// 生成订单号
-	order.OrderNo = s.generateOrderNo()
+	order.OrderNo = utils.GenerateOrderNo()
 
 	// 设置期号
 	order.PeriodNumber = req.PeriodNumber
@@ -153,7 +153,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 
 	// 创建交易流水记录
 	transaction := &models.WalletTransaction{
-		TransactionNo:  s.generateTransactionNo(),
+		TransactionNo:  utils.GenerateTransactionNo("ORDER"),
 		Uid:            req.Uid,
 		Type:           models.TransactionTypeOrderBuy,
 		Amount:         req.Amount,
@@ -388,15 +388,6 @@ func (s *OrderService) GetOrderStats(uid string) (*GetOrderStatsResponse, error)
 	}, nil
 }
 
-// generateOrderNo 生成订单号
-func (s *OrderService) generateOrderNo() string {
-	// 格式：ORD + 年月日 + 时分秒 + 4位随机数
-	now := time.Now()
-	timestamp := now.Format("20060102150405")
-	random := utils.RandomString(4)
-	return fmt.Sprintf("ORD%s%s", timestamp, random)
-}
-
 // calculateProfitAmount 根据用户经验值和订单金额计算利润金额
 func (s *OrderService) calculateProfitAmount(ctx context.Context, experience int, amount float64) float64 {
 	// 根据经验值获取等级配置
@@ -409,15 +400,6 @@ func (s *OrderService) calculateProfitAmount(ctx context.Context, experience int
 	// 计算利润金额：订单金额 × (返现比例 / 100)
 	profitAmount := amount * (level.CashbackRatio / 100.0)
 	return profitAmount
-}
-
-// generateTransactionNo 生成交易流水号
-func (s *OrderService) generateTransactionNo() string {
-	// 格式：TX + 年月日 + 时分秒 + 4位随机数
-	now := time.Now()
-	timestamp := now.Format("20060102150405")
-	random := utils.RandomString(4)
-	return fmt.Sprintf("TX%s%s", timestamp, random)
 }
 
 // GetPeriodList 获取期数列表
