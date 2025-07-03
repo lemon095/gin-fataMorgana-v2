@@ -1,5 +1,5 @@
 # 使用官方Go镜像作为构建环境
-FROM golang:1.23-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -26,7 +26,7 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates tzdata
 
 # 设置时区
-ENV TZ=Asia/Shanghai
+ENV TZ=UTC
 
 # 创建非root用户
 RUN addgroup -g 1001 -S appgroup && \
