@@ -20,6 +20,7 @@ type LotteryPeriod struct {
 	PeriodNumber     string    `json:"period_number" gorm:"uniqueIndex:uk_period_number;not null;size:20;comment:期数编号"`
 	TotalOrderAmount float64   `json:"total_order_amount" gorm:"type:decimal(15,2);not null;default:0.00;comment:本期购买订单金额"`
 	Status           string    `json:"status" gorm:"not null;size:20;default:'pending';index:idx_status;comment:期数状态: pending-待开始, active-进行中, closed-已结束"`
+	LotteryResult    *string   `json:"lottery_result" gorm:"size:50;comment:开奖结果"`
 	OrderStartTime   time.Time `json:"order_start_time" gorm:"not null;index:idx_order_start_time;comment:订单开始时间"`
 	OrderEndTime     time.Time `json:"order_end_time" gorm:"not null;index:idx_order_end_time;comment:订单结束时间"`
 	CreatedAt        time.Time `json:"created_at" gorm:"autoCreateTime;index:idx_created_at;comment:创建时间"`
@@ -33,7 +34,7 @@ func (LotteryPeriod) TableName() string {
 
 // TableComment 表注释
 func (LotteryPeriod) TableComment() string {
-	return "游戏期数表 - 记录每期的编号、订单金额、状态和时间信息"
+	return "游戏期数表 - 记录每期的编号、订单金额、状态、开奖结果和时间信息"
 }
 
 // IsActive 检查期数是否活跃（在开始时间和结束时间范围内）

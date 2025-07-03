@@ -49,4 +49,4 @@ func (r *LotteryPeriodRepository) GetPeriodByNumber(ctx context.Context, periodN
 	}
 
 	return &period, nil
-}
+} 
