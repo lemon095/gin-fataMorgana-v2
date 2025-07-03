@@ -1,0 +1,22 @@
+-- 创建用户登录日志表
+CREATE TABLE IF NOT EXISTS `user_login_logs` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uid` varchar(8) NOT NULL COMMENT '用户UID',
+  `username` varchar(50) NOT NULL COMMENT '用户名',
+  `email` varchar(100) NOT NULL COMMENT '邮箱',
+  `login_ip` varchar(45) NOT NULL COMMENT '登录IP地址',
+  `user_agent` varchar(500) DEFAULT NULL COMMENT '用户代理',
+  `login_time` datetime NOT NULL COMMENT '登录时间',
+  `status` int NOT NULL DEFAULT 1 COMMENT '登录状态 1:成功 0:失败',
+  `fail_reason` varchar(200) DEFAULT NULL COMMENT '失败原因',
+  `device_info` varchar(200) DEFAULT NULL COMMENT '设备信息',
+  `location` varchar(100) DEFAULT NULL COMMENT '登录地点',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_uid` (`uid`),
+  KEY `idx_username` (`username`),
+  KEY `idx_email` (`email`),
+  KEY `idx_login_ip` (`login_ip`),
+  KEY `idx_login_time` (`login_time`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等'; 

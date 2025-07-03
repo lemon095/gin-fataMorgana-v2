@@ -53,18 +53,18 @@ func (l *Logger) shouldLog(level LogLevel) bool {
 func (l *Logger) formatMessage(level LogLevel, requestID, message string, args ...interface{}) string {
 	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
 	levelStr := LogLevelString[level]
-	
+
 	// 格式化消息
 	formattedMessage := message
 	if len(args) > 0 {
 		formattedMessage = fmt.Sprintf(message, args...)
 	}
-	
+
 	// 如果有requestID，添加到日志中
 	if requestID != "" {
 		return fmt.Sprintf("[%s] [%s] [%s] %s", timestamp, levelStr, requestID, formattedMessage)
 	}
-	
+
 	return fmt.Sprintf("[%s] [%s] %s", timestamp, levelStr, formattedMessage)
 }
 
@@ -117,16 +117,16 @@ func GetRequestID(c *gin.Context) string {
 	if c == nil {
 		return ""
 	}
-	
+
 	requestID, exists := c.Get("request_id")
 	if !exists {
 		return ""
 	}
-	
+
 	if id, ok := requestID.(string); ok {
 		return id
 	}
-	
+
 	return ""
 }
 
@@ -171,10 +171,10 @@ func LogUserLogin(c *gin.Context, userID, username, email, ip string, success bo
 	if success {
 		status = "成功"
 	}
-	
-	message := fmt.Sprintf("用户登录 %s - 用户ID: %s, 用户名: %s, 邮箱: %s, IP: %s", 
+
+	message := fmt.Sprintf("用户登录 %s - 用户ID: %s, 用户名: %s, 邮箱: %s, IP: %s",
 		status, userID, username, MaskEmail(email), ip)
-	
+
 	if success {
 		globalLogger.Info(requestID, message)
 	} else {
@@ -185,7 +185,7 @@ func LogUserLogin(c *gin.Context, userID, username, email, ip string, success bo
 // LogUserRegister 用户注册日志
 func LogUserRegister(c *gin.Context, userID, username, email, ip string) {
 	requestID := GetRequestID(c)
-	message := fmt.Sprintf("用户注册 - 用户ID: %s, 用户名: %s, 邮箱: %s, IP: %s", 
+	message := fmt.Sprintf("用户注册 - 用户ID: %s, 用户名: %s, 邮箱: %s, IP: %s",
 		userID, username, MaskEmail(email), ip)
 	globalLogger.Info(requestID, message)
 }
@@ -193,7 +193,7 @@ func LogUserRegister(c *gin.Context, userID, username, email, ip string) {
 // LogWalletOperation 钱包操作日志
 func LogWalletOperation(c *gin.Context, userID, operation, amount, description string) {
 	requestID := GetRequestID(c)
-	message := fmt.Sprintf("钱包操作 - 用户ID: %s, 操作: %s, 金额: %s, 描述: %s", 
+	message := fmt.Sprintf("钱包操作 - 用户ID: %s, 操作: %s, 金额: %s, 描述: %s",
 		userID, operation, amount, description)
 	globalLogger.Info(requestID, message)
 }
@@ -210,4 +210,4 @@ func LogSecurityEvent(c *gin.Context, event, details string) {
 	requestID := GetRequestID(c)
 	message := fmt.Sprintf("安全事件 - 事件: %s, 详情: %s", event, details)
 	globalLogger.Warn(requestID, message)
-} 
+}

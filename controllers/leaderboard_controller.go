@@ -31,14 +31,14 @@ func (c *LeaderboardController) GetLeaderboard(ctx *gin.Context) {
 	}
 
 	uid := strconv.FormatUint(uint64(userID), 10)
-	
+
 	// 获取热榜数据
 	response, err := c.leaderboardService.GetLeaderboard(uid)
 	if err != nil {
 		utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, err.Error())
 		return
 	}
-	
+
 	// 返回成功响应
 	utils.Success(ctx, response)
-} 
+}

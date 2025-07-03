@@ -60,18 +60,18 @@ func generateFakeActivity() FakeRealtimeActivity {
 // GetFakeRealtimeActivities 假数据实时动态接口
 func GetFakeRealtimeActivities(c *gin.Context) {
 	var req FakeActivityRequest
-	
+
 	// 解析请求参数
 	if err := c.ShouldBindJSON(&req); err != nil {
 		// 如果参数解析失败，使用默认值
 		req.Count = 10
 	}
-	
+
 	// 设置默认值和限制
 	if req.Count <= 0 || req.Count > 50 {
 		req.Count = 10
 	}
-	
+
 	rand.Seed(time.Now().UnixNano())
 	var list []FakeRealtimeActivity
 	for i := 0; i < req.Count; i++ {

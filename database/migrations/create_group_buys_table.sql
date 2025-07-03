@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS `group_buys` (
   `group_buy_no` varchar(32) NOT NULL COMMENT '拼单编号',
   `order_no` varchar(32) DEFAULT NULL COMMENT '关联订单编号',
   `creator_uid` varchar(8) NOT NULL COMMENT '创建用户ID',
+  `uid` varchar(8) NOT NULL COMMENT '参与用户ID',
   `current_participants` int NOT NULL DEFAULT 1 COMMENT '当前参与人数',
   `target_participants` int NOT NULL DEFAULT 2 COMMENT '目标参与人数',
   `group_buy_type` varchar(20) NOT NULL DEFAULT 'normal' COMMENT '拼单类型',
@@ -11,22 +12,18 @@ CREATE TABLE IF NOT EXISTS `group_buys` (
   `paid_amount` decimal(15,2) NOT NULL DEFAULT 0.00 COMMENT '已付款金额',
   `per_person_amount` decimal(15,2) NOT NULL COMMENT '每人需要付款金额',
   `deadline` datetime NOT NULL COMMENT '拼单截止时间',
-  `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT '拼单状态',
-  `participant_uid` varchar(8) DEFAULT NULL COMMENT '参与用户ID',
+  `status` varchar(20) NOT NULL DEFAULT 'not_started' COMMENT '拼单状态',
   `description` text COMMENT '拼单描述',
-  `rules` text COMMENT '拼单规则',
-  `auto_start` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否自动开始',
-  `complete` varchar(20) NOT NULL DEFAULT 'pending' COMMENT '完成状态: pending/success/cancelled',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_group_buy_no` (`group_buy_no`),
   KEY `idx_order_no` (`order_no`),
   KEY `idx_creator_uid` (`creator_uid`),
+  KEY `idx_uid` (`uid`),
   KEY `idx_group_buy_type` (`group_buy_type`),
   KEY `idx_deadline` (`deadline`),
   KEY `idx_status` (`status`),
-  KEY `idx_participant_uid` (`participant_uid`),
   KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='拼单表 - 记录拼单信息，包括参与人数、付款金额、截止时间等';
 
@@ -35,6 +32,7 @@ INSERT INTO `group_buys` (
     `group_buy_no`, 
     `order_no`, 
     `creator_uid`, 
+    `uid`, 
     `current_participants`, 
     `target_participants`, 
     `group_buy_type`, 
@@ -43,15 +41,12 @@ INSERT INTO `group_buys` (
     `per_person_amount`, 
     `deadline`, 
     `status`, 
-    `participant_uid`, 
-    `description`, 
-    `rules`, 
-    `auto_start`, 
-    `complete`
+    `description`
 ) VALUES 
 (
     'GB20241201001', 
     'ORD20241201001', 
+    'U001', 
     'U001', 
     1, 
     5, 
@@ -60,17 +55,14 @@ INSERT INTO `group_buys` (
     200.00, 
     200.00, 
     '2024-12-31 23:59:59', 
-    'active', 
-    'U001', 
-    '限时优惠拼单，5人成团享受8折优惠', 
-    '1. 需要5人参与才能享受优惠\n2. 每人支付200元\n3. 拼单成功后统一发货', 
-    1, 
-    'pending'
+    'pending', 
+    '限时优惠拼单，5人成团享受8折优惠'
 ),
 (
     'GB20241201002', 
     NULL, 
     'U002', 
+    'U003', 
     2, 
     3, 
     'flash', 
@@ -78,16 +70,13 @@ INSERT INTO `group_buys` (
     400.00, 
     200.00, 
     '2024-12-15 23:59:59', 
-    'active', 
-    'U003', 
-    '限时闪购拼单，3人成团享受7折优惠', 
-    '1. 需要3人参与才能享受优惠\n2. 每人支付200元\n3. 限时抢购，先到先得', 
-    0, 
-    'pending'
+    'pending', 
+    '限时闪购拼单，3人成团享受7折优惠'
 ),
 (
     'GB20241201003', 
     NULL, 
+    'U003', 
     'U003', 
     1, 
     10, 
@@ -96,10 +85,6 @@ INSERT INTO `group_buys` (
     500.00, 
     500.00, 
     '2024-12-20 23:59:59', 
-    'pending', 
-    NULL, 
-    'VIP专享拼单，10人成团享受6折优惠', 
-    '1. 仅限VIP用户参与\n2. 需要10人参与才能享受优惠\n3. 每人支付500元\n4. 享受专属客服服务', 
-    1, 
-    'pending'
+    'not_started', 
+    'VIP专享拼单，10人成团享受6折优惠'
 ); 

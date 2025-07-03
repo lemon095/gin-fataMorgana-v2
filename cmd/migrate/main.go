@@ -46,4 +46,4 @@ func main() {
 	log.Println("   - wallet_transactions (钱包交易流水表)")
 	log.Println("   - admin_users (邀请码管理表)")
 	log.Println("   - user_login_logs (用户登录日志表)")
-} 
+}

@@ -22,12 +22,12 @@ func InitRedis() error {
 		Addr:         cfg.GetRedisAddr(),
 		Password:     cfg.Password,
 		DB:           cfg.DB,
-		PoolSize:     10,  // 连接池大小
-		MinIdleConns: 5,   // 最小空闲连接数
-		MaxRetries:   3,   // 最大重试次数
-		DialTimeout:  5 * time.Second,  // 连接超时
-		ReadTimeout:  3 * time.Second,  // 读取超时
-		WriteTimeout: 3 * time.Second,  // 写入超时
+		PoolSize:     10,              // 连接池大小
+		MinIdleConns: 5,               // 最小空闲连接数
+		MaxRetries:   3,               // 最大重试次数
+		DialTimeout:  5 * time.Second, // 连接超时
+		ReadTimeout:  3 * time.Second, // 读取超时
+		WriteTimeout: 3 * time.Second, // 写入超时
 	})
 
 	// 测试连接

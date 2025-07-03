@@ -260,5 +260,3 @@ func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 
 	utils.Success(c, response)
 }
-
-

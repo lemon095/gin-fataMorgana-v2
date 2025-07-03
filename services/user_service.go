@@ -82,12 +82,13 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 
 	// 创建新用户
 	user := &models.User{
-		Uid:        userID,
-		Username:   username,
-		Email:      req.Email,
-		Password:   req.Password,
-		Status:     1, // 默认启用
-		InvitedBy:  req.InviteCode,
+		Uid:          userID,
+		Username:     username,
+		Email:        req.Email,
+		Password:     req.Password,
+		Status:       1, // 默认启用
+		Experience:   1, // 新注册用户默认等级为1
+		InvitedBy:    req.InviteCode,
 		BankCardInfo: "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}", // 无条件赋值
 	}
 	// 保险：防止意外为空
@@ -250,7 +251,7 @@ func (s *UserService) RefreshToken(refreshToken string) (*models.TokenResponse, 
 	}, nil
 }
 
-// GetUserByID 根据ID获取用户
+// GetUserByID 根据用户ID获取用户信息
 func (s *UserService) GetUserByID(userID uint) (*models.UserResponse, error) {
 	ctx := context.Background()
 
@@ -267,7 +268,17 @@ func (s *UserService) GetUserByID(userID uint) (*models.UserResponse, error) {
 		return nil, errors.New("用户已被删除")
 	}
 
+	// 从Redis获取用户等级进度
+	userLevelService := NewUserLevelService()
+	rate, err := userLevelService.GetUserLevelRate(ctx, user.Uid)
+	if err != nil {
+		// 如果获取失败，使用默认值0
+		rate = 0
+	}
+
 	response := user.ToResponse()
+	response.Rate = rate // 设置从Redis获取的等级进度
+
 	return &response, nil
 }
 

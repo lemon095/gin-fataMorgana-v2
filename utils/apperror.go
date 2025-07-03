@@ -41,4 +41,4 @@ func GetAppError(err error) (int, string) {
 		return appErr.Code, appErr.Message
 	}
 	return 1, "操作失败"
-} 
+}

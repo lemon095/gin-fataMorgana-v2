@@ -21,4 +21,4 @@ func (s *ShareService) GetShareLink(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return link, nil
-} 
+}

@@ -6,24 +6,24 @@ import (
 
 // LeaderboardEntry 热榜条目
 type LeaderboardEntry struct {
-	ID           uint      `json:"id"`
-	Uid          string    `json:"uid"`
-	Username     string    `json:"username"`      // 脱敏后的用户名
-	CompletedAt  time.Time `json:"completed_at"`  // 最新完成时间
-	OrderCount   int       `json:"order_count"`   // 完成订单数量
-	TotalAmount  float64   `json:"total_amount"`  // 总金额
-	TotalProfit  float64   `json:"total_profit"`  // 总利润
-	Rank         int       `json:"rank"`          // 排名
-	IsRank       bool      `json:"is_rank"`       // 是否在榜单上
+	ID          uint      `json:"id"`
+	Uid         string    `json:"uid"`
+	Username    string    `json:"username"`     // 脱敏后的用户名
+	CompletedAt time.Time `json:"completed_at"` // 最新完成时间
+	OrderCount  int       `json:"order_count"`  // 完成订单数量
+	TotalAmount float64   `json:"total_amount"` // 总金额
+	TotalProfit float64   `json:"total_profit"` // 总利润
+	Rank        int       `json:"rank"`         // 排名
+	IsRank      bool      `json:"is_rank"`      // 是否在榜单上
 }
 
 // LeaderboardResponse 热榜响应
 type LeaderboardResponse struct {
-	WeekStart    time.Time           `json:"week_start"`    // 本周开始时间
-	WeekEnd      time.Time           `json:"week_end"`      // 本周结束时间
-	MyRank       *LeaderboardEntry   `json:"my_rank"`       // 我的排名信息
-	TopUsers     []LeaderboardEntry  `json:"top_users"`     // 前10名用户
-	CacheExpire  time.Time           `json:"cache_expire"`  // 缓存过期时间
+	WeekStart   time.Time          `json:"week_start"`   // 本周开始时间
+	WeekEnd     time.Time          `json:"week_end"`     // 本周结束时间
+	MyRank      *LeaderboardEntry  `json:"my_rank"`      // 我的排名信息
+	TopUsers    []LeaderboardEntry `json:"top_users"`    // 前10名用户
+	CacheExpire time.Time          `json:"cache_expire"` // 缓存过期时间
 }
 
 // GetWeekStart 获取本周开始时间（周一）
@@ -34,10 +34,10 @@ func GetWeekStart(t time.Time) time.Time {
 	} else {
 		weekday = weekday - 1
 	}
-	
+
 	// 计算到本周一的天数
 	daysToMonday := int(weekday)
-	
+
 	// 获取本周一的时间
 	weekStart := t.AddDate(0, 0, -daysToMonday)
 	return time.Date(weekStart.Year(), weekStart.Month(), weekStart.Day(), 0, 0, 0, 0, weekStart.Location())
@@ -61,7 +61,7 @@ func MaskUsername(username string) string {
 	if len(username) <= 2 {
 		return username
 	}
-	
+
 	// 保留首尾字符，中间用*替换
 	first := username[:1]
 	last := username[len(username)-1:]
@@ -69,11 +69,11 @@ func MaskUsername(username string) string {
 	for i := 0; i < len(username)-2; i++ {
 		middle += "*"
 	}
-	
+
 	return first + middle + last
 }
 
 // LeaderboardQuery 热榜查询参数
 type LeaderboardQuery struct {
 	Uid string `json:"uid" binding:"required"` // 当前用户ID
-} 
+}

@@ -40,11 +40,11 @@ func (s *SnowflakeUID) GenerateUID() string {
 		if s.lastTime-currentTime > 1000 {
 			log.Printf("警告：系统时钟回退 %d 毫秒", s.lastTime-currentTime)
 		}
-		
+
 		// 等待到下一个毫秒
 		time.Sleep(time.Millisecond)
 		currentTime = time.Now().UnixNano() / 1e6
-		
+
 		// 如果仍然回退，使用上次时间
 		if currentTime < s.lastTime {
 			currentTime = s.lastTime

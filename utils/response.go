@@ -9,48 +9,48 @@ import (
 
 // 完整的错误码定义
 const (
-	CodeSuccess         = 0    // 成功
-	CodeError           = 1    // 一般错误
-	CodeAuth            = 401  // 认证错误
-	CodeForbidden       = 403  // 禁止访问
-	CodeNotFound        = 404  // 资源不存在
-	CodeValidation      = 422  // 数据验证错误
-	CodeServer          = 500  // 服务器错误
-	CodeDatabaseError   = 1001 // 数据库错误
-	CodeRedisError      = 1002 // Redis错误
-	CodeInvalidParams   = 1003 // 参数错误
-	CodeOperationFailed = 1004 // 操作失败
-	CodeUserNotFound    = 1005 // 用户不存在
+	CodeSuccess           = 0    // 成功
+	CodeError             = 1    // 一般错误
+	CodeAuth              = 401  // 认证错误
+	CodeForbidden         = 403  // 禁止访问
+	CodeNotFound          = 404  // 资源不存在
+	CodeValidation        = 422  // 数据验证错误
+	CodeServer            = 500  // 服务器错误
+	CodeDatabaseError     = 1001 // 数据库错误
+	CodeRedisError        = 1002 // Redis错误
+	CodeInvalidParams     = 1003 // 参数错误
+	CodeOperationFailed   = 1004 // 操作失败
+	CodeUserNotFound      = 1005 // 用户不存在
 	CodeUserAlreadyExists = 1006 // 用户已存在
-	CodeValidationFailed = 1007 // 验证失败
-	CodeAccountLocked   = 1008 // 账户锁定
-	CodeRegisterClosed  = 1009 // 注册关闭
-	CodeGroupBuyNotFound = 1010 // 拼单不存在
-	CodeGroupBuyExpired = 1011 // 拼单已过期
-	CodeGroupBuyOccupied = 1012 // 拼单已被占用
+	CodeValidationFailed  = 1007 // 验证失败
+	CodeAccountLocked     = 1008 // 账户锁定
+	CodeRegisterClosed    = 1009 // 注册关闭
+	CodeGroupBuyNotFound  = 1010 // 拼单不存在
+	CodeGroupBuyExpired   = 1011 // 拼单已过期
+	CodeGroupBuyOccupied  = 1012 // 拼单已被占用
 )
 
 // ResponseMessage 完整的响应消息映射
 var ResponseMessage = map[int]string{
-	CodeSuccess:         "操作成功",
-	CodeError:           "操作失败",
-	CodeAuth:            "认证失败",
-	CodeForbidden:       "禁止访问",
-	CodeNotFound:        "资源不存在",
-	CodeValidation:      "数据验证失败",
-	CodeServer:          "服务器内部错误",
-	CodeDatabaseError:   "数据库操作失败",
-	CodeRedisError:      "Redis操作失败",
-	CodeInvalidParams:   "参数错误",
-	CodeOperationFailed: "操作失败",
-	CodeUserNotFound:    "用户不存在",
+	CodeSuccess:           "操作成功",
+	CodeError:             "操作失败",
+	CodeAuth:              "认证失败",
+	CodeForbidden:         "禁止访问",
+	CodeNotFound:          "资源不存在",
+	CodeValidation:        "数据验证失败",
+	CodeServer:            "服务器内部错误",
+	CodeDatabaseError:     "数据库操作失败",
+	CodeRedisError:        "Redis操作失败",
+	CodeInvalidParams:     "参数错误",
+	CodeOperationFailed:   "操作失败",
+	CodeUserNotFound:      "用户不存在",
 	CodeUserAlreadyExists: "用户已存在",
-	CodeValidationFailed: "验证失败",
-	CodeAccountLocked:   "账户已被锁定",
-	CodeRegisterClosed:  "当前系统不允许注册",
-	CodeGroupBuyNotFound: "拼单不存在或已被删除",
-	CodeGroupBuyExpired: "拼单已超过截止时间",
-	CodeGroupBuyOccupied: "拼单已被其他用户参与",
+	CodeValidationFailed:  "验证失败",
+	CodeAccountLocked:     "账户已被锁定",
+	CodeRegisterClosed:    "当前系统不允许注册",
+	CodeGroupBuyNotFound:  "拼单不存在或已被删除",
+	CodeGroupBuyExpired:   "拼单已超过截止时间",
+	CodeGroupBuyOccupied:  "拼单已被其他用户参与",
 }
 
 // Response 统一响应结构

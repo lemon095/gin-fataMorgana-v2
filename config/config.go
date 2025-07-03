@@ -11,10 +11,10 @@ import (
 
 // Config 简化后的配置结构体
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
 	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
 }
 
@@ -27,14 +27,14 @@ type ServerConfig struct {
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
-	DBName   string `mapstructure:"dbname"`
+	Host            string `mapstructure:"host"`
+	Port            int    `mapstructure:"port"`
+	Username        string `mapstructure:"username"`
+	Password        string `mapstructure:"password"`
+	DBName          string `mapstructure:"dbname"`
 	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
 	MaxOpenConns    int    `mapstructure:"max_open_conns"`
-	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"` // 单位秒
+	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`  // 单位秒
 	ConnMaxIdleTime int    `mapstructure:"conn_max_idle_time"` // 单位秒
 }
 
@@ -48,15 +48,15 @@ type RedisConfig struct {
 
 // JWTConfig JWT配置
 type JWTConfig struct {
-	Secret            string `mapstructure:"secret"`
-	AccessTokenExpire int    `mapstructure:"access_token_expire"`
+	Secret             string `mapstructure:"secret"`
+	AccessTokenExpire  int    `mapstructure:"access_token_expire"`
 	RefreshTokenExpire int    `mapstructure:"refresh_token_expire"`
 }
 
 // SnowflakeConfig 雪花算法配置
 type SnowflakeConfig struct {
-	WorkerID      int64 `mapstructure:"worker_id"`
-	DatacenterID  int64 `mapstructure:"datacenter_id"`
+	WorkerID     int64 `mapstructure:"worker_id"`
+	DatacenterID int64 `mapstructure:"datacenter_id"`
 }
 
 // GlobalConfig 全局配置实例
@@ -99,7 +99,7 @@ func LoadConfig() error {
 
 	// 设置默认值
 	setDefaults()
-	
+
 	// 使用环境变量覆盖配置
 	overrideWithEnvVars()
 

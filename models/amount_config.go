@@ -50,4 +50,4 @@ func (ac *AmountConfig) ToResponse() *AmountConfigResponse {
 		CreatedAt:   ac.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt:   ac.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
-} 
+}

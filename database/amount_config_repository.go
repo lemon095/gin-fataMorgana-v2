@@ -22,27 +22,27 @@ func NewAmountConfigRepository() *AmountConfigRepository {
 // GetAmountConfigsByType 根据类型获取金额配置列表
 func (r *AmountConfigRepository) GetAmountConfigsByType(ctx context.Context, configType string) ([]models.AmountConfig, error) {
 	var configs []models.AmountConfig
-	
+
 	err := r.db.WithContext(ctx).
 		Where("type = ? AND is_active = ?", configType, true).
 		Order("sort_order ASC, amount ASC").
 		Find(&configs).Error
-	
+
 	return configs, err
 }
 
 // GetAmountConfigByID 根据ID获取金额配置
 func (r *AmountConfigRepository) GetAmountConfigByID(ctx context.Context, id int64) (*models.AmountConfig, error) {
 	var config models.AmountConfig
-	
+
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND is_active = ?", id, true).
 		First(&config).Error
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &config, nil
 }
 
@@ -64,14 +64,14 @@ func (r *AmountConfigRepository) DeleteAmountConfig(ctx context.Context, id int6
 // GetAmountConfigsByTypeAndAmount 根据类型和金额获取配置
 func (r *AmountConfigRepository) GetAmountConfigsByTypeAndAmount(ctx context.Context, configType string, amount float64) (*models.AmountConfig, error) {
 	var config models.AmountConfig
-	
+
 	err := r.db.WithContext(ctx).
 		Where("type = ? AND amount = ? AND is_active = ?", configType, amount, true).
 		First(&config).Error
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &config, nil
-} 
+}

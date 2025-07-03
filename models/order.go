@@ -22,24 +22,25 @@ const (
 
 // Order 订单表
 type Order struct {
-	ID                    uint      `json:"id" gorm:"primaryKey;autoIncrement"`
-	OrderNo               string    `json:"order_no" gorm:"uniqueIndex;not null;size:32;comment:订单编号"`
-	Uid                   string    `json:"uid" gorm:"not null;size:8;index;comment:用户唯一ID"`
-	Amount                float64   `json:"amount" gorm:"type:decimal(15,2);not null;comment:订单金额"`
-	ProfitAmount          float64   `json:"profit_amount" gorm:"type:decimal(15,2);not null;comment:利润金额"`
-	Status                string    `json:"status" gorm:"not null;size:20;default:'pending';index;comment:订单状态"`
-	ExpireTime            time.Time `json:"expire_time" gorm:"not null;index;comment:订单剩余时间"`
-	LikeCount             int       `json:"like_count" gorm:"not null;default:0;comment:点赞数"`
-	ShareCount            int       `json:"share_count" gorm:"not null;default:0;comment:转发数"`
-	FollowCount           int       `json:"follow_count" gorm:"not null;default:0;comment:关注数"`
-	FavoriteCount         int       `json:"favorite_count" gorm:"not null;default:0;comment:收藏数"`
-	LikeStatus            string    `json:"like_status" gorm:"not null;size:20;default:'pending';comment:点赞完成状态"`
-	ShareStatus           string    `json:"share_status" gorm:"not null;size:20;default:'pending';comment:转发完成状态"`
-	FollowStatus          string    `json:"follow_status" gorm:"not null;size:20;default:'pending';comment:关注完成状态"`
-	FavoriteStatus        string    `json:"favorite_status" gorm:"not null;size:20;default:'pending';comment:收藏完成状态"`
-	AuditorUid            string    `json:"auditor_uid" gorm:"size:8;index;comment:审核员ID"`
-	CreatedAt             time.Time `json:"created_at" gorm:"autoCreateTime;index;comment:创建时间"`
-	UpdatedAt             time.Time `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
+	ID             uint      `json:"id" gorm:"primaryKey;autoIncrement"`
+	OrderNo        string    `json:"order_no" gorm:"uniqueIndex;not null;size:32;comment:订单编号"`
+	Uid            string    `json:"uid" gorm:"not null;size:8;index;comment:用户唯一ID"`
+	PeriodNumber   string    `json:"period_number" gorm:"not null;size:32;comment:期号"`
+	Amount         float64   `json:"amount" gorm:"type:decimal(15,2);not null;comment:订单金额"`
+	ProfitAmount   float64   `json:"profit_amount" gorm:"type:decimal(15,2);not null;comment:利润金额"`
+	Status         string    `json:"status" gorm:"not null;size:20;default:'pending';index;comment:订单状态"`
+	ExpireTime     time.Time `json:"expire_time" gorm:"not null;index;comment:订单剩余时间"`
+	LikeCount      int       `json:"like_count" gorm:"not null;default:0;comment:点赞数"`
+	ShareCount     int       `json:"share_count" gorm:"not null;default:0;comment:转发数"`
+	FollowCount    int       `json:"follow_count" gorm:"not null;default:0;comment:关注数"`
+	FavoriteCount  int       `json:"favorite_count" gorm:"not null;default:0;comment:收藏数"`
+	LikeStatus     string    `json:"like_status" gorm:"not null;size:20;default:'pending';comment:点赞完成状态"`
+	ShareStatus    string    `json:"share_status" gorm:"not null;size:20;default:'pending';comment:转发完成状态"`
+	FollowStatus   string    `json:"follow_status" gorm:"not null;size:20;default:'pending';comment:关注完成状态"`
+	FavoriteStatus string    `json:"favorite_status" gorm:"not null;size:20;default:'pending';comment:收藏完成状态"`
+	AuditorUid     string    `json:"auditor_uid" gorm:"size:8;index;comment:审核员ID"`
+	CreatedAt      time.Time `json:"created_at" gorm:"autoCreateTime;index;comment:创建时间"`
+	UpdatedAt      time.Time `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
 }
 
 // TableName 指定表名
@@ -54,31 +55,32 @@ func (Order) TableComment() string {
 
 // OrderResponse 订单响应
 type OrderResponse struct {
-	ID                    uint      `json:"id"`
-	OrderNo               string    `json:"order_no"`
-	Uid                   string    `json:"uid"`
-	Amount                float64   `json:"amount"`
-	ProfitAmount          float64   `json:"profit_amount"`
-	Status                string    `json:"status"`
-	StatusName            string    `json:"status_name"`
-	ExpireTime            time.Time `json:"expire_time"`
-	LikeCount             int       `json:"like_count"`
-	ShareCount            int       `json:"share_count"`
-	FollowCount           int       `json:"follow_count"`
-	FavoriteCount         int       `json:"favorite_count"`
-	LikeStatus            string    `json:"like_status"`
-	LikeStatusName        string    `json:"like_status_name"`
-	ShareStatus           string    `json:"share_status"`
-	ShareStatusName       string    `json:"share_status_name"`
-	FollowStatus          string    `json:"follow_status"`
-	FollowStatusName      string    `json:"follow_status_name"`
-	FavoriteStatus        string    `json:"favorite_status"`
-	FavoriteStatusName    string    `json:"favorite_status_name"`
-	AuditorUid            string    `json:"auditor_uid"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
-	IsExpired             bool      `json:"is_expired"`
-	RemainingTime         int64     `json:"remaining_time"` // 剩余时间（秒）
+	ID                 uint      `json:"id"`
+	OrderNo            string    `json:"order_no"`
+	Uid                string    `json:"uid"`
+	Number             string    `json:"period_number"`
+	Amount             float64   `json:"amount"`
+	ProfitAmount       float64   `json:"profit_amount"`
+	Status             string    `json:"status"`
+	StatusName         string    `json:"status_name"`
+	ExpireTime         time.Time `json:"expire_time"`
+	LikeCount          int       `json:"like_count"`
+	ShareCount         int       `json:"share_count"`
+	FollowCount        int       `json:"follow_count"`
+	FavoriteCount      int       `json:"favorite_count"`
+	LikeStatus         string    `json:"like_status"`
+	LikeStatusName     string    `json:"like_status_name"`
+	ShareStatus        string    `json:"share_status"`
+	ShareStatusName    string    `json:"share_status_name"`
+	FollowStatus       string    `json:"follow_status"`
+	FollowStatusName   string    `json:"follow_status_name"`
+	FavoriteStatus     string    `json:"favorite_status"`
+	FavoriteStatusName string    `json:"favorite_status_name"`
+	AuditorUid         string    `json:"auditor_uid"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	IsExpired          bool      `json:"is_expired"`
+	RemainingTime      int64     `json:"remaining_time"` // 剩余时间（秒）
 }
 
 // ToResponse 转换为响应格式
@@ -87,6 +89,7 @@ func (o *Order) ToResponse() OrderResponse {
 		ID:                 o.ID,
 		OrderNo:            o.OrderNo,
 		Uid:                o.Uid,
+		Number:             o.PeriodNumber,
 		Amount:             o.Amount,
 		ProfitAmount:       o.ProfitAmount,
 		Status:             o.Status,
@@ -222,12 +225,12 @@ func (o *Order) ValidateOrderData() error {
 
 // CreateOrderRequest 创建订单请求
 type CreateOrderRequest struct {
-	Amount         float64 `json:"amount" binding:"required,gt=0"`
-	ProfitAmount   float64 `json:"profit_amount" binding:"required,gte=0"`
-	LikeCount      int     `json:"like_count" binding:"gte=0"`
-	ShareCount     int     `json:"share_count" binding:"gte=0"`
-	FollowCount    int     `json:"follow_count" binding:"gte=0"`
-	FavoriteCount  int     `json:"favorite_count" binding:"gte=0"`
+	Amount        float64 `json:"amount" binding:"required,gt=0"`
+	ProfitAmount  float64 `json:"profit_amount" binding:"required,gte=0"`
+	LikeCount     int     `json:"like_count" binding:"gte=0"`
+	ShareCount    int     `json:"share_count" binding:"gte=0"`
+	FollowCount   int     `json:"follow_count" binding:"gte=0"`
+	FavoriteCount int     `json:"favorite_count" binding:"gte=0"`
 }
 
 // OrderStatusType 订单状态类型枚举
@@ -241,7 +244,7 @@ const (
 type GetOrderListRequest struct {
 	Page     int `json:"page" binding:"min=1"`
 	PageSize int `json:"page_size" binding:"min=1,max=100"`
-	Status   int  `json:"status" binding:"min=1,max=3"` // 1:进行中 2:已完成 3:全部
+	Status   int `json:"status" binding:"min=1,max=3"` // 1:进行中 2:已完成 3:全部
 }
 
 // GetStatusByType 根据状态类型获取对应的状态值
@@ -252,7 +255,7 @@ func GetStatusByType(statusType int) string {
 	case OrderStatusTypeCompleted:
 		return OrderStatusSuccess
 	case OrderStatusTypeAll:
-		return "" // 空字符串表示查询全部
+		return "" // 空字符串表示查询期数数据
 	default:
 		return ""
 	}
@@ -266,7 +269,7 @@ func GetStatusTypeName(statusType int) string {
 	case OrderStatusTypeCompleted:
 		return "已完成"
 	case OrderStatusTypeAll:
-		return "全部"
+		return "期数数据"
 	default:
 		return "未知"
 	}
@@ -279,7 +282,7 @@ type GetOrderDetailRequest struct {
 
 // OrderListRequest 订单列表请求
 type OrderListRequest struct {
-	Page     int `json:"page" binding:"min=1"`      // 页码，从1开始
+	Page     int `json:"page" binding:"min=1"`              // 页码，从1开始
 	PageSize int `json:"page_size" binding:"min=1,max=100"` // 每页大小，最大100
 }
 
@@ -297,4 +300,4 @@ type PaginationInfo struct {
 	TotalPages  int   `json:"total_pages"`
 	HasNext     bool  `json:"has_next"`
 	HasPrev     bool  `json:"has_prev"`
-} 
+}

@@ -9,16 +9,16 @@ func MaskPhone(phone string) string {
 	if phone == "" {
 		return phone
 	}
-	
+
 	// 去除空格和特殊字符
 	phone = strings.ReplaceAll(phone, " ", "")
 	phone = strings.ReplaceAll(phone, "-", "")
 	phone = strings.ReplaceAll(phone, "_", "")
-	
+
 	if len(phone) < 7 {
 		return phone
 	}
-	
+
 	// 保留前3位和后4位，中间用****代替
 	return phone[:3] + "****" + phone[len(phone)-4:]
 }
@@ -28,16 +28,16 @@ func MaskBankCard(cardNumber string) string {
 	if cardNumber == "" {
 		return cardNumber
 	}
-	
+
 	// 去除空格和特殊字符
 	cardNumber = strings.ReplaceAll(cardNumber, " ", "")
 	cardNumber = strings.ReplaceAll(cardNumber, "-", "")
 	cardNumber = strings.ReplaceAll(cardNumber, "_", "")
-	
+
 	if len(cardNumber) < 8 {
 		return cardNumber
 	}
-	
+
 	// 保留前4位和后4位，中间用****代替
 	return cardNumber[:4] + " **** **** " + cardNumber[len(cardNumber)-4:]
 }
@@ -47,22 +47,22 @@ func MaskEmail(email string) string {
 	if email == "" {
 		return email
 	}
-	
+
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
 		return email
 	}
-	
+
 	username := parts[0]
 	domain := parts[1]
-	
+
 	if len(username) <= 1 {
 		return email
 	}
-	
+
 	// 用户名只显示第一个字符，其他用***代替
 	maskedUsername := username[:1] + "***"
-	
+
 	return maskedUsername + "@" + domain
 }
 
@@ -71,16 +71,16 @@ func MaskIDCard(idCard string) string {
 	if idCard == "" {
 		return idCard
 	}
-	
+
 	// 去除空格和特殊字符
 	idCard = strings.ReplaceAll(idCard, " ", "")
 	idCard = strings.ReplaceAll(idCard, "-", "")
 	idCard = strings.ReplaceAll(idCard, "_", "")
-	
+
 	if len(idCard) < 8 {
 		return idCard
 	}
-	
+
 	// 保留前3位和后4位，中间用***********代替
 	return idCard[:3] + "***********" + idCard[len(idCard)-4:]
 }
@@ -90,14 +90,14 @@ func MaskName(name string) string {
 	if name == "" {
 		return name
 	}
-	
+
 	// 去除空格
 	name = strings.TrimSpace(name)
-	
+
 	if len(name) <= 1 {
 		return name
 	}
-	
+
 	// 保留第一个字符，其他用**代替
 	return name[:1] + "**"
 }
@@ -107,14 +107,14 @@ func MaskAddress(address string) string {
 	if address == "" {
 		return address
 	}
-	
+
 	// 去除空格
 	address = strings.TrimSpace(address)
-	
+
 	if len(address) <= 6 {
 		return address
 	}
-	
+
 	// 保留前6个字符，其他用***代替
 	return address[:6] + "***"
 }
@@ -130,14 +130,14 @@ func IsSensitiveField(fieldName string) bool {
 		"address", "addr",
 		"password", "pwd", "passwd",
 	}
-	
+
 	fieldName = strings.ToLower(fieldName)
 	for _, field := range sensitiveFields {
 		if strings.Contains(fieldName, field) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -146,9 +146,9 @@ func MaskSensitiveData(fieldName string, value string) string {
 	if value == "" {
 		return value
 	}
-	
+
 	fieldName = strings.ToLower(fieldName)
-	
+
 	switch {
 	case strings.Contains(fieldName, "phone") || strings.Contains(fieldName, "mobile") || strings.Contains(fieldName, "tel"):
 		return MaskPhone(value)
@@ -165,4 +165,4 @@ func MaskSensitiveData(fieldName string, value string) string {
 	default:
 		return value
 	}
-} 
+}

@@ -18,7 +18,7 @@ type IdempotencyKey struct {
 
 // IdempotencyManager 幂等性管理器
 type IdempotencyManager struct {
-	keys map[string]*IdempotencyKey
+	keys  map[string]*IdempotencyKey
 	mutex sync.RWMutex
 }
 
@@ -135,4 +135,4 @@ func StartIdempotencyCleaner(ctx context.Context) {
 			globalIdempotencyManager.CleanExpiredKeys()
 		}
 	}
-} 
+}

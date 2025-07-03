@@ -91,15 +91,15 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 // 预定义的限流配置
 const (
 	// 登录限流：每分钟最多5次
-	LoginRateLimit    = 5
-	LoginRateWindow   = 1 * time.Minute
+	LoginRateLimit  = 5
+	LoginRateWindow = 1 * time.Minute
 
 	// 注册限流：每小时最多3次
-	RegisterRateLimit = 3
+	RegisterRateLimit  = 3
 	RegisterRateWindow = 1 * time.Hour
 
 	// 提现限流：每小时最多2次
-	WithdrawRateLimit = 2
+	WithdrawRateLimit  = 2
 	WithdrawRateWindow = 1 * time.Hour
 
 	// 通用限流：每分钟最多60次
@@ -125,4 +125,4 @@ func WithdrawRateLimitMiddleware() gin.HandlerFunc {
 // GeneralRateLimitMiddleware 通用限流中间件
 func GeneralRateLimitMiddleware() gin.HandlerFunc {
 	return RateLimitMiddleware(GeneralRateLimit, GeneralRateWindow)
-} 
+}

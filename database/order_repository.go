@@ -39,7 +39,7 @@ func (r *OrderRepository) GetUserOrders(ctx context.Context, uid string, page, p
 
 	// 构建查询条件
 	conditions := map[string]interface{}{"uid": uid}
-	
+
 	// 根据状态类型添加状态过滤条件
 	status := models.GetStatusByType(statusType)
 	if status != "" {
@@ -112,12 +112,12 @@ func (r *OrderRepository) GetExpiredOrders(ctx context.Context) ([]models.Order,
 // GetOrderStats 获取订单统计信息
 func (r *OrderRepository) GetOrderStats(ctx context.Context, uid string) (map[string]interface{}, error) {
 	var stats struct {
-		TotalOrders    int64   `json:"total_orders"`
-		PendingOrders  int64   `json:"pending_orders"`
-		SuccessOrders  int64   `json:"success_orders"`
-		FailedOrders   int64   `json:"failed_orders"`
-		TotalAmount    float64 `json:"total_amount"`
-		TotalProfit    float64 `json:"total_profit"`
+		TotalOrders   int64   `json:"total_orders"`
+		PendingOrders int64   `json:"pending_orders"`
+		SuccessOrders int64   `json:"success_orders"`
+		FailedOrders  int64   `json:"failed_orders"`
+		TotalAmount   float64 `json:"total_amount"`
+		TotalProfit   float64 `json:"total_profit"`
 	}
 
 	// 总订单数
@@ -164,4 +164,21 @@ func (r *OrderRepository) GetOrderStats(ctx context.Context, uid string) (map[st
 		"total_amount":   stats.TotalAmount,
 		"total_profit":   stats.TotalProfit,
 	}, nil
-} 
+}
+
+// GetUserOrderCount 获取用户订单数量
+func (r *OrderRepository) GetUserOrderCount(ctx context.Context, uid string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Count(&count).Error
+	return count, err
+}
+
+// CheckUserPeriodExists 检查用户是否已购买过指定期号
+func (r *OrderRepository) CheckUserPeriodExists(ctx context.Context, uid string, periodNumber string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Order{}).
+		Where("uid = ? AND period_number = ?", uid, periodNumber).
+		Count(&count).Error
+
+	return count > 0, err
+}

@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"strconv"
 
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/middleware"
@@ -27,25 +26,33 @@ func NewGroupBuyController() *GroupBuyController {
 
 // GetActiveGroupBuyDetail 获取活跃拼单详情
 // @Summary 获取活跃拼单详情
-// @Description 获取AutoStart为true，截止时间比当前大，完成状态为cancelled的拼单详情
+// @Description 根据用户ID获取未截止的拼单详情
 // @Tags 拼单
 // @Accept json
 // @Produce json
-// @Param random query bool false "是否随机返回，默认false按时间最近返回"
 // @Success 200 {object} utils.Response{data=models.GetGroupBuyDetailResponse}
 // @Failure 404 {object} utils.Response
 // @Failure 500 {object} utils.Response
 // @Router /api/v1/group-buy/active-detail [post]
 func (c *GroupBuyController) GetActiveGroupBuyDetail(ctx *gin.Context) {
-	// 获取查询参数
-	randomStr := ctx.DefaultQuery("random", "false")
-	random, err := strconv.ParseBool(randomStr)
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(ctx)
+	if userID == 0 {
+		utils.Unauthorized(ctx)
+		return
+	}
+
+	// 根据user_id查询uid
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
 	if err != nil {
-		random = false
+		utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, "获取用户信息失败")
+		return
 	}
 
 	// 调用服务层
-	response, err := c.groupBuyService.GetActiveGroupBuyDetail(ctx, random)
+	response, err := c.groupBuyService.GetActiveGroupBuyDetail(ctx, user.Uid)
 	if err != nil {
 		utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, err.Error())
 		return
@@ -100,4 +107,4 @@ func (c *GroupBuyController) JoinGroupBuy(ctx *gin.Context) {
 
 	// 返回成功响应
 	utils.Success(ctx, response)
-} 
+}

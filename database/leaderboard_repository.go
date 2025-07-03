@@ -20,12 +20,12 @@ func NewLeaderboardRepository() *LeaderboardRepository {
 
 // WeeklyLeaderboardData 周热榜数据
 type WeeklyLeaderboardData struct {
-	Uid          string    `json:"uid"`
-	Username     string    `json:"username"`
-	CompletedAt  time.Time `json:"completed_at"`
-	OrderCount   int       `json:"order_count"`
-	TotalAmount  float64   `json:"total_amount"`
-	TotalProfit  float64   `json:"total_profit"`
+	Uid         string    `json:"uid"`
+	Username    string    `json:"username"`
+	CompletedAt time.Time `json:"completed_at"`
+	OrderCount  int       `json:"order_count"`
+	TotalAmount float64   `json:"total_amount"`
+	TotalProfit float64   `json:"total_profit"`
 }
 
 // GetWeeklyLeaderboard 获取本周热榜数据
@@ -120,7 +120,7 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 	`
 
 	var rank int
-	err = r.db.WithContext(ctx).Raw(rankQuery, 
+	err = r.db.WithContext(ctx).Raw(rankQuery,
 		weekStart, weekEnd, uid, weekStart, weekEnd,
 		uid, weekStart, weekEnd, uid, weekStart, weekEnd,
 		uid, weekStart, weekEnd, uid, weekStart, weekEnd,
@@ -141,4 +141,4 @@ func (r *LeaderboardRepository) GetUserByUid(ctx context.Context, uid string) (*
 		return nil, err
 	}
 	return &user, nil
-} 
+}

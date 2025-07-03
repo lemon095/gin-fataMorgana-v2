@@ -261,12 +261,12 @@ func (ac *AuthController) GetBankCardInfo(c *gin.Context) {
 			utils.ErrorWithMessage(c, utils.CodeOperationFailed, "银行卡信息解析失败")
 			return
 		}
-		
+
 		// 对银行卡号进行脱敏处理
 		if bankCardInfo.CardNumber != "" {
 			bankCardInfo.CardNumber = utils.MaskBankCard(bankCardInfo.CardNumber)
 		}
-		
+
 		// 对持卡人姓名进行脱敏处理
 		if bankCardInfo.CardHolder != "" {
 			bankCardInfo.CardHolder = utils.MaskName(bankCardInfo.CardHolder)

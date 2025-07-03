@@ -35,7 +35,7 @@ func (v *BankCardValidator) ValidateCardNumber(cardNumber string) error {
 func (v *BankCardValidator) validateBasicFormat(cardNumber string) error {
 	// 去除空格
 	cardNumber = strings.ReplaceAll(cardNumber, " ", "")
-	
+
 	// 检查长度
 	if len(cardNumber) < 13 || len(cardNumber) > 19 {
 		return errors.New("银行卡号长度不正确，应为13-19位")
@@ -77,16 +77,16 @@ func (v *BankCardValidator) ValidateCardHolder(cardHolder string) error {
 	if cardHolder == "" {
 		return errors.New("持卡人姓名不能为空")
 	}
-	
+
 	if len(cardHolder) < 2 || len(cardHolder) > 50 {
 		return errors.New("持卡人姓名长度应在2-50个字符之间")
 	}
-	
+
 	// 检查是否包含特殊字符
 	if !regexp.MustCompile(`^[\p{Han}a-zA-Z\s]+$`).MatchString(cardHolder) {
 		return errors.New("持卡人姓名只能包含中文、英文字母和空格")
 	}
-	
+
 	return nil
 }
 
@@ -95,10 +95,10 @@ func (v *BankCardValidator) ValidateBankName(bankName string) error {
 	if bankName == "" {
 		return errors.New("银行名称不能为空")
 	}
-	
+
 	if len(bankName) < 2 || len(bankName) > 50 {
 		return errors.New("银行名称长度应在2-50个字符之间")
 	}
-	
+
 	return nil
-} 
+}

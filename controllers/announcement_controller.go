@@ -33,13 +33,13 @@ func NewAnnouncementController() *AnnouncementController {
 // @Router /api/v1/announcements/list [post]
 func (c *AnnouncementController) GetAnnouncementList(ctx *gin.Context) {
 	var request models.AnnouncementListRequest
-	
+
 	// 绑定请求参数
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		utils.InvalidParamsWithMessage(ctx, "请求参数错误: "+err.Error())
 		return
 	}
-	
+
 	// 设置默认值
 	if request.Page <= 0 {
 		request.Page = 1
@@ -50,14 +50,14 @@ func (c *AnnouncementController) GetAnnouncementList(ctx *gin.Context) {
 	if request.PageSize > 100 {
 		request.PageSize = 100
 	}
-	
+
 	// 获取公告列表
 	result, err := c.announcementService.GetAnnouncementList(ctx, request.Page, request.PageSize)
 	if err != nil {
 		utils.InternalError(ctx)
 		return
 	}
-	
+
 	// 返回成功响应
 	utils.SuccessWithMessage(ctx, "获取公告列表成功", result)
-} 
+}

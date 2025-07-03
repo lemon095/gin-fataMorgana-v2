@@ -1,4 +1,8 @@
-# Binaries for programs and plugins
+# Go binary files
+main
+main.exe
+gin-fataMorgana
+gin-fataMorgana.exe
 *.exe
 *.exe~
 *.dll
@@ -18,10 +22,9 @@
 go.work
 
 # Build artifacts
-gin-fataMorgana
-gin-fataMorgana.exe
 build/
 dist/
+bin/
 
 # IDE and editor files
 .vscode/
@@ -197,59 +200,4 @@ __debug_bin
 /.emacs.desktop.lock
 *.elc
 auto-save-list
-tramp
-.\#*
-
-# MacOS
-.AppleDouble
-.LSOverride
-Icon
-._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-*.tmp
-*.temp
-Desktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-*.lnk
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
-
-# Archives
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
-
-# Application specific
-# Add any application-specific files that should be ignored 
+tramp 

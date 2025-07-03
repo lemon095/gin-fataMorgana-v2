@@ -77,4 +77,4 @@ func (s *AmountConfigService) GetAmountConfigsByTypeAndAmount(ctx context.Contex
 	}
 
 	return config.ToResponse(), nil
-} 
+}

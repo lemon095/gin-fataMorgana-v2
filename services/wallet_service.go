@@ -159,7 +159,7 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 			Status:   1,
 			Currency: "CNY",
 		}
-		
+
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
 			return nil, fmt.Errorf("创建钱包失败: %w", err)
 		}
@@ -223,7 +223,7 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 			Status:   1,
 			Currency: "CNY",
 		}
-		
+
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
 			return "", fmt.Errorf("创建钱包失败: %w", err)
 		}
@@ -257,7 +257,7 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 		Type:          models.TransactionTypeRecharge,
 		Amount:        amount,
 		BalanceBefore: balanceBefore,
-		BalanceAfter:  balanceBefore, // 余额不变
+		BalanceAfter:  balanceBefore,                   // 余额不变
 		Status:        models.TransactionStatusPending, // 设置为待处理状态
 		Description:   description,
 		OperatorUid:   "", // 申请时为空，后台处理时由管理员设置
@@ -331,7 +331,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 			Status:   1,
 			Currency: "CNY",
 		}
-		
+
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
 			return nil, fmt.Errorf("创建钱包失败: %w", err)
 		}
@@ -398,9 +398,9 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 		BalanceBefore: balanceBefore,
 		BalanceAfter:  wallet.Balance,
 		Status:        models.TransactionStatusPending, // 设置为待处理状态
-		Description:   "提现", // 服务端写死
-		Remark:        bankCardInfo, // 将银行卡信息存储到备注字段
-		OperatorUid:   "", // 申请时为空，后台处理时由管理员设置
+		Description:   "提现",                            // 服务端写死
+		Remark:        bankCardInfo,                    // 将银行卡信息存储到备注字段
+		OperatorUid:   "",                              // 申请时为空，后台处理时由管理员设置
 	}
 
 	// 创建交易记录
@@ -433,10 +433,10 @@ func (s *WalletService) hasValidBankCard(user *models.User) bool {
 	}
 
 	// 检查银行卡信息是否完整
-	if bankCardInfo.CardNumber == "" || 
-	   bankCardInfo.CardHolder == "" || 
-	   bankCardInfo.BankName == "" || 
-	   bankCardInfo.CardType == "" {
+	if bankCardInfo.CardNumber == "" ||
+		bankCardInfo.CardHolder == "" ||
+		bankCardInfo.BankName == "" ||
+		bankCardInfo.CardType == "" {
 		return false
 	}
 
@@ -447,7 +447,7 @@ func (s *WalletService) hasValidBankCard(user *models.User) bool {
 func (s *WalletService) checkDailyWithdrawLimit(ctx context.Context, uid string, amount float64, dailyLimit float64) error {
 	// 获取今日已申请的提现总额
 	today := time.Now().Format("2006-01-02")
-	
+
 	// 查询今日的提现申请记录
 	transactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
 	if err != nil {
@@ -457,15 +457,15 @@ func (s *WalletService) checkDailyWithdrawLimit(ctx context.Context, uid string,
 	// 计算今日已申请的提现总额
 	var todayTotal float64
 	for _, tx := range transactions {
-		if tx.Type == models.TransactionTypeWithdraw && 
-		   (tx.Status == models.TransactionStatusPending || tx.Status == models.TransactionStatusSuccess) {
+		if tx.Type == models.TransactionTypeWithdraw &&
+			(tx.Status == models.TransactionStatusPending || tx.Status == models.TransactionStatusSuccess) {
 			todayTotal += tx.Amount
 		}
 	}
 
 	// 检查是否超过每日限额
 	if todayTotal+amount > dailyLimit {
-		return fmt.Errorf("超过每日提现限额，今日已申请: %.2f，本次申请: %.2f，每日限额: %.2f", 
+		return fmt.Errorf("超过每日提现限额，今日已申请: %.2f，本次申请: %.2f，每日限额: %.2f",
 			todayTotal, amount, dailyLimit)
 	}
 
@@ -545,8 +545,8 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 			"count":  len(pendingTransactions),
 		},
 		"limits": map[string]interface{}{
-			"single_limit":  1000000.0, // 单笔限额
-			"daily_limit":   5000000.0, // 每日限额
+			"single_limit":    1000000.0, // 单笔限额
+			"daily_limit":     5000000.0, // 每日限额
 			"remaining_today": 5000000.0 - todayPendingTotal - todaySuccessTotal,
 		},
 	}, nil

@@ -26,7 +26,7 @@ func NewAnnouncementService() *AnnouncementService {
 func (s *AnnouncementService) GetAnnouncementList(ctx context.Context, page, pageSize int) (*models.AnnouncementListResponse, error) {
 	// 生成缓存键
 	cacheKey := fmt.Sprintf("announcement:list:page:%d:size:%d", page, pageSize)
-	
+
 	// 尝试从缓存获取数据
 	if cached, err := database.RedisClient.Get(ctx, cacheKey).Result(); err == nil {
 		var response models.AnnouncementListResponse
@@ -34,24 +34,24 @@ func (s *AnnouncementService) GetAnnouncementList(ctx context.Context, page, pag
 			return &response, nil
 		}
 	}
-	
+
 	// 缓存未命中，从数据库获取数据
 	announcements, total, err := s.repo.GetAnnouncementList(ctx, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// 转换为响应格式
 	var responses []models.AnnouncementResponse
 	for _, announcement := range announcements {
 		responses = append(responses, announcement.ToResponse())
 	}
-	
+
 	// 计算分页信息
 	totalPages := int(math.Ceil(float64(total) / float64(pageSize)))
 	hasNext := page < totalPages
 	hasPrev := page > 1
-	
+
 	pagination := models.PaginationInfo{
 		CurrentPage: page,
 		PageSize:    pageSize,
@@ -60,17 +60,17 @@ func (s *AnnouncementService) GetAnnouncementList(ctx context.Context, page, pag
 		HasNext:     hasNext,
 		HasPrev:     hasPrev,
 	}
-	
+
 	response := &models.AnnouncementListResponse{
 		Announcements: responses,
 		Pagination:    pagination,
 	}
-	
+
 	// 缓存数据（1分钟）
 	if data, err := json.Marshal(response); err == nil {
 		database.RedisClient.Set(ctx, cacheKey, data, time.Minute)
 	}
-	
+
 	return response, nil
 }
 
@@ -80,7 +80,7 @@ func (s *AnnouncementService) GetAnnouncementByID(ctx context.Context, id uint) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	response := announcement.ToResponse()
 	return &response, nil
 }
@@ -92,9 +92,9 @@ func (s *AnnouncementService) ClearAnnouncementCache(ctx context.Context) error 
 	if err != nil {
 		return err
 	}
-	
+
 	if len(keys) > 0 {
 		return database.RedisClient.Del(ctx, keys...).Err()
 	}
 	return nil
-} 
+}

@@ -215,4 +215,14 @@ func (oc *OrderController) GetOrderStats(c *gin.Context) {
 	utils.Success(c, response)
 }
 
- 
+// GetPeriodList 获取期数列表
+func (oc *OrderController) GetPeriodList(c *gin.Context) {
+	// 获取期数列表
+	response, err := oc.orderService.GetPeriodList()
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		return
+	}
+
+	utils.Success(c, response)
+}

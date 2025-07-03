@@ -36,20 +36,20 @@ func NewAmountConfigController() *AmountConfigController {
 // @Router /api/v1/amount-config/list [post]
 func (c *AmountConfigController) GetAmountConfigsByType(ctx *gin.Context) {
 	var request models.AmountConfigRequest
-	
+
 	// 绑定请求参数
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		utils.InvalidParamsWithMessage(ctx, "请求参数错误: "+err.Error())
 		return
 	}
-	
+
 	// 获取金额配置列表
 	configs, err := c.amountConfigService.GetAmountConfigsByType(ctx, request.Type)
 	if err != nil {
 		utils.InternalError(ctx)
 		return
 	}
-	
+
 	// 返回成功响应
 	utils.SuccessWithMessage(ctx, "获取金额配置列表成功", configs)
 }
@@ -75,21 +75,21 @@ func (c *AmountConfigController) GetAmountConfigByID(ctx *gin.Context) {
 		utils.InvalidParamsWithMessage(ctx, "配置ID不能为空")
 		return
 	}
-	
+
 	// 解析ID
 	var id int64
 	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
 		utils.InvalidParamsWithMessage(ctx, "配置ID格式错误")
 		return
 	}
-	
+
 	// 获取金额配置详情
 	config, err := c.amountConfigService.GetAmountConfigByID(ctx, id)
 	if err != nil {
 		utils.NotFound(ctx)
 		return
 	}
-	
+
 	// 返回成功响应
 	utils.SuccessWithMessage(ctx, "获取金额配置详情成功", config)
-} 
+}

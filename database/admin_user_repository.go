@@ -97,11 +97,11 @@ func (r *AdminUserRepository) Delete(ctx context.Context, id uint) error {
 func (r *AdminUserRepository) List(ctx context.Context, limit, offset int, role int) ([]models.AdminUser, error) {
 	var adminUsers []models.AdminUser
 	query := r.db.WithContext(ctx)
-	
+
 	if role > 0 {
 		query = query.Where("role = ?", role)
 	}
-	
+
 	err := query.Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
@@ -113,11 +113,11 @@ func (r *AdminUserRepository) List(ctx context.Context, limit, offset int, role 
 func (r *AdminUserRepository) Count(ctx context.Context, role int) (int64, error) {
 	var count int64
 	query := r.db.WithContext(ctx).Model(&models.AdminUser{})
-	
+
 	if role > 0 {
 		query = query.Where("role = ?", role)
 	}
-	
+
 	err := query.Count(&count).Error
 	return count, err
 }
@@ -294,7 +294,7 @@ func (r *AdminUserRepository) GetAdminsByRole(ctx context.Context, role int, lim
 // GetAdminsByRoleLevel 根据角色等级获取管理员列表
 func (r *AdminUserRepository) GetAdminsByRoleLevel(ctx context.Context, minLevel, maxLevel int, limit, offset int) ([]models.AdminUser, error) {
 	var adminUsers []models.AdminUser
-	
+
 	// 直接使用角色ID范围查询
 	err := r.db.WithContext(ctx).
 		Where("role >= ? AND role <= ?", minLevel, maxLevel).

@@ -157,4 +157,4 @@ func (s *LeaderboardService) updateMyRankInfo(response *models.LeaderboardRespon
 	// 不在前10名中，查询具体排名
 	myRank := s.getMyRankInfo(uid, weekStart, weekEnd, response.TopUsers)
 	response.MyRank = myRank
-} 
+}

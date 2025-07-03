@@ -1,0 +1,25 @@
+-- 创建用户表
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uid` varchar(8) NOT NULL COMMENT '用户唯一ID',
+  `username` varchar(50) NOT NULL COMMENT '用户名',
+  `email` varchar(100) NOT NULL COMMENT '邮箱地址',
+  `password` varchar(255) NOT NULL COMMENT '密码哈希',
+  `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
+  `bank_card_info` json DEFAULT NULL COMMENT '银行卡信息JSON',
+  `experience` bigint NOT NULL DEFAULT 1 COMMENT '用户等级',
+  `credit_score` bigint NOT NULL DEFAULT 100 COMMENT '用户信用分',
+  `status` bigint NOT NULL DEFAULT 1 COMMENT '用户状态 1:正常 0:禁用',
+  `invited_by` varchar(6) DEFAULT NULL COMMENT '注册时填写的邀请码',
+  `has_group_buy_qualification` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否有拼单资格',
+  `created_at` datetime(3) DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) DEFAULT NULL COMMENT '软删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `idx_users_uid` (`uid`),
+  UNIQUE KEY `idx_users_email` (`email`),
+  KEY `idx_users_username` (`username`),
+  KEY `idx_users_phone` (`phone`),
+  KEY `idx_users_invited_by` (`invited_by`),
+  KEY `idx_users_deleted_at` (`deleted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表 - 存储用户基本信息、认证信息、银行卡信息、经验值、信用分等'; 

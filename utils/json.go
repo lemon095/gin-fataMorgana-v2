@@ -16,4 +16,4 @@ func StructToJSON(v interface{}) (string, error) {
 // JSONToStruct 将JSON字符串转换为结构体
 func JSONToStruct(jsonStr string, v interface{}) error {
 	return json.Unmarshal([]byte(jsonStr), v)
-} 
+}

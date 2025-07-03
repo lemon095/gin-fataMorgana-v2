@@ -27,4 +27,4 @@ func (c *ShareController) GetShareLink(ctx *gin.Context) {
 		return
 	}
 	utils.Success(ctx, gin.H{"share_link": link})
-} 
+}
