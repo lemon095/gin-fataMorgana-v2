@@ -26,9 +26,10 @@ func generateUID() string {
 	return fmt.Sprintf("%08d", rand.Intn(100000000))
 }
 
+// maskUID 对UID进行脱敏处理
 func maskUID(uid string) string {
-	if len(uid) != 8 {
-		return uid
+	if len(uid) < 5 {
+		return uid // 如果UID太短，直接返回
 	}
 	return uid[:2] + "***" + uid[5:]
 }

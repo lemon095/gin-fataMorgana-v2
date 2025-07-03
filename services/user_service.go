@@ -304,35 +304,33 @@ func (s *UserService) recordSuccessfulLogin(ctx context.Context, user *models.Us
 
 // recordFailedLogin 记录失败登录
 func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, loginIP, userAgent, reason string) {
-	var log *models.UserLoginLog
-
+	var uid string
+	
+	// 安全的类型断言
 	switch u := user.(type) {
 	case *models.User:
-		log = &models.UserLoginLog{
-			Uid:        u.Uid,
-			Username:   u.Username,
-			Email:      u.Email,
-			LoginIP:    loginIP,
-			UserAgent:  userAgent,
-			LoginTime:  time.Now(),
-			Status:     0, // 失败
-			FailReason: reason,
-		}
+		uid = u.Uid
 	case string: // 邮箱字符串
-		log = &models.UserLoginLog{
-			Uid:        "",
-			Username:   "",
-			Email:      u,
-			LoginIP:    loginIP,
-			UserAgent:  userAgent,
-			LoginTime:  time.Now(),
-			Status:     0, // 失败
-			FailReason: reason,
-		}
+		uid = u
+	default:
+		// 如果类型不匹配，记录错误但不panic
+		log.Printf("未知的用户类型: %T", user)
+		return
 	}
-
-	if log != nil {
-		s.loginLogRepo.Create(ctx, log)
+	
+	// 记录失败登录
+	logEntry := &models.UserLoginLog{
+		Uid:        uid,
+		LoginIP:    loginIP,
+		UserAgent:  userAgent,
+		Status:     0, // 0表示失败
+		FailReason: reason,
+		LoginTime:  time.Now(),
+		CreatedAt:  time.Now(),
+	}
+	
+	if err := s.loginLogRepo.Create(ctx, logEntry); err != nil {
+		log.Printf("记录失败登录失败: %v", err)
 	}
 }
 

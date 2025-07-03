@@ -56,20 +56,20 @@ func GetCurrentWeekRange() (time.Time, time.Time) {
 	return weekStart, weekEnd
 }
 
-// MaskUsername 脱敏用户名
+// MaskUsername 对用户名进行脱敏处理
 func MaskUsername(username string) string {
 	if len(username) <= 2 {
-		return username
+		return username // 如果用户名太短，直接返回
 	}
-
-	// 保留首尾字符，中间用*替换
+	
 	first := username[:1]
 	last := username[len(username)-1:]
-	middle := ""
+	
+	var middle string
 	for i := 0; i < len(username)-2; i++ {
 		middle += "*"
 	}
-
+	
 	return first + middle + last
 }
 
