@@ -30,8 +30,10 @@ func (r *MemberLevelRepository) GetByLevel(ctx context.Context, level int) (*mod
 // GetByExperience 根据经验值获取等级配置
 func (r *MemberLevelRepository) GetByExperience(ctx context.Context, experience int) (*models.MemberLevel, error) {
 	var memberLevel models.MemberLevel
+	// 根据经验值查找对应的等级配置
+	// 经验值1对应等级1，经验值3对应等级2，以此类推
 	err := r.db.WithContext(ctx).
-		Where("min_experience <= ? AND max_experience >= ? AND status = 1", experience, experience).
+		Where("level = ?", experience).
 		First(&memberLevel).Error
 	if err != nil {
 		return nil, err
