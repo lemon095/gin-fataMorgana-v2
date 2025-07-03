@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"gin-fataMorgana/models"
-	"time"
 )
 
 // LotteryPeriodRepository 期数仓库
@@ -19,14 +18,20 @@ func NewLotteryPeriodRepository() *LotteryPeriodRepository {
 }
 
 // GetCurrentPeriod 获取当前活跃期数
-// 查询条件：当前时间在订单开始时间和订单结束时间范围内
-// 同时确保开始时间早于结束时间
+// 暂时注释掉时间检测，直接查询 active 状态的数据
 func (r *LotteryPeriodRepository) GetCurrentPeriod(ctx context.Context) (*models.LotteryPeriod, error) {
 	var period models.LotteryPeriod
 
-	now := time.Now()
+	// 注释掉时间检测逻辑
+	// now := time.Now()
+	// err := r.db.WithContext(ctx).
+	// 	Where("order_start_time <= ? AND order_end_time > ? AND order_start_time < order_end_time", now, now).
+	// 	Order("created_at DESC").
+	// 	First(&period).Error
+
+	// 直接查询 active 状态的数据
 	err := r.db.WithContext(ctx).
-		Where("order_start_time <= ? AND order_end_time > ? AND order_start_time < order_end_time", now, now).
+		Where("status = ?", "active").
 		Order("created_at DESC").
 		First(&period).Error
 
