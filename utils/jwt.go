@@ -1,10 +1,7 @@
 package utils
 
 import (
-	"errors"
 	"time"
-
-	"gin-fataMorgana/config"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -17,11 +14,10 @@ var (
 )
 
 // InitJWT 初始化JWT配置
-func InitJWT() {
-	cfg := config.GlobalConfig.JWT
-	JWTSecret = []byte(cfg.Secret)
-	AccessTokenExpiry = time.Duration(cfg.AccessTokenExpire) * time.Second
-	RefreshTokenExpiry = time.Duration(cfg.RefreshTokenExpire) * time.Second
+func InitJWT(secret string, accessTokenExpire, refreshTokenExpire int) {
+	JWTSecret = []byte(secret)
+	AccessTokenExpiry = time.Duration(accessTokenExpire) * time.Second
+	RefreshTokenExpiry = time.Duration(refreshTokenExpire) * time.Second
 }
 
 // Claims JWT声明
@@ -84,7 +80,7 @@ func ParseToken(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 
-	return nil, errors.New("无效的令牌")
+	return nil, NewAppError(CodeTokenInvalid, "无效的令牌")
 }
 
 // ValidateToken 验证令牌
@@ -95,8 +91,8 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	// 检查令牌是否过期
-	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now().UTC()) {
-		return nil, errors.New("令牌已过期")
+	if time.Now().UTC().Unix() > claims.ExpiresAt.Unix() {
+		return nil, NewAppError(CodeTokenExpired, "令牌已过期")
 	}
 
 	return claims, nil

@@ -81,7 +81,7 @@ func (s *WalletService) GetUserTransactions(req *GetUserTransactionsRequest) (*G
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("获取用户资金记录失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserFundRecordGetFailed, "获取用户资金记录失败")
 	}
 
 	// 转换为响应格式
@@ -123,12 +123,12 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 	// 检查用户是否存在且状态正常
 	user, err := s.userRepo.FindByUid(ctx, uid)
 	if err != nil {
-		return nil, fmt.Errorf("用户不存在: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
 	}
 
 	// 检查用户状态
-	if !user.IsActive() {
-		return nil, fmt.Errorf("用户账户已被禁用，无法创建钱包")
+	if user.Status == 0 { // 已禁用
+		return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
 	}
 
 	// 创建新钱包
@@ -140,7 +140,7 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 	}
 
 	if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-		return nil, fmt.Errorf("创建钱包失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
 	}
 
 	return wallet, nil
@@ -155,12 +155,12 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
 		user, err := s.userRepo.FindByUid(ctx, uid)
 		if err != nil {
-			return nil, fmt.Errorf("用户不存在: %w", err)
+			return nil, utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
 		}
 
 		// 检查用户状态
-		if !user.IsActive() {
-			return nil, fmt.Errorf("用户账户已被禁用，无法创建钱包")
+		if user.Status == 0 { // 已禁用
+			return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
 		}
 
 		// 自动创建钱包
@@ -172,7 +172,7 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 		}
 
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-			return nil, fmt.Errorf("创建钱包失败: %w", err)
+			return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
 		}
 	}
 
@@ -194,7 +194,7 @@ func (s *WalletService) CreateTransaction(transaction *models.WalletTransaction)
 	}
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
-		return fmt.Errorf("创建交易记录失败: %w", err)
+		return utils.NewAppError(utils.CodeTransactionCreateFailed, "创建交易记录失败")
 	}
 
 	return nil
@@ -219,12 +219,12 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
 		user, err := s.userRepo.FindByUid(ctx, uid)
 		if err != nil {
-			return "", fmt.Errorf("用户不存在: %w", err)
+			return "", utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
 		}
 
 		// 检查用户状态
-		if !user.IsActive() {
-			return "", fmt.Errorf("用户账户已被禁用，无法创建钱包")
+		if user.Status == 0 { // 已禁用
+			return "", utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
 		}
 
 		// 自动创建钱包
@@ -236,23 +236,23 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 		}
 
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-			return "", fmt.Errorf("创建钱包失败: %w", err)
+			return "", utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
 		}
 	}
 
 	// 检查钱包状态
-	if !wallet.IsActive() {
-		return "", fmt.Errorf("钱包已被冻结，无法充值")
+	if wallet.Status == 1 { // 已冻结
+		return "", utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法充值")
 	}
 
 	// 检查充值金额是否合理
 	if amount <= 0 {
-		return "", fmt.Errorf("充值金额必须大于0")
+		return "", utils.NewAppError(utils.CodeRechargeAmountInvalid, "充值金额必须大于0")
 	}
 
 	// 检查是否超过单笔充值限额（可选，这里设置100万）
 	if amount > 1000000 {
-		return "", fmt.Errorf("单笔充值金额不能超过100万元")
+		return "", utils.NewAppError(utils.CodeRechargeAmountExceeded, "单笔充值金额不能超过100万元")
 	}
 
 	// 记录交易前余额
@@ -276,7 +276,7 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 
 	// 创建交易记录
 	if err := s.CreateTransaction(transaction); err != nil {
-		return "", fmt.Errorf("创建充值申请失败: %w", err)
+		return "", utils.NewAppError(utils.CodeTransactionCreateFailed, "创建充值申请失败")
 	}
 
 	return transactionNo, nil
@@ -300,25 +300,25 @@ type WithdrawResponse struct {
 func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*WithdrawResponse, error) {
 	ctx := context.Background()
 
-	// 验证用户密码
+	// 获取用户信息
 	user, err := s.userRepo.FindByUid(ctx, uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取用户信息失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserInfoGetFailed, "获取用户信息失败")
 	}
 
 	// 检查用户状态
-	if !user.IsActive() {
-		return nil, fmt.Errorf("用户账户已被禁用，无法提现")
+	if user.Status == 0 { // 已禁用
+		return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法提现")
 	}
 
-	// 验证密码
+	// 验证登录密码
 	if !user.CheckPassword(req.Password) {
-		return nil, fmt.Errorf("登录密码错误")
+		return nil, utils.NewAppError(utils.CodeWithdrawPasswordWrong, "登录密码错误")
 	}
 
-	// 检查用户是否绑定了银行卡
-	if !s.hasValidBankCard(user) {
-		return nil, fmt.Errorf("请先绑定银行卡后再进行提现操作")
+	// 检查是否绑定银行卡
+	if user.BankCardInfo == "" {
+		return nil, utils.NewAppError(utils.CodeBankCardNotBound, "请先绑定银行卡后再进行提现操作")
 	}
 
 	// 获取钱包，如果不存在则自动创建
@@ -327,12 +327,12 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
 		user, err := s.userRepo.FindByUid(ctx, uid)
 		if err != nil {
-			return nil, fmt.Errorf("用户不存在: %w", err)
+			return nil, utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
 		}
 
 		// 检查用户状态
-		if !user.IsActive() {
-			return nil, fmt.Errorf("用户账户已被禁用，无法创建钱包")
+		if user.Status == 0 { // 已禁用
+			return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
 		}
 
 		// 自动创建钱包
@@ -344,28 +344,28 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 		}
 
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-			return nil, fmt.Errorf("创建钱包失败: %w", err)
+			return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
 		}
 	}
 
 	// 检查钱包状态
-	if !wallet.IsActive() {
-		return nil, fmt.Errorf("钱包已被冻结，无法提现")
+	if wallet.Status == 1 { // 已冻结
+		return nil, utils.NewAppError(utils.CodeWalletFrozenWithdraw, "钱包已被冻结，无法提现")
 	}
 
 	// 检查提现金额是否合理
 	if req.Amount <= 0 {
-		return nil, fmt.Errorf("提现金额必须大于0")
+		return nil, utils.NewAppError(utils.CodeWithdrawAmountInvalid, "提现金额必须大于0")
 	}
 
 	// 检查总余额是否足够
 	if wallet.Balance < req.Amount {
-		return nil, fmt.Errorf("余额不足，当前余额: %.2f元，申请提现: %.2f元", wallet.Balance, req.Amount)
+		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, "余额不足，当前余额: "+fmt.Sprintf("%.2f", wallet.Balance)+"元，申请提现: "+fmt.Sprintf("%.2f", req.Amount)+"元")
 	}
 
 	// 检查是否超过单笔提现限额（可选，这里设置100万）
 	if req.Amount > 1000000 {
-		return nil, fmt.Errorf("单笔提现金额不能超过100万元")
+		return nil, utils.NewAppError(utils.CodeWithdrawAmountExceeded2, "单笔提现金额不能超过100万元")
 	}
 
 	// 检查是否超过每日提现限额（可选，这里设置500万）
@@ -380,12 +380,12 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 
 	// 直接扣减余额
 	if err := wallet.Withdraw(req.Amount); err != nil {
-		return nil, fmt.Errorf("扣减余额失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeBalanceDeductFailed, "扣减余额失败")
 	}
 
 	// 更新钱包
 	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return nil, fmt.Errorf("更新钱包失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeWalletUpdateFailed, "更新钱包失败")
 	}
 
 	// 生成交易流水号
@@ -419,7 +419,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 		// 如果创建交易记录失败，需要回滚扣减的余额
 		wallet.Recharge(req.Amount)
 		s.walletRepo.UpdateWallet(ctx, wallet)
-		return nil, fmt.Errorf("创建提现申请失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeWithdrawCreateFailed, "创建提现申请失败")
 	}
 
 	return &WithdrawResponse{
@@ -462,7 +462,7 @@ func (s *WalletService) checkDailyWithdrawLimit(ctx context.Context, uid string,
 	// 查询今日的提现申请记录
 	transactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
 	if err != nil {
-		return fmt.Errorf("查询今日提现记录失败: %w", err)
+		return utils.NewAppError(utils.CodeTodayWithdrawQueryFailed, "查询今日提现记录失败")
 	}
 
 	// 计算今日已申请的提现总额
@@ -476,8 +476,7 @@ func (s *WalletService) checkDailyWithdrawLimit(ctx context.Context, uid string,
 
 	// 检查是否超过每日限额
 	if todayTotal+amount > dailyLimit {
-		return fmt.Errorf("超过每日提现限额，今日已申请: %.2f，本次申请: %.2f，每日限额: %.2f",
-			todayTotal, amount, dailyLimit)
+		return utils.NewAppError(utils.CodeDailyWithdrawExceeded, "超过每日提现限额")
 	}
 
 	return nil
@@ -490,14 +489,14 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 	// 获取钱包信息
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取钱包失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包失败")
 	}
 
 	// 获取今日提现申请
 	today := time.Now().UTC().Format("2006-01-02")
 	todayTransactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
 	if err != nil {
-		return nil, fmt.Errorf("查询今日提现记录失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeTodayWithdrawQueryFailed, "查询今日提现记录失败")
 	}
 
 	// 计算今日提现统计
@@ -527,7 +526,7 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 	// 获取所有待处理的提现申请
 	pendingTransactions, _, err := s.walletRepo.GetTransactionsByType(ctx, uid, models.TransactionTypeWithdraw, 1, 1000)
 	if err != nil {
-		return nil, fmt.Errorf("查询待处理提现记录失败: %w", err)
+		return nil, utils.NewAppError(utils.CodePendingWithdrawQueryFailed, "查询待处理提现记录失败")
 	}
 
 	// 计算待处理提现统计
@@ -575,7 +574,7 @@ func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (
 	// 获取交易记录
 	transaction, err := s.walletRepo.GetTransactionByNo(ctx, req.TransactionNo)
 	if err != nil {
-		return nil, fmt.Errorf("获取交易详情失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeTransactionDetailGetFailed, "获取交易详情失败")
 	}
 
 	// 转换为响应格式

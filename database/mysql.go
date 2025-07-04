@@ -9,6 +9,7 @@ import (
 
 	"gin-fataMorgana/config"
 	"gin-fataMorgana/models"
+	"gin-fataMorgana/utils"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -32,13 +33,13 @@ func InitMySQL() error {
 	// 连接数据库
 	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
-		return fmt.Errorf("连接数据库失败: %w", err)
+		return utils.NewAppError(utils.CodeDBConnectFailed, "连接数据库失败")
 	}
 
 	// 获取底层的sql.DB对象
 	sqlDB, err := db.DB()
 	if err != nil {
-		return fmt.Errorf("获取数据库实例失败: %w", err)
+		return utils.NewAppError(utils.CodeDBInstanceFailed, "获取数据库实例失败")
 	}
 
 	// 设置连接池参数（从配置文件读取）
@@ -76,7 +77,7 @@ func InitMySQL() error {
 // AutoMigrate 自动迁移数据库表
 func AutoMigrate() error {
 	if DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return utils.NewAppError(utils.CodeDBNotInitialized, "数据库未初始化")
 	}
 
 	// 自动迁移表结构
@@ -95,7 +96,7 @@ func AutoMigrate() error {
 		&models.LotteryPeriod{},
 	)
 	if err != nil {
-		return fmt.Errorf("数据库迁移失败: %w", err)
+		return utils.NewAppError(utils.CodeDBMigrationFailed, "数据库迁移失败")
 	}
 
 	// 添加表注释
@@ -153,7 +154,7 @@ func CloseDB() error {
 	if DB != nil {
 		sqlDB, err := DB.DB()
 		if err != nil {
-			return fmt.Errorf("获取数据库实例失败: %w", err)
+			return utils.NewAppError(utils.CodeDBInstanceFailed, "获取数据库实例失败")
 		}
 		return sqlDB.Close()
 	}
@@ -187,12 +188,12 @@ func GetDBStats() map[string]interface{} {
 // HealthCheck 数据库健康检查
 func HealthCheck() error {
 	if DB == nil {
-		return fmt.Errorf("数据库未初始化")
+		return utils.NewAppError(utils.CodeDBNotInitialized, "数据库未初始化")
 	}
 
 	sqlDB, err := DB.DB()
 	if err != nil {
-		return fmt.Errorf("获取数据库实例失败: %w", err)
+		return utils.NewAppError(utils.CodeDBInstanceFailed, "获取数据库实例失败")
 	}
 
 	return sqlDB.Ping()
@@ -218,10 +219,14 @@ func NewQueryCache() *QueryCache {
 	return &QueryCache{DB: DB}
 }
 
-// WithCache 带缓存的查询
+// WithCache 带缓存的查询（添加超时控制）
 func (qc *QueryCache) WithCache(ctx context.Context, key string, expiration time.Duration, fn func() (interface{}, error)) (interface{}, error) {
+	// 设置查询超时
+	queryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	// 先尝试从Redis获取缓存
-	if cached, err := RedisClient.Get(ctx, key).Result(); err == nil {
+	if cached, err := RedisClient.Get(queryCtx, key).Result(); err == nil {
 		return cached, nil
 	}
 
@@ -232,19 +237,23 @@ func (qc *QueryCache) WithCache(ctx context.Context, key string, expiration time
 	}
 
 	// 缓存结果
-	RedisClient.Set(ctx, key, result, expiration)
+	RedisClient.Set(queryCtx, key, result, expiration)
 	return result, nil
 }
 
 // InvalidateCache 清除缓存
 func (qc *QueryCache) InvalidateCache(ctx context.Context, pattern string) error {
-	keys, err := RedisClient.Keys(ctx, pattern).Result()
+	// 设置操作超时
+	opCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	keys, err := RedisClient.Keys(opCtx, pattern).Result()
 	if err != nil {
 		return err
 	}
 
 	if len(keys) > 0 {
-		return RedisClient.Del(ctx, keys...).Err()
+		return RedisClient.Del(opCtx, keys...).Err()
 	}
 	return nil
 }

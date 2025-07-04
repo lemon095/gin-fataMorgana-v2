@@ -4,7 +4,6 @@ import (
 	"gin-fataMorgana/middleware"
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,14 +22,12 @@ func NewLeaderboardController() *LeaderboardController {
 
 // GetLeaderboard 获取任务热榜
 func (c *LeaderboardController) GetLeaderboard(ctx *gin.Context) {
-	// 获取当前用户ID
-	userID := middleware.GetCurrentUser(ctx)
-	if userID == 0 {
+	// 获取当前用户UID（从认证中间件中获取）
+	uid := middleware.GetCurrentUID(ctx)
+	if uid == "" {
 		utils.Unauthorized(ctx)
 		return
 	}
-
-	uid := strconv.FormatUint(uint64(userID), 10)
 
 	// 获取热榜数据
 	response, err := c.leaderboardService.GetLeaderboard(uid)

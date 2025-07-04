@@ -46,30 +46,30 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	}
 
 	if !isEmail(req.Account) && !isPhone(req.Account) {
-		return nil, utils.NewAppError(utils.CodeAccountNotFound, "账号格式错误，请输入正确的邮箱或手机号", nil)
+		return nil, utils.NewAppError(utils.CodeAccountFormatInvalid, "账号格式错误，请输入正确的邮箱或手机号")
 	}
 
 	if isEmail(req.Account) {
 		emailExists, err := s.userRepo.CheckEmailExists(ctx, req.Account)
 		if err != nil {
-			return nil, utils.NewAppError(utils.CodeEmailFormatInvalid, "邮箱格式不正确", err)
+			return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 		}
 		if emailExists {
-			return nil, utils.NewAppError(utils.CodeEmailAlreadyExists, "邮箱已被注册", nil)
+			return nil, utils.NewAppError(utils.CodeEmailAlreadyExists, "邮箱已被注册")
 		}
 	}
 	if isPhone(req.Account) {
 		phoneExists, err := s.userRepo.CheckPhoneExists(ctx, req.Account)
 		if err != nil {
-			return nil, utils.NewAppError(utils.CodePhoneFormatInvalid, "手机号格式不正确", err)
+			return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 		}
 		if phoneExists {
-			return nil, utils.NewAppError(utils.CodePhoneAlreadyExists, "手机号已被注册", nil)
+			return nil, utils.NewAppError(utils.CodePhoneAlreadyExists, "手机号已被注册")
 		}
 	}
 
 	if req.Password != req.ConfirmPassword {
-		return nil, utils.NewAppError(utils.CodePasswordNotMatch, "两次输入的密码不一致", nil)
+		return nil, utils.NewAppError(utils.CodePasswordNotMatch, "两次输入的密码不一致")
 	}
 
 	// 验证邀请码是否来自活跃的管理员
@@ -78,14 +78,14 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		adminUser, err := adminUserRepo.GetActiveInviteCode(ctx, req.InviteCode)
 		if err != nil {
 			log.Printf("邀请码验证失败，邀请码: %s, 错误: %v", req.InviteCode, err)
-			return nil, errors.New("邀请码无效或管理员账户已被禁用")
+			return nil, utils.NewAppError(utils.CodeInviteCodeAdminDisabled, "邀请码无效或管理员账户已被禁用")
 		}
 
 		// 可以在这里添加额外的邀请码验证逻辑
 		// 例如：检查管理员是否有权限邀请用户
 		if !adminUser.IsActive() {
 			log.Printf("邀请码对应的管理员账户已被禁用，邀请码: %s", req.InviteCode)
-			return nil, errors.New("邀请码对应的管理员账户已被禁用")
+			return nil, utils.NewAppError(utils.CodeInviteCodeAdminDisabled2, "邀请码对应的管理员账户已被禁用")
 		}
 	}
 
@@ -119,13 +119,13 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	// 加密密码
 	if err := user.HashPassword(); err != nil {
 		log.Printf("加密用户密码失败，邮箱: %s, 错误: %v", req.Account, err)
-		return nil, fmt.Errorf("加密密码失败: %w", err)
+		return nil, utils.NewAppError(utils.CodePasswordEncryptFailed, "加密密码失败")
 	}
 
 	// 保存用户到数据库
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		log.Printf("创建用户失败，邮箱: %s, 错误: %v", req.Account, err)
-		return nil, fmt.Errorf("创建用户失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserCreateFailed, "创建用户失败")
 	}
 
 	log.Printf("用户注册成功，UID: %s, 邮箱: %s", userID, req.Account)
@@ -137,16 +137,16 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 // validateRegisterRequest 验证注册请求参数
 func (s *UserService) validateRegisterRequest(req *models.UserRegisterRequest) error {
 	if req.Account == "" {
-		return errors.New("账号不能为空")
+		return utils.NewAppError(utils.CodeAccountEmpty, "账号不能为空")
 	}
 	if req.Password == "" {
-		return errors.New("密码不能为空")
+		return utils.NewAppError(utils.CodePasswordEmpty, "密码不能为空")
 	}
 	if len(req.Password) < 6 {
-		return errors.New("密码长度不能少于6位")
+		return utils.NewAppError(utils.CodePasswordTooShort, "密码长度不能少于6位")
 	}
 	if req.ConfirmPassword == "" {
-		return errors.New("确认密码不能为空")
+		return utils.NewAppError(utils.CodePasswordEmpty, "确认密码不能为空")
 	}
 	return nil
 }
@@ -188,33 +188,33 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 	} else if isPhone(req.Account) {
 		user, err = s.userRepo.FindByPhone(ctx, req.Account)
 	} else {
-		return nil, errors.New("账号格式错误，请输入正确的邮箱或手机号")
+		return nil, utils.NewAppError(utils.CodeAccountFormatInvalid, "账号格式错误，请输入正确的邮箱或手机号")
 	}
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账号不存在")
-			return nil, errors.New("账号不存在")
+			return nil, utils.NewAppError(utils.CodeAccountNotFound, "账号不存在")
 		}
 		return nil, err
 	}
 
 	if !user.CheckPassword(req.Password) {
 		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "密码错误")
-		return nil, errors.New("邮箱或手机号或密码错误")
+		return nil, utils.NewAppError(utils.CodeLoginCredentialError, "邮箱或手机号或密码错误")
 	}
 
 	// 新增：校验用户状态
 	if user.DeletedAt != nil {
 		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账户已被删除")
-		return nil, errors.New("账户已被删除，无法登录")
+		return nil, utils.NewAppError(utils.CodeUserDeletedLogin, "账户已被删除，无法登录")
 	}
 	if user.Status == 0 {
 		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账户已被禁用")
-		return nil, errors.New("账户已被禁用，无法登录")
+		return nil, utils.NewAppError(utils.CodeUserDisabledLogin, "账户已被禁用，无法登录")
 	}
 	if user.Status == 2 {
 		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账户待审核")
-		return nil, errors.New("账户待审核，无法登录")
+		return nil, utils.NewAppError(utils.CodeUserPendingApproval, "账户待审核，无法登录")
 	}
 
 	// 记录成功的登录
@@ -257,37 +257,38 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 }
 
 // RefreshToken 刷新访问令牌
-func (s *UserService) RefreshToken(refreshToken string) (*models.TokenResponse, error) {
+func (s *UserService) RefreshToken(req *models.RefreshTokenRequest) (*models.TokenResponse, error) {
 	ctx := context.Background()
 
 	// 验证刷新令牌
-	claims, err := utils.ValidateToken(refreshToken)
-	if err != nil {
-		return nil, errors.New("无效的刷新令牌")
+	if req.RefreshToken == "" {
+		return nil, utils.NewAppError(utils.CodeRefreshTokenInvalid, "无效的刷新令牌")
 	}
 
-	// 查找用户
+	// 解析刷新令牌
+	claims, err := utils.ValidateToken(req.RefreshToken)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeRefreshTokenInvalid, "无效的刷新令牌")
+	}
+
+	// 检查用户是否存在
 	user, err := s.userRepo.FindByUsername(ctx, claims.Username)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, utils.NewAppError(utils.CodeUserNotFound, "用户不存在")
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 	}
 
-	// 检查用户是否已被删除
-	if user.DeletedAt != nil {
-		return nil, errors.New("账户已被删除，无法刷新令牌")
+	// 检查用户状态
+	if user.Status == 2 { // 已删除
+		return nil, utils.NewAppError(utils.CodeUserDeletedRefresh, "账户已被删除，无法刷新令牌")
 	}
-
-	// 检查用户是否被禁用
-	if user.Status == 0 {
-		return nil, errors.New("账户已被禁用，无法刷新令牌")
+	if user.Status == 1 { // 已禁用
+		return nil, utils.NewAppError(utils.CodeUserDisabledRefresh, "账户已被禁用，无法刷新令牌")
 	}
-
-	// 检查用户是否待审核
-	if user.Status == 2 {
-		return nil, errors.New("账户待审核，无法刷新令牌")
+	if user.Status == 0 { // 待审核
+		return nil, utils.NewAppError(utils.CodeUserPendingRefresh, "账户待审核，无法刷新令牌")
 	}
 
 	// 生成新的访问令牌
@@ -317,14 +318,14 @@ func (s *UserService) GetUserByID(userID uint) (*models.UserResponse, error) {
 	var user models.User
 	if err := s.userRepo.FindByID(ctx, userID, &user); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, utils.NewAppError(utils.CodeUserNotFound, "用户不存在")
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 	}
 
 	// 检查用户是否已被删除
 	if user.DeletedAt != nil {
-		return nil, errors.New("用户已被删除")
+		return nil, utils.NewAppError(utils.CodeUserDeleted, "用户已被删除")
 	}
 
 	// 从Redis获取用户等级进度
@@ -409,19 +410,19 @@ func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*model
 	user, err := s.userRepo.FindByUid(ctx, uid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, utils.NewAppError(utils.CodeUserNotFound, "用户不存在")
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 	}
 
 	// 检查用户是否已被删除
 	if user.DeletedAt != nil {
-		return nil, errors.New("账户已被删除，无法绑定银行卡")
+		return nil, utils.NewAppError(utils.CodeUserDeletedBindCard, "账户已被删除，无法绑定银行卡")
 	}
 
 	// 检查用户是否被禁用
 	if user.Status == 0 {
-		return nil, errors.New("账户已被禁用，无法绑定银行卡")
+		return nil, utils.NewAppError(utils.CodeUserDisabledBindCard, "账户已被禁用，无法绑定银行卡")
 	}
 
 	// 验证银行卡信息
@@ -440,7 +441,7 @@ func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*model
 	// 将银行卡信息转换为JSON字符串
 	bankCardInfoJSON, err := utils.StructToJSON(bankCardInfo)
 	if err != nil {
-		return nil, fmt.Errorf("银行卡信息格式错误: %w", err)
+		return nil, utils.NewAppError(utils.CodeBankCardFormatError, "银行卡信息格式错误")
 	}
 
 	// 更新用户的银行卡信息
@@ -449,7 +450,7 @@ func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*model
 
 	// 保存到数据库
 	if err := s.userRepo.Update(ctx, user); err != nil {
-		return nil, fmt.Errorf("更新银行卡信息失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeBankCardUpdateFailed, "更新银行卡信息失败")
 	}
 
 	response := user.ToResponse()
@@ -458,26 +459,24 @@ func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*model
 
 // validateBankCardInfo 验证银行卡信息
 func (s *UserService) validateBankCardInfo(req *BindBankCardRequest) error {
-	validator := utils.NewBankCardValidator()
-
 	// 验证银行名称
-	if err := validator.ValidateBankName(req.BankName); err != nil {
+	if err := utils.ValidateBankName(req.BankName); err != nil {
 		return err
 	}
 
 	// 验证持卡人姓名
-	if err := validator.ValidateCardHolder(req.CardHolder); err != nil {
+	if err := utils.ValidateCardholderName(req.CardHolder); err != nil {
 		return err
 	}
 
 	// 验证银行卡号
-	if err := validator.ValidateCardNumber(req.CardNumber); err != nil {
+	if err := utils.ValidateCardNumberFormat(req.CardNumber); err != nil {
 		return err
 	}
 
 	// 验证卡类型
 	if strings.TrimSpace(req.CardType) == "" {
-		return errors.New("卡类型不能为空")
+		return utils.NewAppError(utils.CodeCardTypeEmpty, "卡类型不能为空")
 	}
 
 	// 验证卡类型是否在允许的范围内
@@ -490,7 +489,7 @@ func (s *UserService) validateBankCardInfo(req *BindBankCardRequest) error {
 		}
 	}
 	if !isValidCardType {
-		return errors.New("卡类型不正确，支持的类型：借记卡、信用卡、储蓄卡")
+		return utils.NewAppError(utils.CodeCardTypeInvalid, "卡类型不正确，支持的类型：借记卡、信用卡、储蓄卡")
 	}
 
 	return nil
@@ -504,101 +503,91 @@ func (s *UserService) GetBankCardInfo(uid string) (*models.BankCardInfo, error) 
 	user, err := s.userRepo.FindByUid(ctx, uid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("用户不存在")
+			return nil, utils.NewAppError(utils.CodeUserNotFound, "用户不存在")
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 	}
 
 	// 检查用户是否已被删除
 	if user.DeletedAt != nil {
-		return nil, errors.New("账户已被删除")
+		return nil, utils.NewAppError(utils.CodeUserDeleted, "用户已被删除")
 	}
 
 	// 检查用户是否被禁用
 	if user.Status == 0 {
-		return nil, errors.New("账户已被禁用")
+		return nil, utils.NewAppError(utils.CodeUserDisabledLogin, "账户已被禁用")
 	}
 
 	// 检查是否已绑定银行卡
 	if user.BankCardInfo == "" {
-		return nil, errors.New("用户未绑定银行卡")
+		return nil, utils.NewAppError(utils.CodeUserNoBankCard, "用户未绑定银行卡")
 	}
 
 	// 解析银行卡信息
 	var bankCardInfo models.BankCardInfo
 	if err := utils.JSONToStruct(user.BankCardInfo, &bankCardInfo); err != nil {
-		return nil, fmt.Errorf("银行卡信息格式错误: %w", err)
+		return nil, utils.NewAppError(utils.CodeBankCardFormatError, "银行卡信息格式错误")
 	}
 
 	return &bankCardInfo, nil
 }
 
 // ChangePassword 修改密码
-func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+func (s *UserService) ChangePassword(req *models.ChangePasswordRequest, uid string) error {
 	ctx := context.Background()
 
-	// 1. 根据用户ID获取用户信息
-	var user models.User
-	if err := s.userRepo.FindByID(ctx, userID, &user); err != nil {
+	// 检查用户是否存在
+	user, err := s.userRepo.FindByUid(ctx, uid)
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("用户不存在")
+			return utils.NewAppError(utils.CodeUserNotFound, "用户不存在")
 		}
-		return fmt.Errorf("查询用户失败: %w", err)
+		return utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 	}
 
-	// 2. 检查用户是否已被删除
-	if user.DeletedAt != nil {
-		return errors.New("用户已被删除，无法修改密码")
+	// 检查用户状态
+	if user.Status == 2 { // 已删除
+		return utils.NewAppError(utils.CodeUserDeletedChangePwd, "用户已被删除，无法修改密码")
+	}
+	if user.Status == 1 { // 已禁用
+		return utils.NewAppError(utils.CodeUserDisabledChangePwd, "账户已被禁用，无法修改密码")
 	}
 
-	// 3. 检查用户是否被禁用
-	if user.Status == 0 {
-		return errors.New("账户已被禁用，无法修改密码")
+	// 验证当前密码
+	if !user.CheckPassword(req.OldPassword) {
+		return utils.NewAppError(utils.CodeCurrentPasswordWrong, "当前密码错误")
 	}
 
-	// 4. 验证旧密码是否正确
-	if !user.CheckPassword(oldPassword) {
-		return errors.New("当前密码错误")
+	// 检查新密码是否与当前密码相同
+	if user.CheckPassword(req.NewPassword) {
+		return utils.NewAppError(utils.CodeNewPasswordSame, "新密码不能与当前密码相同")
 	}
 
-	// 5. 验证新密码格式
-	if err := s.validateNewPassword(newPassword); err != nil {
-		return err
+	// 验证密码长度
+	if len(req.NewPassword) < 6 {
+		return utils.NewAppError(utils.CodePasswordTooShort, "密码长度不能少于6位")
+	}
+	if len(req.NewPassword) > 50 {
+		return utils.NewAppError(utils.CodePasswordTooLong, "密码长度不能超过50位")
 	}
 
-	// 6. 检查新密码是否与旧密码相同
-	if oldPassword == newPassword {
-		return errors.New("新密码不能与当前密码相同")
-	}
-
-	// 7. 更新密码
-	user.Password = newPassword
+	// 更新密码
+	user.Password = req.NewPassword
 	if err := user.HashPassword(); err != nil {
-		return fmt.Errorf("密码加密失败: %w", err)
+		return utils.NewAppError(utils.CodePasswordEncryptFailed2, "密码加密失败")
 	}
 
 	user.UpdatedAt = time.Now().UTC()
 
-	// 8. 保存到数据库
-	if err := s.userRepo.Update(ctx, &user); err != nil {
-		return fmt.Errorf("更新密码失败: %w", err)
+	// 保存到数据库
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return utils.NewAppError(utils.CodePasswordUpdateFailed, "更新密码失败")
 	}
 
-	// 9. 可选：使所有现有token失效（这里可以通过Redis实现）
+	// 可选：使所有现有token失效（这里可以通过Redis实现）
 	// 由于项目中没有token黑名单机制，这里暂时跳过
 	// 如果需要实现，可以在Redis中维护一个token黑名单
 
-	return nil
-}
-
-// validateNewPassword 验证新密码
-func (s *UserService) validateNewPassword(password string) error {
-	if len(password) < 6 {
-		return errors.New("密码长度不能少于6位")
-	}
-	if len(password) > 50 {
-		return errors.New("密码长度不能超过50位")
-	}
 	return nil
 }
 

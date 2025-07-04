@@ -6,7 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
+
+	"gin-fataMorgana/utils"
 )
 
 // Config 简化后的配置结构体
@@ -86,15 +88,15 @@ func LoadConfig() error {
 		return nil
 	}
 
-	viper.SetConfigFile(configFile)
-
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("读取配置文件失败: %w", err)
+	// 读取配置文件
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return utils.NewAppError(utils.CodeConfigReadFailed, "读取配置文件失败")
 	}
 
-	GlobalConfig = &Config{}
-	if err := viper.Unmarshal(GlobalConfig); err != nil {
-		return fmt.Errorf("解析配置文件失败: %w", err)
+	// 解析配置文件
+	if err := yaml.Unmarshal(data, &GlobalConfig); err != nil {
+		return utils.NewAppError(utils.CodeConfigParseFailed, "解析配置文件失败")
 	}
 
 	// 设置默认值
@@ -221,25 +223,30 @@ func (c *RedisConfig) GetRedisAddr() string {
 
 // ValidateConfig 简化后的配置验证
 func ValidateConfig() error {
+	// 检查配置是否已加载
 	if GlobalConfig == nil {
-		return fmt.Errorf("配置未加载")
+		return utils.NewAppError(utils.CodeConfigNotLoaded, "配置未加载")
 	}
 
-	// 基本验证
+	// 验证数据库配置
 	if GlobalConfig.Database.Host == "" {
-		return fmt.Errorf("数据库主机地址不能为空")
+		return utils.NewAppError(utils.CodeDBHostEmpty, "数据库主机地址不能为空")
 	}
 	if GlobalConfig.Database.Username == "" {
-		return fmt.Errorf("数据库用户名不能为空")
+		return utils.NewAppError(utils.CodeDBUserEmpty, "数据库用户名不能为空")
 	}
 	if GlobalConfig.Database.DBName == "" {
-		return fmt.Errorf("数据库名称不能为空")
+		return utils.NewAppError(utils.CodeDBNameEmpty, "数据库名称不能为空")
 	}
+
+	// 验证Redis配置
 	if GlobalConfig.Redis.Host == "" {
-		return fmt.Errorf("Redis主机地址不能为空")
+		return utils.NewAppError(utils.CodeRedisHostEmpty, "Redis主机地址不能为空")
 	}
+
+	// 验证JWT配置
 	if GlobalConfig.JWT.Secret == "" {
-		return fmt.Errorf("JWT密钥不能为空")
+		return utils.NewAppError(utils.CodeJWTSecretEmpty, "JWT密钥不能为空")
 	}
 
 	return nil

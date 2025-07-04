@@ -83,7 +83,7 @@ func RateLimitMiddleware(limit int, window time.Duration) gin.HandlerFunc {
 
 		// 检查是否允许请求
 		if !limiter.isAllowed(clientIP) {
-			utils.ErrorWithMessage(c, utils.CodeForbidden, "请求过于频繁，请稍后再试")
+			utils.ErrorWithMessage(c, utils.CodeRateLimitExceeded, "请求过于频繁，请稍后再试")
 			c.Abort()
 			return
 		}
@@ -138,7 +138,7 @@ func LoginRateLimitMiddleware() gin.HandlerFunc {
 		}
 
 		if !limiter.isAllowed(key) {
-			utils.ErrorWithMessage(c, utils.CodeForbidden, "请求过于频繁，请稍后再试")
+			utils.ErrorWithMessage(c, utils.CodeRateLimitExceeded, "请求过于频繁，请稍后再试")
 			c.Abort()
 			return
 		}
@@ -173,7 +173,7 @@ func AccountRateLimitMiddleware() gin.HandlerFunc {
 		}
 
 		if !limiter.isAllowed(key) {
-			utils.ErrorWithMessage(c, utils.CodeForbidden, "请求过于频繁，请稍后再试")
+			utils.ErrorWithMessage(c, utils.CodeRateLimitExceeded, "请求过于频繁，请稍后再试")
 			c.Abort()
 			return
 		}

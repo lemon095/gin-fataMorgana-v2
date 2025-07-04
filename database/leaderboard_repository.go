@@ -28,29 +28,43 @@ type WeeklyLeaderboardData struct {
 	TotalProfit float64   `json:"total_profit"`
 }
 
-// GetWeeklyLeaderboard 获取本周热榜数据
+// GetWeeklyLeaderboard 获取本周热榜数据（性能优化版本）
 func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekStart, weekEnd time.Time) ([]WeeklyLeaderboardData, error) {
 	var results []WeeklyLeaderboardData
 
+	// 优化查询：使用窗口函数提高性能
 	query := `
+		WITH user_stats AS (
+			SELECT 
+				o.uid,
+				u.username,
+				MAX(o.updated_at) as completed_at,
+				COUNT(*) as order_count,
+				SUM(o.amount) as total_amount,
+				SUM(o.profit_amount) as total_profit,
+				ROW_NUMBER() OVER (
+					ORDER BY COUNT(*) DESC, SUM(o.amount) DESC, MAX(o.updated_at) ASC
+				) as rank
+			FROM orders o
+			JOIN users u ON o.uid = u.uid
+			WHERE o.status = ? 
+			AND o.updated_at >= ? 
+			AND o.updated_at <= ?
+			GROUP BY o.uid, u.username
+		)
 		SELECT 
-			o.uid,
-			u.username,
-			MAX(o.updated_at) as completed_at,
-			COUNT(*) as order_count,
-			SUM(o.amount) as total_amount,
-			SUM(o.profit_amount) as total_profit
-		FROM orders o
-		JOIN users u ON o.uid = u.uid
-		WHERE o.status = 'success' 
-		AND o.updated_at >= ? 
-		AND o.updated_at <= ?
-		GROUP BY o.uid, u.username
-		ORDER BY order_count DESC, total_amount DESC, completed_at ASC
-		LIMIT 10
+			uid,
+			username,
+			completed_at,
+			order_count,
+			total_amount,
+			total_profit
+		FROM user_stats
+		WHERE rank <= 10
+		ORDER BY rank
 	`
 
-	err := r.db.WithContext(ctx).Raw(query, weekStart, weekEnd).Scan(&results).Error
+	err := r.db.WithContext(ctx).Raw(query, "success", weekStart, weekEnd).Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +76,7 @@ func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekSt
 func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid string, weekStart, weekEnd time.Time) (*WeeklyLeaderboardData, int, error) {
 	var userData WeeklyLeaderboardData
 
-	// 获取用户数据
+	// 获取用户数据 - 使用参数化查询
 	userQuery := `
 		SELECT 
 			o.uid,
@@ -73,14 +87,14 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 			SUM(o.profit_amount) as total_profit
 		FROM orders o
 		JOIN users u ON o.uid = u.uid
-		WHERE o.status = 'success' 
+		WHERE o.status = ? 
 		AND o.uid = ?
 		AND o.updated_at >= ? 
 		AND o.updated_at <= ?
 		GROUP BY o.uid, u.username
 	`
 
-	err := r.db.WithContext(ctx).Raw(userQuery, uid, weekStart, weekEnd).Scan(&userData).Error
+	err := r.db.WithContext(ctx).Raw(userQuery, "success", uid, weekStart, weekEnd).Scan(&userData).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -90,7 +104,7 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 		return nil, 0, nil
 	}
 
-	// 获取用户排名
+	// 获取用户排名 - 使用参数化查询
 	rankQuery := `
 		SELECT COUNT(*) + 1 as rank
 		FROM (
@@ -100,20 +114,20 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 				SUM(o.amount) as total_amount,
 				MAX(o.updated_at) as completed_at
 			FROM orders o
-			WHERE o.status = 'success' 
+			WHERE o.status = ? 
 			AND o.updated_at >= ? 
 			AND o.updated_at <= ?
 			GROUP BY o.uid
 			HAVING (
-				order_count > (SELECT COUNT(*) FROM orders WHERE status = 'success' AND uid = ? AND updated_at >= ? AND updated_at <= ?)
+				order_count > (SELECT COUNT(*) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
 				OR (
-					order_count = (SELECT COUNT(*) FROM orders WHERE status = 'success' AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-					AND total_amount > (SELECT SUM(amount) FROM orders WHERE status = 'success' AND uid = ? AND updated_at >= ? AND updated_at <= ?)
+					order_count = (SELECT COUNT(*) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
+					AND total_amount > (SELECT SUM(amount) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
 				)
 				OR (
-					order_count = (SELECT COUNT(*) FROM orders WHERE status = 'success' AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-					AND total_amount = (SELECT SUM(amount) FROM orders WHERE status = 'success' AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-					AND completed_at < (SELECT MAX(updated_at) FROM orders WHERE status = 'success' AND uid = ? AND updated_at >= ? AND updated_at <= ?)
+					order_count = (SELECT COUNT(*) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
+					AND total_amount = (SELECT SUM(amount) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
+					AND completed_at < (SELECT MAX(updated_at) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
 				)
 			)
 		) as ranking
@@ -121,10 +135,12 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 
 	var rank int
 	err = r.db.WithContext(ctx).Raw(rankQuery,
-		weekStart, weekEnd, uid, weekStart, weekEnd,
-		uid, weekStart, weekEnd, uid, weekStart, weekEnd,
-		uid, weekStart, weekEnd, uid, weekStart, weekEnd,
-		uid, weekStart, weekEnd).Scan(&rank).Error
+		"success", weekStart, weekEnd,
+		"success", uid, weekStart, weekEnd,
+		"success", uid, weekStart, weekEnd, "success", uid, weekStart, weekEnd,
+		"success", uid, weekStart, weekEnd, "success", uid, weekStart, weekEnd,
+		"success", uid, weekStart, weekEnd, "success", uid, weekStart, weekEnd,
+		"success", uid, weekStart, weekEnd).Scan(&rank).Error
 
 	if err != nil {
 		return nil, 0, err

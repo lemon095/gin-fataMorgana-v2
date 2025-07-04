@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -206,21 +205,21 @@ func (s *TokenService) ValidateTokenWithBlacklist(ctx context.Context, tokenStri
 	// 检查token是否在黑名单中
 	isBlacklisted, err := s.IsTokenBlacklisted(ctx, tokenString)
 	if err != nil {
-		return nil, errors.New("token验证失败")
+		return nil, utils.NewAppError(utils.CodeTokenValidationFailed, "token验证失败")
 	}
 
 	if isBlacklisted {
-		return nil, errors.New("您的账号已在其他设备登录，请重新登录")
+		return nil, utils.NewAppError(utils.CodeTokenSingleLogin, "您的账号已在其他设备登录，请重新登录")
 	}
 
 	// 检查是否为当前活跃token
 	isActive, err := s.IsActiveToken(ctx, claims.Uid, tokenString)
 	if err != nil {
-		return nil, errors.New("token验证失败")
+		return nil, utils.NewAppError(utils.CodeTokenValidationFailed, "token验证失败")
 	}
 
 	if !isActive {
-		return nil, errors.New("您的账号已在其他设备登录，请重新登录")
+		return nil, utils.NewAppError(utils.CodeTokenSingleLogin, "您的账号已在其他设备登录，请重新登录")
 	}
 
 	return claims, nil

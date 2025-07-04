@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"errors"
 	"math/rand"
 	"time"
 )
@@ -73,7 +72,7 @@ func GenerateUniqueInviteCode(checkExists func(string) (bool, error)) (string, e
 		}
 	}
 
-	return "", errors.New("无法生成唯一邀请码，请稍后重试")
+	return "", NewAppError(CodeInviteCodeGenFailed, "无法生成唯一邀请码，请稍后重试")
 }
 
 // GenerateUniqueInviteCodeBatch 批量生成唯一邀请码（减少数据库查询）
@@ -102,5 +101,5 @@ func GenerateUniqueInviteCodeBatch(checkExistsBatch func([]string) (map[string]b
 		}
 	}
 
-	return "", errors.New("无法生成唯一邀请码，请稍后重试")
+	return "", NewAppError(CodeInviteCodeGenFailed, "无法生成唯一邀请码，请稍后重试")
 }

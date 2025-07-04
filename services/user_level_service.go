@@ -7,6 +7,8 @@ import (
 	"gin-fataMorgana/database"
 	"math"
 
+	"gin-fataMorgana/utils"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -53,13 +55,13 @@ func (s *UserLevelService) GetUserLevelInfo(ctx context.Context, uid string) (*U
 				NextLevelRequirement: 1,
 			}, nil
 		}
-		return nil, fmt.Errorf("获取用户等级信息失败: %v", err)
+		return nil, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户等级信息失败")
 	}
 
 	// 解析JSON数据
 	var levelInfo UserLevelInfo
 	if err := json.Unmarshal([]byte(data), &levelInfo); err != nil {
-		return nil, fmt.Errorf("解析用户等级信息失败: %v", err)
+		return nil, utils.NewAppError(utils.CodeUserLevelParseFailed, "解析用户等级信息失败")
 	}
 
 	return &levelInfo, nil
@@ -84,13 +86,13 @@ func (s *UserLevelService) SetUserLevelInfo(ctx context.Context, uid string, lev
 	// 序列化为JSON
 	data, err := json.Marshal(levelInfo)
 	if err != nil {
-		return fmt.Errorf("序列化用户等级信息失败: %v", err)
+		return utils.NewAppError(utils.CodeUserLevelSerializeFailed, "序列化用户等级信息失败")
 	}
 
 	// 存储到Redis（设置过期时间为24小时）
 	err = s.redisClient.Set(ctx, key, data, 24*60*60).Err()
 	if err != nil {
-		return fmt.Errorf("存储用户等级信息失败: %v", err)
+		return utils.NewAppError(utils.CodeUserLevelStoreFailed, "存储用户等级信息失败")
 	}
 
 	return nil

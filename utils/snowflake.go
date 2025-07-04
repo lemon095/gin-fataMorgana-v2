@@ -5,8 +5,6 @@ import (
 	"log"
 	"sync"
 	"time"
-
-	"gin-fataMorgana/config"
 )
 
 // SnowflakeUID 雪花算法简化版UID生成器
@@ -70,10 +68,9 @@ func (s *SnowflakeUID) GenerateUID() string {
 var globalUIDGenerator *SnowflakeUID
 
 // InitSnowflake 初始化雪花算法
-func InitSnowflake() {
-	cfg := config.GlobalConfig.Snowflake
+func InitSnowflake(workerID int64) {
 	// 使用配置中的worker_id作为机器ID
-	machineID := cfg.WorkerID
+	machineID := workerID
 	globalUIDGenerator = NewSnowflakeUID(machineID)
 	log.Printf("雪花算法初始化成功，机器ID: %d", machineID)
 }

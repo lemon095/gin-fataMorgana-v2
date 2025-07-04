@@ -73,10 +73,10 @@ func main() {
 	}
 
 	// 初始化JWT
-	utils.InitJWT()
+	utils.InitJWT(config.GlobalConfig.JWT.Secret, config.GlobalConfig.JWT.AccessTokenExpire, config.GlobalConfig.JWT.RefreshTokenExpire)
 
 	// 初始化雪花算法
-	utils.InitSnowflake()
+	utils.InitSnowflake(config.GlobalConfig.Snowflake.WorkerID)
 
 	// 启动幂等性清理器
 	ctx := context.Background()
@@ -211,33 +211,22 @@ func main() {
 	r.GET("/health", healthController.HealthCheck)
 
 	// API路由组
-	api := r.Group("/api/v1")
+	api := r.Group("/api")
+	
+	// API版本控制
+	v1 := api.Group("/v1")
 
-	// 健康检查路由
-	health := api.Group("/health")
-	{
-		health.GET("/check", healthController.HealthCheck)       // 系统整体健康检查
-		health.GET("/database", healthController.DatabaseHealth) // 数据库连接健康检查
-		health.GET("/redis", healthController.RedisHealth)       // Redis连接健康检查
-	}
+	// 健康检查接口
+	v1.GET("/health/system", healthController.HealthCheck)
+	v1.GET("/health/database", healthController.DatabaseHealth)
+	v1.GET("/health/redis", healthController.RedisHealth)
 
-	// 认证相关路由
-	auth := api.Group("/auth")
-	{
-		// 注册路由支持OPTIONS
-		auth.OPTIONS("/register", func(c *gin.Context) {
-			c.Status(200)
-		})
-
-		auth.POST("/register", middleware.RegisterOpenMiddleware(), middleware.RegisterRateLimitMiddleware(), authController.Register) // 用户注册 - 创建新用户账户
-		auth.POST("/login", middleware.LoginRateLimitMiddleware(), authController.Login)                                               // 用户登录 - 验证用户身份并生成令牌
-		auth.POST("/refresh", authController.RefreshToken)                                                                             // 刷新令牌 - 延长用户登录状态
-		auth.POST("/logout", authController.Logout)                                                                                    // 用户登出 - 清除用户登录状态
-		auth.POST("/profile", middleware.AuthMiddleware(), authController.GetProfile)                                                  // 获取用户信息 - 获取当前用户详细资料
-		auth.POST("/change-password", middleware.AuthMiddleware(), authController.ChangePassword)                                      // 修改密码 - 用户修改登录密码
-		auth.POST("/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)                                         // 绑定银行卡 - 用户绑定提现银行卡
-		auth.POST("/bank-card", middleware.AuthMiddleware(), authController.GetBankCardInfo)                                           // 获取银行卡信息 - 查询用户绑定的银行卡
-	}
+	// 认证相关接口
+	v1.POST("/auth/register", middleware.RateLimitMiddleware(3, 1*time.Hour), authController.Register) // 注册限流：每小时3次
+	v1.POST("/auth/login", middleware.LoginRateLimitMiddleware(), authController.Login)               // 登录限流：每分钟10次
+	v1.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
+	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)       // 绑定银行卡
+	v1.POST("/auth/get-bank-card-info", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
 
 	// 会话管理路由
 	session := api.Group("/session")
@@ -287,6 +276,7 @@ func main() {
 	// 排行榜路由
 	leaderboard := api.Group("/leaderboard")
 	{
+		leaderboard.Use(middleware.AuthMiddleware()) // 需要认证
 		leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜 - 查询周度任务完成排行榜
 	}
 

@@ -48,7 +48,7 @@ func (s *GroupBuyService) GetActiveGroupBuyDetail(ctx context.Context, uid strin
 	// 1. 检查用户是否具有拼单资格
 	hasQualification, err := s.checkGroupBuyQualification(ctx, uid)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "检查拼单资格失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "检查拼单资格失败，请稍后重试")
 	}
 
 	// 2. 如果没有拼单资格，返回固定格式的空数据
@@ -59,7 +59,7 @@ func (s *GroupBuyService) GetActiveGroupBuyDetail(ctx context.Context, uid strin
 	// 3. 确保用户有钱包，如果没有则自动创建
 	err = s.ensureUserWallet(ctx, uid)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "创建钱包失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "创建钱包失败，请稍后重试")
 	}
 
 	// 4. 根据用户ID获取未开始的拼单数据
@@ -69,7 +69,7 @@ func (s *GroupBuyService) GetActiveGroupBuyDetail(ctx context.Context, uid strin
 		if err.Error() == "record not found" {
 			return s.createEmptyGroupBuyResponse(), nil
 		}
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取拼单详情失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取拼单详情失败，请稍后重试")
 	}
 
 	// 5. 转换为响应格式
@@ -158,41 +158,41 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	groupBuy, err := s.groupBuyRepo.GetGroupBuyByNo(ctx, groupBuyNo)
 	if err != nil {
 		if err.Error() == "record not found" {
-			return nil, utils.NewAppError(utils.CodeGroupBuyNotFound, "拼单不存在或已被删除", err)
+			return nil, utils.NewAppError(utils.CodeGroupBuyNotFound, "拼单不存在或已被删除")
 		}
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "查询拼单信息失败", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "查询拼单信息失败")
 	}
 
 	// 2. 检查拼单是否为该用户的
 	if groupBuy.Uid != uid {
-		return nil, utils.NewAppError(utils.CodeGroupBuyOccupied, "该拼单不属于您，无法参与", nil)
+		return nil, utils.NewAppError(utils.CodeGroupBuyOccupied, "该拼单不属于您，无法参与")
 	}
 
 	// 3. 检查拼单是否已经被参与（已有订单编号）
 	if groupBuy.OrderNo != nil && *groupBuy.OrderNo != "" {
-		return nil, utils.NewAppError(utils.CodeGroupBuyOccupied, "该拼单已被参与，无法重复参与", nil)
+		return nil, utils.NewAppError(utils.CodeGroupBuyOccupied, "该拼单已被参与，无法重复参与")
 	}
 
 	// 4. 检查截止时间是否已经过了
 	if time.Now().UTC().After(groupBuy.Deadline) {
-		return nil, utils.NewAppError(utils.CodeGroupBuyExpired, "该拼单已超过截止时间", nil)
+		return nil, utils.NewAppError(utils.CodeGroupBuyExpired, "该拼单已超过截止时间")
 	}
 
 	// 5. 检查用户钱包余额
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取钱包失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取钱包失败，请稍后重试")
 	}
 
 	// 检查钱包状态
 	if !wallet.IsActive() {
-		return nil, utils.NewAppError(utils.CodeOperationFailed, "钱包已被冻结，无法参与拼单", nil)
+		return nil, utils.NewAppError(utils.CodeOperationFailed, "钱包已被冻结，无法参与拼单")
 	}
 
 	// 检查余额是否足够
 	if wallet.Balance < groupBuy.PerPersonAmount {
 		return nil, utils.NewAppError(utils.CodeOperationFailed,
-			fmt.Sprintf("余额不足，当前余额: %.2f，拼单金额: %.2f", wallet.Balance, groupBuy.PerPersonAmount), nil)
+			fmt.Sprintf("余额不足，当前余额: %.2f，拼单金额: %.2f", wallet.Balance, groupBuy.PerPersonAmount))
 	}
 
 	// 6. 记录交易前余额
@@ -200,19 +200,19 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 
 	// 7. 扣减余额
 	if err := wallet.Withdraw(groupBuy.PerPersonAmount); err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "扣减余额失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "扣减余额失败，请稍后重试")
 	}
 
 	// 8. 更新钱包
 	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "更新钱包失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "更新钱包失败，请稍后重试")
 	}
 
 	// 9. 获取用户信息以获取经验值
 	userRepo := database.NewUserRepository()
 	user, err := userRepo.FindByUid(ctx, uid)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取用户信息失败", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取用户信息失败")
 	}
 
 	// 10. 根据用户经验值获取等级配置并计算利润金额
@@ -248,7 +248,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		// 如果创建订单失败，需要回滚扣减的余额
 		wallet.Recharge(groupBuy.PerPersonAmount)
 		s.walletRepo.UpdateWallet(ctx, wallet)
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "创建订单失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "创建订单失败，请稍后重试")
 	}
 
 	// 14. 创建钱包流水记录
@@ -281,7 +281,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		wallet.Recharge(groupBuy.PerPersonAmount)
 		s.walletRepo.UpdateWallet(ctx, wallet)
 		// 注意：这里可能需要删除已创建的订单，但为了简化，我们只回滚余额
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "更新拼单状态失败，请稍后重试", err)
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "更新拼单状态失败，请稍后重试")
 	}
 
 	// 16. 返回订单ID

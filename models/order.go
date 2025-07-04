@@ -1,7 +1,7 @@
 package models
 
 import (
-	"errors"
+	"gin-fataMorgana/utils"
 	"time"
 )
 
@@ -202,22 +202,22 @@ func (o *Order) InitializeTaskStatuses() {
 func (o *Order) ValidateOrderData() error {
 	// 检查总金额不能为0
 	if o.Amount <= 0 {
-		return errors.New("订单金额必须大于0")
+		return utils.NewAppError(utils.CodeOrderAmountInvalid, "订单金额必须大于0")
 	}
 
 	// 检查利润金额不能为负数
 	if o.ProfitAmount < 0 {
-		return errors.New("利润金额不能为负数")
+		return utils.NewAppError(utils.CodeProfitAmountInvalid, "利润金额不能为负数")
 	}
 
 	// 检查不能所有任务都为0
 	if o.IsAllTasksZero() {
-		return errors.New("至少需要有一个任务数量大于0")
+		return utils.NewAppError(utils.CodeTaskCountInvalid, "至少需要有一个任务数量大于0")
 	}
 
 	// 检查任务数量不能为负数
 	if o.LikeCount < 0 || o.ShareCount < 0 || o.FollowCount < 0 || o.FavoriteCount < 0 {
-		return errors.New("任务数量不能为负数")
+		return utils.NewAppError(utils.CodeTaskCountNegative, "任务数量不能为负数")
 	}
 
 	return nil

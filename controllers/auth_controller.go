@@ -125,7 +125,7 @@ func (ac *AuthController) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	tokens, err := ac.userService.RefreshToken(req.RefreshToken)
+	tokens, err := ac.userService.RefreshToken(&req)
 	if err != nil {
 		switch err.Error() {
 		case "无效的刷新令牌":
@@ -353,8 +353,15 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	// 获取当前用户UID
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
+		utils.Unauthorized(c)
+		return
+	}
+
 	// 调用服务层修改密码
-	err := ac.userService.ChangePassword(userID, req.OldPassword, req.NewPassword)
+	err := ac.userService.ChangePassword(&req, uid)
 	if err != nil {
 		switch err.Error() {
 		case "用户不存在":

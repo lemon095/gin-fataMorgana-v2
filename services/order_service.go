@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
@@ -81,7 +80,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	userRepo := database.NewUserRepository()
 	user, err := userRepo.FindByUid(ctx, req.Uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取用户信息失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeUserInfoGetFailed, "获取用户信息失败")
 	}
 
 	// 根据用户经验值获取等级配置并计算利润金额
@@ -103,7 +102,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 
 	// 验证订单数据
 	if err := order.ValidateOrderData(); err != nil {
-		return nil, fmt.Errorf("订单数据验证失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeOrderDataValidateFailed, "订单数据验证失败")
 	}
 
 	// 初始化任务状态
@@ -118,17 +117,17 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	// 获取用户钱包
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, req.Uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取钱包失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包失败")
 	}
 
 	// 检查钱包状态
 	if !wallet.IsActive() {
-		return nil, fmt.Errorf("钱包已被冻结，无法创建订单")
+		return nil, utils.NewAppError(utils.CodeWalletFrozenOrder, "钱包已被冻结，无法创建订单")
 	}
 
 	// 检查余额是否足够
 	if wallet.Balance < req.Amount {
-		return nil, fmt.Errorf("余额不足，当前余额: %.2f，订单金额: %.2f", wallet.Balance, req.Amount)
+		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, "余额不足")
 	}
 
 	// 记录交易前余额
@@ -136,12 +135,12 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 
 	// 扣减余额
 	if err := wallet.Withdraw(req.Amount); err != nil {
-		return nil, fmt.Errorf("扣减余额失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeBalanceDeductFailed, "扣减余额失败")
 	}
 
 	// 更新钱包
 	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return nil, fmt.Errorf("更新钱包失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeWalletUpdateFailed, "更新钱包失败")
 	}
 
 	// 创建订单
@@ -149,7 +148,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		// 如果创建订单失败，需要回滚扣减的余额
 		wallet.Recharge(req.Amount)
 		s.walletRepo.UpdateWallet(ctx, wallet)
-		return nil, fmt.Errorf("创建订单失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeOrderCreateFailed, "创建订单失败")
 	}
 
 	// 创建交易流水记录
@@ -187,17 +186,17 @@ func (s *OrderService) validatePeriod(ctx context.Context, periodNumber string) 
 	// 根据期数编号获取期数
 	period, err := periodRepo.GetPeriodByNumber(ctx, periodNumber)
 	if err != nil {
-		return fmt.Errorf("期数不存在: %s", periodNumber)
+		return utils.NewAppError(utils.CodePeriodNotFound, "期数不存在")
 	}
 
 	// 检查当前时间是否在期数的订单开始时间和订单结束时间范围内
 	now := time.Now().UTC()
 	if now.Before(period.OrderStartTime) {
-		return fmt.Errorf("期数 %s 还未开始，开始时间: %s", periodNumber, period.OrderStartTime.Format("2006-01-02 15:04:05"))
+		return utils.NewAppError(utils.CodePeriodNotStarted, "期数还未开始")
 	}
 
 	if now.After(period.OrderEndTime) || now.Equal(period.OrderEndTime) {
-		return fmt.Errorf("期数 %s 已结束，结束时间: %s", periodNumber, period.OrderEndTime.Format("2006-01-02 15:04:05"))
+		return utils.NewAppError(utils.CodePeriodEnded, "期数已结束")
 	}
 
 	return nil
@@ -208,7 +207,7 @@ func (s *OrderService) validateOrderAmount(ctx context.Context, req *CreateOrder
 	// 获取价格配置
 	purchaseConfig, err := s.getPurchaseConfig(ctx)
 	if err != nil {
-		return fmt.Errorf("获取价格配置失败: %w", err)
+		return utils.NewAppError(utils.CodePriceConfigGetFailed, "获取价格配置失败")
 	}
 
 	// 计算订单金额
@@ -219,10 +218,7 @@ func (s *OrderService) validateOrderAmount(ctx context.Context, req *CreateOrder
 
 	// 比较计算金额和请求金额
 	if calculatedAmount != req.Amount {
-		return fmt.Errorf("订单金额不匹配，计算金额: %.2f，请求金额: %.2f。价格配置：点赞%.2f，分享%.2f，转发%.2f，收藏%.2f",
-			calculatedAmount, req.Amount,
-			purchaseConfig.LikeAmount, purchaseConfig.ShareAmount,
-			purchaseConfig.ForwardAmount, purchaseConfig.FavoriteAmount)
+		return utils.NewAppError(utils.CodeOrderAmountMismatch, "订单金额不匹配")
 	}
 
 	return nil
@@ -239,7 +235,7 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 
 	// 验证状态类型参数
 	if req.Status < 1 || req.Status > 3 {
-		return nil, errors.New("状态类型参数无效，必须是1(进行中)、2(已完成)或3(拼单数据)")
+		return nil, utils.NewAppError(utils.CodeOrderStatusInvalid, "状态类型参数无效，必须是1(进行中)、2(已完成)或3(拼单数据)")
 	}
 
 	// 如果status为3，从拼单表获取数据
@@ -250,7 +246,7 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 	// 获取订单列表
 	orders, total, err := s.orderRepo.GetUserOrders(ctx, uid, req.Page, req.PageSize, req.Status)
 	if err != nil {
-		return nil, fmt.Errorf("获取订单列表失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeOrderListGetFailed, "获取订单列表失败")
 	}
 
 	// 转换为响应格式
@@ -285,7 +281,7 @@ func (s *OrderService) getGroupBuyList(ctx context.Context, uid string, page, pa
 	// 获取拼单列表，查询符合开始时间和截至时间在当前范围内的拼单
 	groupBuys, total, err := groupBuyRepo.GetActiveGroupBuys(ctx, uid, page, pageSize)
 	if err != nil {
-		return nil, fmt.Errorf("获取拼单列表失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeGroupBuyListGetFailed, "获取拼单列表失败")
 	}
 
 	// 转换为订单响应格式
@@ -349,12 +345,12 @@ func (s *OrderService) GetOrderDetail(req *models.GetOrderDetailRequest, uid str
 	// 获取订单
 	order, err := s.orderRepo.FindOrderByOrderNo(ctx, req.OrderNo)
 	if err != nil {
-		return nil, fmt.Errorf("获取订单详情失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeOrderDetailGetFailed, "获取订单详情失败")
 	}
 
 	// 检查订单是否属于当前用户
 	if order.Uid != uid {
-		return nil, errors.New("无权访问此订单")
+		return nil, utils.NewAppError(utils.CodeOrderAccessDenied, "无权访问此订单")
 	}
 
 	// 转换为响应格式
@@ -370,7 +366,7 @@ func (s *OrderService) GetOrderStats(uid string) (*GetOrderStatsResponse, error)
 	// 获取订单统计
 	stats, err := s.orderRepo.GetOrderStats(ctx, uid)
 	if err != nil {
-		return nil, fmt.Errorf("获取订单统计失败: %w", err)
+		return nil, utils.NewAppError(utils.CodeOrderStatsGetFailed, "获取订单统计失败")
 	}
 
 	return &GetOrderStatsResponse{
@@ -406,7 +402,7 @@ func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {
 	// 获取当前活跃期数
 	period, err := periodRepo.GetCurrentPeriod(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取期数信息失败: %w", err)
+		return nil, utils.NewAppError(utils.CodePeriodInfoGetFailed, "获取期数信息失败")
 	}
 
 	// 添加期数时间调试信息
@@ -419,7 +415,7 @@ func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {
 	// 获取价格配置
 	purchaseConfig, err := s.getPurchaseConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("获取价格配置失败: %w", err)
+		return nil, utils.NewAppError(utils.CodePriceConfigGetFailed, "获取价格配置失败")
 	}
 
 	// 构建响应
@@ -462,7 +458,7 @@ func (s *OrderService) getPurchaseConfig(ctx context.Context) (*models.PurchaseC
 	// 解析JSON
 	var config models.PurchaseConfig
 	if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
-		return nil, fmt.Errorf("解析价格配置失败: %w", err)
+		return nil, utils.NewAppError(utils.CodePriceConfigParseFailed, "解析价格配置失败")
 	}
 
 	return &config, nil
@@ -480,11 +476,11 @@ func (s *OrderService) checkUserPeriodDuplicate(ctx context.Context, uid string,
 	// 查询用户是否已经用该期号创建过订单
 	exists, err := s.orderRepo.CheckUserPeriodExists(ctx, uid, periodNumber)
 	if err != nil {
-		return fmt.Errorf("检查期号重复失败: %w", err)
+		return utils.NewAppError(utils.CodePeriodDuplicateCheckFailed, "检查期号重复失败")
 	}
 
 	if exists {
-		return fmt.Errorf("您已经购买过期号 %s 的订单", periodNumber)
+		return utils.NewAppError(utils.CodePeriodAlreadyBought, "您已经购买过期号的订单")
 	}
 
 	return nil
