@@ -28,7 +28,7 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 	var req models.GetTransactionsRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (wc *WalletController) GetWallet(c *gin.Context) {
 	var req models.GetWalletRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -166,7 +166,7 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 	var req services.WithdrawRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -200,7 +200,7 @@ func (wc *WalletController) GetWithdrawSummary(c *gin.Context) {
 	var req models.GetWithdrawSummaryRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -236,7 +236,7 @@ func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 

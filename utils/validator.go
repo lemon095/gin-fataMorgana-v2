@@ -26,14 +26,6 @@ type ValidationError struct {
 	Message string `json:"message"`
 }
 
-// ValidationErrorResponse 验证错误响应
-type ValidationErrorResponse struct {
-	Code      int             `json:"code"`
-	Message   string          `json:"message"`
-	Errors    []ValidationError `json:"errors"`
-	Timestamp int64           `json:"timestamp"`
-}
-
 // 字段名称映射（中文）
 var fieldNameMap = map[string]string{
 	"Email":           "邮箱",
@@ -234,24 +226,20 @@ func getTagErrorMessage(tag, param string) string {
 }
 
 // CreateValidationErrorResponse 创建验证错误响应
-func CreateValidationErrorResponse(err error) ValidationErrorResponse {
+func CreateValidationErrorResponse(err error) Response {
 	errors := FormatValidationErrors(err)
-	
-	// 生成主要错误信息
 	var messages []string
 	for _, e := range errors {
 		messages = append(messages, e.Message)
 	}
-	
 	mainMessage := "请求参数验证失败"
 	if len(messages) > 0 {
 		mainMessage = strings.Join(messages, "；")
 	}
-	
-	return ValidationErrorResponse{
-		Code:      CodeValidation,
+	return Response{
+		Code:      CodeInvalidParams, // 统一用参数错误码
 		Message:   mainMessage,
-		Errors:    errors,
+		Data:      nil, // 错误时data为nil
 		Timestamp: time.Now().UnixMilli(),
 	}
 }
@@ -259,7 +247,7 @@ func CreateValidationErrorResponse(err error) ValidationErrorResponse {
 // HandleValidationError 处理验证错误并返回响应
 func HandleValidationError(c *gin.Context, err error) {
 	response := CreateValidationErrorResponse(err)
-	c.JSON(getHTTPStatus(CodeValidation), response)
+	c.JSON(getHTTPStatus(CodeInvalidParams), response)
 }
 
 // ValidateStruct 验证结构体并返回友好错误

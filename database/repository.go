@@ -304,3 +304,23 @@ func (r *UserRepository) GetUserStats(ctx context.Context) (map[string]interface
 func (r *UserRepository) Update(ctx context.Context, user *models.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }
+
+// FindByPhone 根据手机号查找用户
+func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// CheckPhoneExists 检查手机号是否存在
+func (r *UserRepository) CheckPhoneExists(ctx context.Context, phone string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.User{}).Where("phone = ?", phone).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

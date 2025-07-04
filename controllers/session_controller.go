@@ -23,7 +23,7 @@ func (sc *SessionController) CheckLoginStatus(c *gin.Context) {
 	var req models.GetSessionStatusRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -37,7 +37,7 @@ func (sc *SessionController) GetCurrentUserInfo(c *gin.Context) {
 	var req models.GetSessionUserRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 

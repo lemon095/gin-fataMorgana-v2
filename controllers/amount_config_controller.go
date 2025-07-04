@@ -39,7 +39,7 @@ func (c *AmountConfigController) GetAmountConfigsByType(ctx *gin.Context) {
 
 	// 绑定请求参数
 	if err := ctx.ShouldBindJSON(&request); err != nil {
-		utils.InvalidParamsWithMessage(ctx, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(ctx, err)
 		return
 	}
 

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"gin-fataMorgana/utils"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,8 +66,8 @@ func GetFakeRealtimeActivities(c *gin.Context) {
 
 	// 解析请求参数
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// 如果参数解析失败，使用默认值
-		req.Count = 10
+		utils.HandleValidationError(c, err)
+		return
 	}
 
 	// 设置默认值和限制

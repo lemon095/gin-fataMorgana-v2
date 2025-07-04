@@ -304,3 +304,13 @@ func (r *AdminUserRepository) GetAdminsByRoleLevel(ctx context.Context, minLevel
 		Find(&adminUsers).Error
 	return adminUsers, err
 }
+
+// FindByPhone 根据手机号查找用户
+func (r *AdminUserRepository) FindByPhone(ctx context.Context, phone string) (*models.AdminUser, error) {
+	var adminUser models.AdminUser
+	err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&adminUser).Error
+	if err != nil {
+		return nil, err
+	}
+	return &adminUser, nil
+}

@@ -29,7 +29,7 @@ func (oc *OrderController) GetOrderList(c *gin.Context) {
 	var req models.GetOrderListRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 	var req services.CreateOrderRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -133,7 +133,7 @@ func (oc *OrderController) GetOrderDetail(c *gin.Context) {
 	var req models.GetOrderDetailRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 

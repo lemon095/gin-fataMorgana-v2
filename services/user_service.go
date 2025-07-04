@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -33,28 +34,42 @@ func NewUserService() *UserService {
 func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserResponse, error) {
 	ctx := context.Background()
 
-	// 验证请求参数
-	if err := s.validateRegisterRequest(req); err != nil {
-		log.Printf("用户注册参数验证失败: %v", err)
-		return nil, fmt.Errorf("请求参数验证失败: %w", err)
+	// 判断账号类型
+	isEmail := func(account string) bool {
+		emailRegex := regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$`)
+		return emailRegex.MatchString(account)
+	}
+	isPhone := func(account string) bool {
+		// 国际手机号E.164格式
+		phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
+		return phoneRegex.MatchString(account)
 	}
 
-	// 先验证密码确认
+	if !isEmail(req.Account) && !isPhone(req.Account) {
+		return nil, errors.New("账号格式错误，请输入正确的邮箱或手机号")
+	}
+
+	if isEmail(req.Account) {
+		emailExists, err := s.userRepo.CheckEmailExists(ctx, req.Account)
+		if err != nil {
+			return nil, fmt.Errorf("验证邮箱失败: %w", err)
+		}
+		if emailExists {
+			return nil, errors.New("邮箱已被注册")
+		}
+	}
+	if isPhone(req.Account) {
+		phoneExists, err := s.userRepo.CheckPhoneExists(ctx, req.Account)
+		if err != nil {
+			return nil, fmt.Errorf("验证手机号失败: %w", err)
+		}
+		if phoneExists {
+			return nil, errors.New("手机号已被注册")
+		}
+	}
+
 	if req.Password != req.ConfirmPassword {
-		log.Printf("用户注册失败：密码确认不匹配，邮箱: %s", req.Email)
 		return nil, errors.New("两次输入的密码不一致")
-	}
-
-	// 检查邮箱是否存在
-	emailExists, err := s.userRepo.CheckEmailExists(ctx, req.Email)
-	if err != nil {
-		log.Printf("检查邮箱是否存在失败，邮箱: %s, 错误: %v", req.Email, err)
-		return nil, fmt.Errorf("验证邮箱失败: %w", err)
-	}
-
-	if emailExists {
-		log.Printf("用户注册失败：邮箱已存在，邮箱: %s", req.Email)
-		return nil, errors.New("邮箱已被注册")
 	}
 
 	// 验证邀请码是否来自活跃的管理员
@@ -74,8 +89,8 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		}
 	}
 
-	// 自动生成用户名（使用邮箱前缀 + 随机字符串）
-	username := s.generateUsername(req.Email)
+	// 自动生成用户名（使用邮箱/手机号前缀 + 随机字符串）
+	username := s.generateUsername(req.Account)
 
 	// 使用雪花算法生成八位数用户ID
 	userID := utils.GenerateUID()
@@ -84,12 +99,17 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	user := &models.User{
 		Uid:          userID,
 		Username:     username,
-		Email:        req.Email,
 		Password:     req.Password,
 		Status:       2, // 默认待审核
 		Experience:   1, // 新注册用户默认等级为1
 		InvitedBy:    req.InviteCode,
 		BankCardInfo: "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}", // 无条件赋值
+	}
+	if isEmail(req.Account) {
+		user.Email = req.Account
+	}
+	if isPhone(req.Account) {
+		user.Phone = req.Account
 	}
 	// 保险：防止意外为空
 	if user.BankCardInfo == "" {
@@ -98,17 +118,17 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 
 	// 加密密码
 	if err := user.HashPassword(); err != nil {
-		log.Printf("加密用户密码失败，邮箱: %s, 错误: %v", req.Email, err)
+		log.Printf("加密用户密码失败，邮箱: %s, 错误: %v", req.Account, err)
 		return nil, fmt.Errorf("加密密码失败: %w", err)
 	}
 
 	// 保存用户到数据库
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		log.Printf("创建用户失败，邮箱: %s, 错误: %v", req.Email, err)
+		log.Printf("创建用户失败，邮箱: %s, 错误: %v", req.Account, err)
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
 
-	log.Printf("用户注册成功，UID: %s, 邮箱: %s", userID, req.Email)
+	log.Printf("用户注册成功，UID: %s, 邮箱: %s", userID, req.Account)
 
 	response := user.ToResponse()
 	return &response, nil
@@ -116,8 +136,8 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 
 // validateRegisterRequest 验证注册请求参数
 func (s *UserService) validateRegisterRequest(req *models.UserRegisterRequest) error {
-	if req.Email == "" {
-		return errors.New("邮箱不能为空")
+	if req.Account == "" {
+		return errors.New("账号不能为空")
 	}
 	if req.Password == "" {
 		return errors.New("密码不能为空")
@@ -132,9 +152,9 @@ func (s *UserService) validateRegisterRequest(req *models.UserRegisterRequest) e
 }
 
 // generateUsername 根据邮箱生成用户名
-func (s *UserService) generateUsername(email string) string {
+func (s *UserService) generateUsername(account string) string {
 	// 提取邮箱前缀
-	parts := strings.Split(email, "@")
+	parts := strings.Split(account, "@")
 	prefix := parts[0]
 
 	// 生成随机后缀
@@ -150,39 +170,37 @@ func (s *UserService) generateUsername(email string) string {
 func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent string) (*models.TokenResponse, error) {
 	ctx := context.Background()
 
-	// 首先检查用户是否存在（包括已删除的）
-	user, err := s.userRepo.FindByEmailIncludeDeleted(ctx, req.Email)
+	// 判断账号类型
+	isEmail := func(account string) bool {
+		emailRegex := regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$`)
+		return emailRegex.MatchString(account)
+	}
+	isPhone := func(account string) bool {
+		// 国际手机号E.164格式
+		phoneRegex := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
+		return phoneRegex.MatchString(account)
+	}
+
+	var user *models.User
+	var err error
+	if isEmail(req.Account) {
+		user, err = s.userRepo.FindByEmail(ctx, req.Account)
+	} else if isPhone(req.Account) {
+		user, err = s.userRepo.FindByPhone(ctx, req.Account)
+	} else {
+		return nil, errors.New("账号格式错误，请输入正确的邮箱或手机号")
+	}
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// 记录失败的登录尝试
-			s.recordFailedLogin(ctx, req.Email, loginIP, userAgent, "邮箱或密码错误")
-			return nil, errors.New("邮箱或密码错误")
+			s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账号不存在")
+			return nil, errors.New("账号不存在")
 		}
-		return nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, err
 	}
 
-	// 检查用户是否已被删除
-	if user.DeletedAt != nil {
-		s.recordFailedLogin(ctx, user, loginIP, userAgent, "账户已被删除")
-		return nil, errors.New("账户已被删除，无法登录")
-	}
-
-	// 检查用户是否被禁用
-	if user.Status == 0 {
-		s.recordFailedLogin(ctx, user, loginIP, userAgent, "账户已被禁用")
-		return nil, errors.New("账户已被禁用，无法登录")
-	}
-
-	// 检查用户是否待审核
-	if user.Status == 2 {
-		s.recordFailedLogin(ctx, user, loginIP, userAgent, "账户待审核")
-		return nil, errors.New("账户待审核，请等待管理员审核后登录")
-	}
-
-	// 验证密码
 	if !user.CheckPassword(req.Password) {
-		s.recordFailedLogin(ctx, user, loginIP, userAgent, "密码错误")
-		return nil, errors.New("邮箱或密码错误")
+		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "密码错误")
+		return nil, errors.New("邮箱或手机号或密码错误")
 	}
 
 	// 记录成功的登录

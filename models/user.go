@@ -39,15 +39,15 @@ func (User) TableComment() string {
 
 // UserRegisterRequest 用户注册请求
 type UserRegisterRequest struct {
-	Email           string `json:"email" binding:"required,email"`
+	Account         string `json:"account" binding:"required"` // 可以是邮箱或手机号
 	Password        string `json:"password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=Password"`
-	InviteCode      string `json:"invite_code" binding:"required"` // 邀请码
+	InviteCode      string `json:"invite_code" binding:"required"`
 }
 
 // UserLoginRequest 用户登录请求
 type UserLoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
+	Account  string `json:"account" binding:"required"` // 可以是邮箱或手机号
 	Password string `json:"password" binding:"required"`
 }
 
