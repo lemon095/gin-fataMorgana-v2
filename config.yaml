@@ -37,7 +37,7 @@ redis:
 # JWT配置
 jwt:
   secret: "your-super-secret-jwt-key-must-be-at-least-32-characters-long"
-  access_token_expire: 3600
+  access_token_expire: 86400
   refresh_token_expire: 604800
 
 # 登录缓存配置

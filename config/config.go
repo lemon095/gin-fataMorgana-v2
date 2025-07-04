@@ -128,7 +128,7 @@ func setDefaults() {
 		GlobalConfig.Redis.DB = 0
 	}
 	if GlobalConfig.JWT.AccessTokenExpire == 0 {
-		GlobalConfig.JWT.AccessTokenExpire = 3600 // 1小时
+		GlobalConfig.JWT.AccessTokenExpire = 86400 // 1天
 	}
 	if GlobalConfig.JWT.RefreshTokenExpire == 0 {
 		GlobalConfig.JWT.RefreshTokenExpire = 604800 // 7天
