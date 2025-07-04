@@ -6,6 +6,10 @@ import (
 
 	"gin-fataMorgana/utils"
 
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -118,14 +122,16 @@ func LoginRateLimitMiddleware() gin.HandlerFunc {
 		}
 
 		var key string
-		// 尝试从请求体获取account字段
 		if c.Request.URL.Path == "/api/v1/auth/login" && c.Request.Method == "POST" {
+			raw, _ := ioutil.ReadAll(c.Request.Body)
 			var body struct {
 				Account string `json:"account"`
 			}
-			if err := c.ShouldBindJSON(&body); err == nil && body.Account != "" {
+			_ = json.Unmarshal(raw, &body)
+			if body.Account != "" {
 				key = body.Account
 			}
+			c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(raw))
 		}
 		if key == "" {
 			key = c.ClientIP()
@@ -153,12 +159,15 @@ func AccountRateLimitMiddleware() gin.HandlerFunc {
 
 		var key string
 		// 尝试从请求体获取account字段
+		raw, _ := ioutil.ReadAll(c.Request.Body)
 		var body struct {
 			Account string `json:"account"`
 		}
-		if err := c.ShouldBindJSON(&body); err == nil && body.Account != "" {
+		_ = json.Unmarshal(raw, &body)
+		if body.Account != "" {
 			key = body.Account
 		}
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(raw))
 		if key == "" {
 			key = c.ClientIP()
 		}

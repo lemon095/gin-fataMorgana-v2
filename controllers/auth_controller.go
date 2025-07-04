@@ -8,6 +8,7 @@ import (
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
+	"io/ioutil"
 	"log"
 	"strings"
 
@@ -39,6 +40,10 @@ func NewAuthController() *AuthController {
 // @Failure 500 {object} utils.Response "服务器错误"
 // @Router /auth/register [post]
 func (ac *AuthController) Register(c *gin.Context) {
+	body, _ := ioutil.ReadAll(c.Request.Body)
+	log.Printf("原始请求体: %s", string(body))
+	c.Request.Body = ioutil.NopCloser(strings.NewReader(string(body)))
+
 	var req models.UserRegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
