@@ -107,22 +107,79 @@ const (
 	GeneralRateWindow = 1 * time.Minute
 )
 
-// LoginRateLimitMiddleware 登录限流中间件
+// LoginRateLimitMiddleware 登录限流中间件（账号级别，优先用account参数）
 func LoginRateLimitMiddleware() gin.HandlerFunc {
-	return RateLimitMiddleware(LoginRateLimit, LoginRateWindow)
+	limiter := NewRateLimiter(10, 1*time.Minute) // 1分钟10次
+
+	return func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
+		var key string
+		// 尝试从请求体获取account字段
+		if c.Request.URL.Path == "/api/v1/auth/login" && c.Request.Method == "POST" {
+			var body struct {
+				Account string `json:"account"`
+			}
+			if err := c.ShouldBindJSON(&body); err == nil && body.Account != "" {
+				key = body.Account
+			}
+		}
+		if key == "" {
+			key = c.ClientIP()
+		}
+
+		if !limiter.isAllowed(key) {
+			utils.ErrorWithMessage(c, utils.CodeForbidden, "请求过于频繁，请稍后再试")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }
 
-// RegisterRateLimitMiddleware 注册限流中间件
+// 通用账号级别限流中间件（优先用account参数）
+func AccountRateLimitMiddleware() gin.HandlerFunc {
+	limiter := NewRateLimiter(60, 1*time.Minute) // 1分钟60次
+
+	return func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			c.Next()
+			return
+		}
+
+		var key string
+		// 尝试从请求体获取account字段
+		var body struct {
+			Account string `json:"account"`
+		}
+		if err := c.ShouldBindJSON(&body); err == nil && body.Account != "" {
+			key = body.Account
+		}
+		if key == "" {
+			key = c.ClientIP()
+		}
+
+		if !limiter.isAllowed(key) {
+			utils.ErrorWithMessage(c, utils.CodeForbidden, "请求过于频繁，请稍后再试")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// 统一注册、提现、通用限流为账号级别
 func RegisterRateLimitMiddleware() gin.HandlerFunc {
-	return RateLimitMiddleware(RegisterRateLimit, RegisterRateWindow)
+	return AccountRateLimitMiddleware()
 }
-
-// WithdrawRateLimitMiddleware 提现限流中间件
 func WithdrawRateLimitMiddleware() gin.HandlerFunc {
-	return RateLimitMiddleware(WithdrawRateLimit, WithdrawRateWindow)
+	return AccountRateLimitMiddleware()
 }
-
-// GeneralRateLimitMiddleware 通用限流中间件
 func GeneralRateLimitMiddleware() gin.HandlerFunc {
-	return RateLimitMiddleware(GeneralRateLimit, GeneralRateWindow)
+	return AccountRateLimitMiddleware()
 }
