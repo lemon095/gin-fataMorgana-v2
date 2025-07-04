@@ -8,6 +8,8 @@ import (
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
+	"log"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,7 +42,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 	var req models.UserRegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -77,7 +79,7 @@ func (ac *AuthController) Login(c *gin.Context) {
 	var req models.UserLoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -112,7 +114,7 @@ func (ac *AuthController) RefreshToken(c *gin.Context) {
 	var req models.RefreshTokenRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -143,7 +145,7 @@ func (ac *AuthController) GetProfile(c *gin.Context) {
 	var req models.GetProfileRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -171,9 +173,48 @@ func (ac *AuthController) GetProfile(c *gin.Context) {
 	})
 }
 
-// Logout 用户登出（客户端需要删除本地存储的token）
+// Logout 用户登出（撤销当前token）
 func (ac *AuthController) Logout(c *gin.Context) {
-	// 这里只是返回成功消息，客户端需要删除本地token
+	// 获取当前用户信息
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
+		utils.Unauthorized(c)
+		return
+	}
+
+	// 获取当前token
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		utils.SuccessWithMessage(c, "登出成功", nil)
+		return
+	}
+
+	tokenParts := strings.Split(authHeader, " ")
+	if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+		utils.SuccessWithMessage(c, "登出成功", nil)
+		return
+	}
+
+	tokenString := tokenParts[1]
+
+	// 撤销用户会话
+	ctx := context.Background()
+	tokenService := services.NewTokenService()
+	
+	// 将当前token加入黑名单
+	err := tokenService.AddTokenToBlacklist(ctx, tokenString)
+	if err != nil {
+		// 记录错误但不影响登出流程
+		log.Printf("将token加入黑名单失败: %v", err)
+	}
+
+	// 撤销用户会话
+	err = tokenService.RevokeUserSession(ctx, uid)
+	if err != nil {
+		// 记录错误但不影响登出流程
+		log.Printf("撤销用户会话失败: %v", err)
+	}
+
 	utils.SuccessWithMessage(c, "登出成功", nil)
 }
 
@@ -182,7 +223,7 @@ func (ac *AuthController) BindBankCard(c *gin.Context) {
 	var req services.BindBankCardRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -231,7 +272,7 @@ func (ac *AuthController) GetBankCardInfo(c *gin.Context) {
 	var req models.GetBankCardRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 
@@ -291,10 +332,10 @@ func (ac *AuthController) GetBankCardInfo(c *gin.Context) {
 // @Failure 500 {object} utils.Response
 // @Router /api/v1/auth/change-password [post]
 func (ac *AuthController) ChangePassword(c *gin.Context) {
-	// 绑定请求参数
 	var req models.ChangePasswordRequest
+
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.InvalidParamsWithMessage(c, "请求参数错误: "+err.Error())
+		utils.HandleValidationError(c, err)
 		return
 	}
 

@@ -4,46 +4,79 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"gin-fataMorgana/database"
+	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
 
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware 统一的JWT认证中间件
+// AuthMiddleware 认证中间件
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从请求头获取Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			utils.Unauthorized(c)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "缺少认证令牌",
+				"error":   "MISSING_TOKEN",
+			})
 			c.Abort()
 			return
 		}
 
-		// 检查Bearer前缀
+		// 检查Authorization头格式
 		tokenParts := strings.Split(authHeader, " ")
 		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			utils.TokenInvalid(c)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": "认证令牌格式错误",
+				"error":   "INVALID_TOKEN_FORMAT",
+			})
 			c.Abort()
 			return
 		}
 
 		tokenString := tokenParts[1]
 
-		// 验证令牌
-		claims, err := utils.ValidateToken(tokenString)
+		// 使用新的验证方法，包含黑名单检查
+		ctx := context.Background()
+		tokenService := services.NewTokenService()
+		claims, err := tokenService.ValidateTokenWithBlacklist(ctx, tokenString)
 		if err != nil {
-			utils.TokenInvalid(c)
+			// 根据错误类型返回不同的错误信息
+			errorMessage := "认证失败"
+			errorCode := "AUTH_FAILED"
+			
+			if strings.Contains(err.Error(), "已在其他设备登录") {
+				errorMessage = err.Error()
+				errorCode = "TOKEN_REVOKED"
+			} else if strings.Contains(err.Error(), "已过期") {
+				errorMessage = "令牌已过期，请重新登录"
+				errorCode = "TOKEN_EXPIRED"
+			} else if strings.Contains(err.Error(), "无效的令牌") {
+				errorMessage = "无效的认证令牌"
+				errorCode = "INVALID_TOKEN"
+			}
+
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code":    401,
+				"message": errorMessage,
+				"error":   errorCode,
+				"timestamp": time.Now().Unix(),
+			})
 			c.Abort()
 			return
 		}
 
-		// 将用户信息存储到上下文中
+		// 设置用户信息到上下文
 		c.Set("user_id", claims.UserID)
+		c.Set("uid", claims.Uid)
 		c.Set("username", claims.Username)
 		c.Set("claims", claims)
+		c.Set("is_authenticated", true)
 
 		c.Next()
 	}
@@ -91,6 +124,15 @@ func GetCurrentUser(c *gin.Context) uint {
 		return 0
 	}
 	return userID.(uint)
+}
+
+// GetCurrentUID 获取当前用户UID
+func GetCurrentUID(c *gin.Context) string {
+	uid, exists := c.Get("uid")
+	if !exists {
+		return ""
+	}
+	return uid.(string)
 }
 
 // GetCurrentUsername 获取当前用户名

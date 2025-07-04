@@ -182,6 +182,14 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 	// 记录成功的登录
 	s.recordSuccessfulLogin(ctx, user, loginIP, userAgent)
 
+	// 实现单点登录：检查并撤销旧会话
+	tokenService := NewTokenService()
+	activeToken, err := tokenService.GetUserActiveToken(ctx, user.Uid)
+	if err == nil && activeToken != nil {
+		// 将旧token加入黑名单
+		tokenService.AddTokenToBlacklist(ctx, activeToken.TokenHash)
+	}
+
 	// 生成访问令牌
 	accessToken, err := utils.GenerateAccessToken(user.ID, user.Uid, user.Username)
 	if err != nil {
@@ -192,6 +200,14 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 	refreshToken, err := utils.GenerateRefreshToken(user.ID, user.Uid, user.Username)
 	if err != nil {
 		return nil, err
+	}
+
+	// 设置新的活跃token
+	deviceInfo := s.extractDeviceInfo(userAgent)
+	err = tokenService.SetUserActiveToken(ctx, user.Uid, accessToken, deviceInfo, loginIP, userAgent)
+	if err != nil {
+		// 记录错误但不影响登录流程
+		log.Printf("设置用户活跃token失败: %v", err)
 	}
 
 	return &models.TokenResponse{
@@ -532,23 +548,22 @@ func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword strin
 	return nil
 }
 
-// validateNewPassword 验证新密码格式
+// validateNewPassword 验证新密码
 func (s *UserService) validateNewPassword(password string) error {
-	if password == "" {
-		return errors.New("新密码不能为空")
-	}
-
 	if len(password) < 6 {
-		return errors.New("新密码长度不能少于6位")
+		return errors.New("密码长度不能少于6位")
 	}
-
 	if len(password) > 50 {
-		return errors.New("新密码长度不能超过50位")
+		return errors.New("密码长度不能超过50位")
 	}
-
-	// 可以添加更多密码强度验证
-	// 例如：必须包含数字、字母、特殊字符等
-	// 这里暂时使用简单的长度验证
-
 	return nil
+}
+
+// extractDeviceInfo 提取设备信息
+func (s *UserService) extractDeviceInfo(userAgent string) string {
+	// 简单的设备信息提取，可以集成更复杂的解析库
+	if len(userAgent) > 200 {
+		userAgent = userAgent[:200]
+	}
+	return userAgent
 }
