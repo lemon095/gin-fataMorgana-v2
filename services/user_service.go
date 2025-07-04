@@ -172,7 +172,7 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 
 	// 判断账号类型
 	isEmail := func(account string) bool {
-		emailRegex := regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$`)
+		emailRegex := regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$`)
 		return emailRegex.MatchString(account)
 	}
 	isPhone := func(account string) bool {
