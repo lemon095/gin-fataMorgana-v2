@@ -26,8 +26,22 @@ const (
 	CodeAccountLocked     = 1008 // 账户锁定
 	CodeRegisterClosed    = 1009 // 注册关闭
 	CodeGroupBuyNotFound  = 1010 // 拼单不存在
-	CodeGroupBuyExpired   = 1011 // 拼单已过期
+	CodeGroupBuyExpired   = 3003 // 拼单已过期
 	CodeGroupBuyOccupied  = 1012 // 拼单已被占用
+	CodeEmailAlreadyExists      = 2001 // 邮箱已被注册
+	CodePhoneAlreadyExists      = 2002 // 手机号已被注册
+	CodeEmailFormatInvalid      = 2003 // 邮箱格式不正确
+	CodePhoneFormatInvalid      = 2004 // 手机号格式不正确
+	CodeAccountEmpty            = 2005 // 账号不能为空
+	CodePasswordEmpty           = 2006 // 密码不能为空
+	CodePasswordNotMatch        = 2007 // 两次输入的密码不一致
+	CodeInviteCodeInvalid       = 2008 // 邀请码无效
+	CodeAccountNotFound         = 2009 // 账号不存在
+	CodePasswordIncorrect       = 2010 // 密码错误
+	CodeBalanceInsufficient     = 3001 // 余额不足
+	CodeGroupBuyFull            = 3002 // 拼单已满员
+	CodeOrderAmountMismatch     = 3004 // 订单金额不匹配
+	CodeWithdrawAmountExceeded  = 3005 // 提现金额超限
 )
 
 // ResponseMessage 完整的响应消息映射
@@ -49,8 +63,22 @@ var ResponseMessage = map[int]string{
 	CodeAccountLocked:     "账户已被锁定",
 	CodeRegisterClosed:    "当前系统不允许注册",
 	CodeGroupBuyNotFound:  "拼单不存在或已被删除",
-	CodeGroupBuyExpired:   "拼单已超过截止时间",
+	CodeGroupBuyExpired:   "拼单已过期",
 	CodeGroupBuyOccupied:  "拼单已被其他用户参与",
+	CodeEmailAlreadyExists:     "邮箱已被注册",
+	CodePhoneAlreadyExists:     "手机号已被注册",
+	CodeEmailFormatInvalid:     "邮箱格式不正确",
+	CodePhoneFormatInvalid:     "手机号格式不正确",
+	CodeAccountEmpty:           "账号不能为空",
+	CodePasswordEmpty:          "密码不能为空",
+	CodePasswordNotMatch:       "两次输入的密码不一致",
+	CodeInviteCodeInvalid:      "邀请码无效",
+	CodeAccountNotFound:        "账号不存在",
+	CodePasswordIncorrect:      "密码错误",
+	CodeBalanceInsufficient:    "余额不足",
+	CodeGroupBuyFull:           "拼单已满员",
+	CodeOrderAmountMismatch:    "订单金额不匹配",
+	CodeWithdrawAmountExceeded: "提现金额超限",
 }
 
 // Response 统一响应结构

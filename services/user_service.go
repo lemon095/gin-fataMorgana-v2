@@ -46,30 +46,30 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	}
 
 	if !isEmail(req.Account) && !isPhone(req.Account) {
-		return nil, errors.New("账号格式错误，请输入正确的邮箱或手机号")
+		return nil, utils.NewAppError(utils.CodeAccountNotFound, "账号格式错误，请输入正确的邮箱或手机号", nil)
 	}
 
 	if isEmail(req.Account) {
 		emailExists, err := s.userRepo.CheckEmailExists(ctx, req.Account)
 		if err != nil {
-			return nil, fmt.Errorf("验证邮箱失败: %w", err)
+			return nil, utils.NewAppError(utils.CodeEmailFormatInvalid, "邮箱格式不正确", err)
 		}
 		if emailExists {
-			return nil, errors.New("邮箱已被注册")
+			return nil, utils.NewAppError(utils.CodeEmailAlreadyExists, "邮箱已被注册", nil)
 		}
 	}
 	if isPhone(req.Account) {
 		phoneExists, err := s.userRepo.CheckPhoneExists(ctx, req.Account)
 		if err != nil {
-			return nil, fmt.Errorf("验证手机号失败: %w", err)
+			return nil, utils.NewAppError(utils.CodePhoneFormatInvalid, "手机号格式不正确", err)
 		}
 		if phoneExists {
-			return nil, errors.New("手机号已被注册")
+			return nil, utils.NewAppError(utils.CodePhoneAlreadyExists, "手机号已被注册", nil)
 		}
 	}
 
 	if req.Password != req.ConfirmPassword {
-		return nil, errors.New("两次输入的密码不一致")
+		return nil, utils.NewAppError(utils.CodePasswordNotMatch, "两次输入的密码不一致", nil)
 	}
 
 	// 验证邀请码是否来自活跃的管理员
