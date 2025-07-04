@@ -122,8 +122,9 @@ type GetWalletRequest struct {
 
 // GetTransactionsRequest 获取交易记录请求
 type GetTransactionsRequest struct {
-	Page     int `json:"page" binding:"min=1"`              // 页码，从1开始
-	PageSize int `json:"page_size" binding:"min=1,max=100"` // 每页大小，最大100
+	Page     int    `json:"page" binding:"min=1"`              // 页码，从1开始
+	PageSize int    `json:"page_size" binding:"min=1,max=20"`  // 每页大小，最大20
+	Type     string `json:"type"`                              // 交易类型过滤：recharge(充值)、withdraw(提现)、order_buy(购买)、group_buy(拼单)
 }
 
 // GetWithdrawSummaryRequest 获取提现汇总请求

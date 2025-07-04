@@ -24,6 +24,17 @@ func NewAnnouncementService() *AnnouncementService {
 
 // GetAnnouncementList 获取公告列表（带缓存）
 func (s *AnnouncementService) GetAnnouncementList(ctx context.Context, page, pageSize int) (*models.AnnouncementListResponse, error) {
+	// 验证分页参数
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	if pageSize > 20 {
+		return nil, fmt.Errorf("每页数量不能超过20")
+	}
+
 	// 生成缓存键
 	cacheKey := fmt.Sprintf("announcement:list:page:%d:size:%d", page, pageSize)
 

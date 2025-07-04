@@ -243,8 +243,8 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 	}
 
 	// 验证分页参数
-	if pageSize > 100 {
-		return nil, errors.New("每页数量不能超过100")
+	if pageSize > 20 {
+		return nil, errors.New("每页数量不能超过20")
 	}
 
 	// 验证状态类型参数

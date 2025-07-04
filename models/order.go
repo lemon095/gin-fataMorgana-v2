@@ -243,7 +243,7 @@ const (
 // GetOrderListRequest 获取订单列表请求
 type GetOrderListRequest struct {
 	Page     int `json:"page" binding:"min=1"`
-	PageSize int `json:"page_size" binding:"min=1,max=100"`
+	PageSize int `json:"page_size" binding:"min=1,max=20"`
 	Status   int `json:"status" binding:"min=1,max=3"` // 1:进行中 2:已完成 3:全部
 }
 
@@ -283,7 +283,7 @@ type GetOrderDetailRequest struct {
 // OrderListRequest 订单列表请求
 type OrderListRequest struct {
 	Page     int `json:"page" binding:"min=1"`              // 页码，从1开始
-	PageSize int `json:"page_size" binding:"min=1,max=100"` // 每页大小，最大100
+	PageSize int `json:"page_size" binding:"min=1,max=20"` // 每页大小，最大20
 }
 
 // OrderListResponse 订单列表响应

@@ -47,8 +47,8 @@ func (c *AnnouncementController) GetAnnouncementList(ctx *gin.Context) {
 	if request.PageSize <= 0 {
 		request.PageSize = 10
 	}
-	if request.PageSize > 100 {
-		request.PageSize = 100
+	if request.PageSize > 20 {
+		request.PageSize = 20
 	}
 
 	// 获取公告列表

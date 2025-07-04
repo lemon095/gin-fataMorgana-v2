@@ -53,6 +53,7 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 		Uid:      user.Uid,
 		Page:     req.Page,
 		PageSize: req.PageSize,
+		Type:     req.Type,
 	}
 
 	// 调用服务

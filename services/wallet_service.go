@@ -24,11 +24,12 @@ func NewWalletService() *WalletService {
 	}
 }
 
-// GetUserTransactionsRequest 获取用户资金记录请求
+// GetUserTransactionsRequest 获取用户交易记录请求
 type GetUserTransactionsRequest struct {
 	Uid      string `json:"uid" binding:"required"`
-	Page     int    `json:"page"`
-	PageSize int    `json:"page_size"`
+	Page     int    `json:"page" binding:"min=1"`
+	PageSize int    `json:"page_size" binding:"min=1,max=20"` // 每页大小，最大20
+	Type     string `json:"type"` // 交易类型过滤
 }
 
 // GetUserTransactionsResponse 获取用户资金记录响应
@@ -63,12 +64,23 @@ func (s *WalletService) GetUserTransactions(req *GetUserTransactionsRequest) (*G
 	}
 
 	// 验证分页参数
-	if pageSize > 100 {
-		return nil, errors.New("每页数量不能超过100")
+	if pageSize > 20 {
+		return nil, errors.New("每页数量不能超过20")
 	}
 
 	// 获取交易记录
-	transactions, total, err := s.walletRepo.GetUserTransactions(ctx, req.Uid, page, pageSize)
+	var transactions []models.WalletTransaction
+	var total int64
+	var err error
+
+	if req.Type != "" {
+		// 如果指定了类型，使用类型过滤
+		transactions, total, err = s.walletRepo.GetTransactionsByType(ctx, req.Uid, req.Type, page, pageSize)
+	} else {
+		// 否则获取所有交易记录
+		transactions, total, err = s.walletRepo.GetUserTransactions(ctx, req.Uid, page, pageSize)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("获取用户资金记录失败: %w", err)
 	}
