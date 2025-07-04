@@ -59,7 +59,7 @@ func (AnnouncementBanner) TableComment() string {
 // AnnouncementListRequest 公告列表请求
 type AnnouncementListRequest struct {
 	Page     int `json:"page" binding:"min=1"`              // 页码，从1开始
-	PageSize int `json:"page_size" binding:"min=1,max=20"` // 每页大小，最大20
+	PageSize int `json:"page_size" binding:"min=1"`         // 每页大小，最小1
 }
 
 // AnnouncementResponse 公告响应

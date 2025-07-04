@@ -100,3 +100,9 @@ type JoinGroupBuyRequest struct {
 type JoinGroupBuyResponse struct {
 	OrderID uint `json:"order_id"` // 订单ID
 }
+
+// GroupBuyListRequest 拼单列表请求
+type GroupBuyListRequest struct {
+	Page     int `json:"page" binding:"min=1"`              // 页码，从1开始
+	PageSize int `json:"page_size" binding:"min=1"`         // 每页大小，最小1
+}

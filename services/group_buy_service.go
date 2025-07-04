@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 
@@ -316,4 +317,51 @@ func (s *GroupBuyService) generateTransactionNo() string {
 	timestamp := now.Format("20060102150405")
 	random := utils.RandomString(4)
 	return fmt.Sprintf("TX%s%s", timestamp, random)
+}
+
+// GetGroupBuyList 获取拼单列表
+func (s *GroupBuyService) GetGroupBuyList(req models.GroupBuyListRequest) (*models.GroupBuyListResponse, error) {
+	// 限制page_size最大值，超出时设置为默认值20
+	if req.PageSize > 20 {
+		req.PageSize = 20
+	}
+
+	// 计算偏移量
+	offset := (req.Page - 1) * req.PageSize
+
+	// 构建查询条件
+	query := s.groupBuyRepo.DB.Model(&models.GroupBuy{})
+
+	// 获取总数
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	// 获取拼单列表
+	var groupBuys []models.GroupBuy
+	if err := query.Order("created_at DESC").Offset(offset).Limit(req.PageSize).Find(&groupBuys).Error; err != nil {
+		return nil, err
+	}
+
+	// 转换为响应格式
+	var responses []models.GroupBuyResponse
+	for _, groupBuy := range groupBuys {
+		responses = append(responses, groupBuy.ToResponse())
+	}
+
+	// 计算分页信息
+	totalPages := int(math.Ceil(float64(total) / float64(req.PageSize)))
+
+	return &models.GroupBuyListResponse{
+		GroupBuys: responses,
+		Pagination: models.PaginationInfo{
+			CurrentPage: req.Page,
+			PageSize:    req.PageSize,
+			Total:       total,
+			TotalPages:  totalPages,
+			HasNext:     req.Page < totalPages,
+			HasPrev:     req.Page > 1,
+		},
+	}, nil
 }

@@ -32,7 +32,7 @@ func (s *AnnouncementService) GetAnnouncementList(ctx context.Context, page, pag
 		pageSize = 10
 	}
 	if pageSize > 20 {
-		return nil, fmt.Errorf("每页数量不能超过20")
+		pageSize = 20
 	}
 
 	// 生成缓存键

@@ -231,20 +231,9 @@ func (s *OrderService) validateOrderAmount(ctx context.Context, req *CreateOrder
 func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string) (*GetOrderListResponse, error) {
 	ctx := context.Background()
 
-	// 设置默认分页参数
-	page := req.Page
-	pageSize := req.PageSize
-
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
-	// 验证分页参数
-	if pageSize > 20 {
-		return nil, errors.New("每页数量不能超过20")
+	// 限制page_size最大值，超出时设置为默认值20
+	if req.PageSize > 20 {
+		req.PageSize = 20
 	}
 
 	// 验证状态类型参数
@@ -254,11 +243,11 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 
 	// 如果status为3，从拼单表获取数据
 	if req.Status == 3 {
-		return s.getGroupBuyList(ctx, uid, page, pageSize)
+		return s.getGroupBuyList(ctx, uid, req.Page, req.PageSize)
 	}
 
 	// 获取订单列表
-	orders, total, err := s.orderRepo.GetUserOrders(ctx, uid, page, pageSize, req.Status)
+	orders, total, err := s.orderRepo.GetUserOrders(ctx, uid, req.Page, req.PageSize, req.Status)
 	if err != nil {
 		return nil, fmt.Errorf("获取订单列表失败: %w", err)
 	}
@@ -270,15 +259,15 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 	}
 
 	// 计算分页信息
-	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
-	hasNext := page < totalPages
-	hasPrev := page > 1
+	totalPages := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
+	hasNext := req.Page < totalPages
+	hasPrev := req.Page > 1
 
 	return &GetOrderListResponse{
 		Orders: orderResponses,
 		Pagination: PaginationInfo{
-			CurrentPage: page,
-			PageSize:    pageSize,
+			CurrentPage: req.Page,
+			PageSize:    req.PageSize,
 			Total:       total,
 			TotalPages:  totalPages,
 			HasNext:     hasNext,
