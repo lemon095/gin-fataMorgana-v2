@@ -6,7 +6,6 @@ import (
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
-	"math"
 	"time"
 )
 
@@ -583,56 +582,4 @@ func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (
 	response := transaction.ToResponse()
 
 	return &response, nil
-}
-
-// GetTransactions 获取用户交易记录
-func (s *WalletService) GetTransactions(uid string, req models.GetTransactionsRequest) (*models.TransactionListResponse, error) {
-	// 限制page_size最大值，超出时设置为默认值20
-	if req.PageSize > 20 {
-		req.PageSize = 20
-	}
-
-	// 计算偏移量
-	offset := (req.Page - 1) * req.PageSize
-
-	// 构建查询条件
-	query := s.walletRepo.DB.Model(&models.WalletTransaction{}).Where("uid = ?", uid)
-
-	// 如果指定了交易类型，添加类型过滤
-	if req.Type != "" {
-		query = query.Where("type = ?", req.Type)
-	}
-
-	// 获取总数
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, err
-	}
-
-	// 获取交易记录
-	var transactions []models.WalletTransaction
-	if err := query.Order("created_at DESC").Offset(offset).Limit(req.PageSize).Find(&transactions).Error; err != nil {
-		return nil, err
-	}
-
-	// 转换为响应格式
-	var responses []models.TransactionResponse
-	for _, t := range transactions {
-		responses = append(responses, t.ToResponse())
-	}
-
-	// 计算分页信息
-	totalPages := int(math.Ceil(float64(total) / float64(req.PageSize)))
-
-	return &models.TransactionListResponse{
-		Transactions: responses,
-		Pagination: models.PaginationInfo{
-			CurrentPage: req.Page,
-			PageSize:    req.PageSize,
-			Total:       total,
-			TotalPages:  totalPages,
-			HasNext:     req.Page < totalPages,
-			HasPrev:     req.Page > 1,
-		},
-	}, nil
 }
