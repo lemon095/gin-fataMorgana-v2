@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `bank_card_info` json DEFAULT NULL COMMENT '银行卡信息JSON',
   `experience` bigint NOT NULL DEFAULT 1 COMMENT '用户等级',
   `credit_score` bigint NOT NULL DEFAULT 100 COMMENT '用户信用分',
-  `status` bigint NOT NULL DEFAULT 1 COMMENT '用户状态 1:正常 0:禁用',
+  `status` bigint NOT NULL DEFAULT 2 COMMENT '用户状态 0:禁用 1:正常 2:待审核',
   `invited_by` varchar(6) DEFAULT NULL COMMENT '注册时填写的邀请码',
   `has_group_buy_qualification` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否有拼单资格',
   `created_at` datetime(3) DEFAULT NULL COMMENT '创建时间',

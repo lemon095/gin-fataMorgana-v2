@@ -18,7 +18,7 @@ type User struct {
 	BankCardInfo             string     `json:"bank_card_info" gorm:"type:json;comment:银行卡信息JSON"`
 	Experience               int        `json:"experience" gorm:"default:0;comment:用户经验值"`
 	CreditScore              int        `json:"credit_score" gorm:"default:100;comment:用户信用分"`
-	Status                   int        `json:"status" gorm:"default:1;comment:用户状态 1:正常 0:禁用"`
+	Status                   int        `json:"status" gorm:"default:2;comment:用户状态 0:禁用 1:正常 2:待审核"`
 	InvitedBy                string     `json:"invited_by" gorm:"size:6;index;comment:注册时填写的邀请码"`
 	HasGroupBuyQualification bool       `json:"has_group_buy_qualification" gorm:"default:false;comment:是否有拼单资格"`
 	Rate                     int        `json:"rate" gorm:"-"` // 用户等级进度（从Redis获取，不存储到数据库）

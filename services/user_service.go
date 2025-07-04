@@ -86,7 +86,7 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		Username:     username,
 		Email:        req.Email,
 		Password:     req.Password,
-		Status:       1, // 默认启用
+		Status:       2, // 默认待审核
 		Experience:   1, // 新注册用户默认等级为1
 		InvitedBy:    req.InviteCode,
 		BankCardInfo: "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}", // 无条件赋值
@@ -173,6 +173,12 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 		return nil, errors.New("账户已被禁用，无法登录")
 	}
 
+	// 检查用户是否待审核
+	if user.Status == 2 {
+		s.recordFailedLogin(ctx, user, loginIP, userAgent, "账户待审核")
+		return nil, errors.New("账户待审核，请等待管理员审核后登录")
+	}
+
 	// 验证密码
 	if !user.CheckPassword(req.Password) {
 		s.recordFailedLogin(ctx, user, loginIP, userAgent, "密码错误")
@@ -245,6 +251,11 @@ func (s *UserService) RefreshToken(refreshToken string) (*models.TokenResponse, 
 	// 检查用户是否被禁用
 	if user.Status == 0 {
 		return nil, errors.New("账户已被禁用，无法刷新令牌")
+	}
+
+	// 检查用户是否待审核
+	if user.Status == 2 {
+		return nil, errors.New("账户待审核，无法刷新令牌")
 	}
 
 	// 生成新的访问令牌
