@@ -203,7 +203,7 @@ func (s *WalletService) CreateTransaction(transaction *models.WalletTransaction)
 // generateTransactionNo 生成交易流水号
 func (s *WalletService) generateTransactionNo() string {
 	// 格式：TX + 年月日 + 时分秒 + 4位随机数
-	now := time.Now()
+	now := time.Now().UTC()
 	timestamp := now.Format("20060102150405")
 	random := utils.RandomString(4)
 	return fmt.Sprintf("TX%s%s", timestamp, random)
@@ -457,7 +457,7 @@ func (s *WalletService) hasValidBankCard(user *models.User) bool {
 // checkDailyWithdrawLimit 检查每日提现限额
 func (s *WalletService) checkDailyWithdrawLimit(ctx context.Context, uid string, amount float64, dailyLimit float64) error {
 	// 获取今日已申请的提现总额
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().UTC().Format("2006-01-02")
 
 	// 查询今日的提现申请记录
 	transactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
@@ -494,7 +494,7 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 	}
 
 	// 获取今日提现申请
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().UTC().Format("2006-01-02")
 	todayTransactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
 	if err != nil {
 		return nil, fmt.Errorf("查询今日提现记录失败: %w", err)

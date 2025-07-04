@@ -50,7 +50,7 @@ func (s *LeaderboardService) GetLeaderboard(uid string) (*models.LeaderboardResp
 	}
 
 	// 缓存数据（5分钟）
-	cacheExpire := time.Now().Add(5 * time.Minute)
+	cacheExpire := time.Now().UTC().Add(5 * time.Minute)
 	response.CacheExpire = cacheExpire
 
 	cacheData, err := json.Marshal(response)
@@ -96,7 +96,7 @@ func (s *LeaderboardService) buildLeaderboardResponse(uid string, weekStart, wee
 		WeekEnd:     weekEnd,
 		MyRank:      myRank,
 		TopUsers:    topEntries,
-		CacheExpire: time.Now().Add(5 * time.Minute),
+		CacheExpire: time.Now().UTC().Add(5 * time.Minute),
 	}
 
 	return response, nil

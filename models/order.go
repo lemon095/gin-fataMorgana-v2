@@ -138,7 +138,7 @@ func (o *Order) GetTaskStatusName(status string) string {
 
 // IsExpired 检查订单是否已过期
 func (o *Order) IsExpired() bool {
-	return time.Now().After(o.ExpireTime)
+	return time.Now().UTC().After(o.ExpireTime)
 }
 
 // GetRemainingTime 获取剩余时间（秒）

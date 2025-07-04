@@ -42,6 +42,7 @@ const (
 	CodeGroupBuyFull            = 3002 // 拼单已满员
 	CodeOrderAmountMismatch     = 3004 // 订单金额不匹配
 	CodeWithdrawAmountExceeded  = 3005 // 提现金额超限
+	CodeUserPendingApproval      = 1011 // 账户待审核，无法登录
 )
 
 // ResponseMessage 完整的响应消息映射
@@ -79,6 +80,7 @@ var ResponseMessage = map[int]string{
 	CodeGroupBuyFull:           "拼单已满员",
 	CodeOrderAmountMismatch:    "订单金额不匹配",
 	CodeWithdrawAmountExceeded: "提现金额超限",
+	CodeUserPendingApproval:     "账户待审核，无法登录",
 }
 
 // Response 统一响应结构
@@ -95,7 +97,7 @@ func Success(c *gin.Context, data interface{}) {
 		Code:      CodeSuccess,
 		Message:   ResponseMessage[CodeSuccess],
 		Data:      data,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: time.Now().UTC().UnixMilli(),
 	})
 }
 
@@ -105,7 +107,7 @@ func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
 		Code:      CodeSuccess,
 		Message:   message,
 		Data:      data,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: time.Now().UTC().UnixMilli(),
 	})
 }
 
@@ -119,7 +121,7 @@ func Error(c *gin.Context, code int) {
 	c.JSON(getHTTPStatus(code), Response{
 		Code:      code,
 		Message:   message,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: time.Now().UTC().UnixMilli(),
 	})
 }
 
@@ -128,7 +130,7 @@ func ErrorWithMessage(c *gin.Context, code int, message string) {
 	c.JSON(getHTTPStatus(code), Response{
 		Code:      code,
 		Message:   message,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: time.Now().UTC().UnixMilli(),
 	})
 }
 
@@ -143,7 +145,7 @@ func ErrorWithData(c *gin.Context, code int, data interface{}) {
 		Code:      code,
 		Message:   message,
 		Data:      data,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: time.Now().UTC().UnixMilli(),
 	})
 }
 
@@ -247,4 +249,9 @@ func InviteCodeInvalid(c *gin.Context) {
 // AccountLocked 账户锁定
 func AccountLocked(c *gin.Context) {
 	ErrorWithMessage(c, CodeAccountLocked, "账户已被锁定")
+}
+
+// 账户待审核
+func UserPendingApproval(c *gin.Context) {
+	ErrorWithMessage(c, CodeUserPendingApproval, ResponseMessage[CodeUserPendingApproval])
 }

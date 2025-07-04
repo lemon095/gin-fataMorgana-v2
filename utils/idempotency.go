@@ -32,7 +32,7 @@ func NewIdempotencyManager() *IdempotencyManager {
 // GenerateIdempotencyKey 生成幂等键
 func (im *IdempotencyManager) GenerateIdempotencyKey(userID, operation string) string {
 	// 使用时间戳+用户ID+操作类型+随机字符串生成唯一键
-	timestamp := time.Now().UnixNano()
+	timestamp := time.Now().UTC().UnixNano()
 	randomStr := RandomString(8)
 	return fmt.Sprintf("%d_%s_%s_%s", timestamp, userID, operation, randomStr)
 }

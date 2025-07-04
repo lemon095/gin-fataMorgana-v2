@@ -88,7 +88,7 @@ func (s *TokenService) SetUserActiveToken(ctx context.Context, uid, token, devic
 	
 	tokenInfo := &TokenInfo{
 		TokenHash:  tokenHash,
-		LoginTime:  time.Now(),
+		LoginTime:  time.Now().UTC(),
 		DeviceInfo: deviceInfo,
 		LoginIP:    loginIP,
 		UserAgent:  userAgent,
@@ -115,7 +115,7 @@ func (s *TokenService) AddTokenToBlacklist(ctx context.Context, token string) er
 	// 黑名单过期时间比token过期时间稍长，确保覆盖
 	expiration := time.Duration(config.GlobalConfig.JWT.AccessTokenExpire+300) * time.Second
 	
-	return database.SetKey(ctx, key, time.Now().Unix(), expiration)
+	return database.SetKey(ctx, key, time.Now().UTC().Unix(), expiration)
 }
 
 // IsTokenBlacklisted 检查token是否在黑名单中
@@ -158,7 +158,7 @@ func (s *TokenService) RevokeUserSession(ctx context.Context, uid string) error 
 		// 将活跃token加入黑名单
 		key := s.getTokenBlacklistKey(activeToken.TokenHash)
 		expiration := time.Duration(config.GlobalConfig.JWT.AccessTokenExpire+300) * time.Second
-		database.SetKey(ctx, key, time.Now().Unix(), expiration)
+		database.SetKey(ctx, key, time.Now().UTC().Unix(), expiration)
 	}
 	
 	// 删除活跃token记录

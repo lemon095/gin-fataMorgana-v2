@@ -103,6 +103,8 @@ func (ac *AuthController) Login(c *gin.Context) {
 			utils.ErrorWithMessage(c, utils.CodeUserNotFound, err.Error())
 		case "账户已被禁用，无法登录":
 			utils.AccountLocked(c)
+		case "账户待审核，无法登录":
+			utils.ErrorWithMessage(c, utils.CodeUserPendingApproval, err.Error())
 		default:
 			utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
 		}

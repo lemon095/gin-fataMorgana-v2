@@ -203,6 +203,20 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 		return nil, errors.New("邮箱或手机号或密码错误")
 	}
 
+	// 新增：校验用户状态
+	if user.DeletedAt != nil {
+		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账户已被删除")
+		return nil, errors.New("账户已被删除，无法登录")
+	}
+	if user.Status == 0 {
+		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账户已被禁用")
+		return nil, errors.New("账户已被禁用，无法登录")
+	}
+	if user.Status == 2 {
+		s.recordFailedLogin(ctx, req.Account, loginIP, userAgent, "账户待审核")
+		return nil, errors.New("账户待审核，无法登录")
+	}
+
 	// 记录成功的登录
 	s.recordSuccessfulLogin(ctx, user, loginIP, userAgent)
 
@@ -341,7 +355,7 @@ func (s *UserService) recordSuccessfulLogin(ctx context.Context, user *models.Us
 		Email:     user.Email,
 		LoginIP:   loginIP,
 		UserAgent: userAgent,
-		LoginTime: time.Now(),
+		LoginTime: time.Now().UTC(),
 		Status:    1, // 成功
 	}
 	s.loginLogRepo.Create(ctx, log)
@@ -370,8 +384,8 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 		UserAgent:  userAgent,
 		Status:     0, // 0表示失败
 		FailReason: reason,
-		LoginTime:  time.Now(),
-		CreatedAt:  time.Now(),
+		LoginTime:  time.Now().UTC(),
+		CreatedAt:  time.Now().UTC(),
 	}
 	
 	if err := s.loginLogRepo.Create(ctx, logEntry); err != nil {
@@ -431,7 +445,7 @@ func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*model
 
 	// 更新用户的银行卡信息
 	user.BankCardInfo = bankCardInfoJSON
-	user.UpdatedAt = time.Now()
+	user.UpdatedAt = time.Now().UTC()
 
 	// 保存到数据库
 	if err := s.userRepo.Update(ctx, user); err != nil {
@@ -563,7 +577,7 @@ func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword strin
 		return fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	user.UpdatedAt = time.Now()
+	user.UpdatedAt = time.Now().UTC()
 
 	// 8. 保存到数据库
 	if err := s.userRepo.Update(ctx, &user); err != nil {

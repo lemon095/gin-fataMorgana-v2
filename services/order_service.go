@@ -8,6 +8,7 @@ import (
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
+	"log"
 	"time"
 )
 
@@ -96,7 +97,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		FollowCount:   req.FollowCount,
 		FavoriteCount: req.FavoriteCount,
 		Status:        models.OrderStatusPending,
-		ExpireTime:    time.Now().Add(5 * time.Minute), // 创建时间+5分钟
+		ExpireTime:    time.Now().UTC().Add(5 * time.Minute), // 创建时间+5分钟
 		AuditorUid:    operatorUid,
 	}
 
@@ -190,7 +191,7 @@ func (s *OrderService) validatePeriod(ctx context.Context, periodNumber string) 
 	}
 
 	// 检查当前时间是否在期数的订单开始时间和订单结束时间范围内
-	now := time.Now()
+	now := time.Now().UTC()
 	if now.Before(period.OrderStartTime) {
 		return fmt.Errorf("期数 %s 还未开始，开始时间: %s", periodNumber, period.OrderStartTime.Format("2006-01-02 15:04:05"))
 	}
@@ -302,9 +303,9 @@ func (s *OrderService) getGroupBuyList(ctx context.Context, uid string, page, pa
 			ExpireTime:   groupBuy.Deadline,
 			CreatedAt:    groupBuy.CreatedAt,
 			UpdatedAt:    groupBuy.UpdatedAt,
-			IsExpired:    time.Now().After(groupBuy.Deadline),
+			IsExpired:    time.Now().UTC().After(groupBuy.Deadline),
 			RemainingTime: func() int64 {
-				if time.Now().After(groupBuy.Deadline) {
+				if time.Now().UTC().After(groupBuy.Deadline) {
 					return 0
 				}
 				return int64(time.Until(groupBuy.Deadline).Seconds())
@@ -395,6 +396,10 @@ func (s *OrderService) calculateProfitAmount(ctx context.Context, experience int
 func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {
 	ctx := context.Background()
 
+	// 添加时间调试信息
+	now := time.Now().UTC()
+	log.Printf("当前时间(UTC): %s", now.Format("2006-01-02 15:04:05 UTC"))
+
 	// 创建期数Repository
 	periodRepo := database.NewLotteryPeriodRepository()
 
@@ -403,6 +408,13 @@ func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("获取期数信息失败: %w", err)
 	}
+
+	// 添加期数时间调试信息
+	log.Printf("期数信息: ID=%d, 期号=%s, 开始时间=%s, 结束时间=%s, 状态=%s", 
+		period.ID, period.PeriodNumber, 
+		period.OrderStartTime.Format("2006-01-02 15:04:05 UTC"),
+		period.OrderEndTime.Format("2006-01-02 15:04:05 UTC"),
+		period.GetStatus())
 
 	// 获取价格配置
 	purchaseConfig, err := s.getPurchaseConfig(ctx)

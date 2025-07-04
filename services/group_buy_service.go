@@ -126,8 +126,8 @@ func (s *GroupBuyService) ensureUserWallet(ctx context.Context, uid string) erro
 				Uid:       uid,
 				Balance:   0.0,
 				Status:    1, // 1表示正常状态
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
 			}
 
 			err = s.walletRepo.CreateWallet(ctx, newWallet)
@@ -142,7 +142,7 @@ func (s *GroupBuyService) ensureUserWallet(ctx context.Context, uid string) erro
 	// 2. 如果钱包存在但状态不正常，激活钱包
 	if !wallet.IsActive() {
 		wallet.Status = 1
-		wallet.UpdatedAt = time.Now()
+		wallet.UpdatedAt = time.Now().UTC()
 		err = s.walletRepo.UpdateWallet(ctx, wallet)
 		if err != nil {
 			return err
@@ -174,7 +174,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	}
 
 	// 4. 检查截止时间是否已经过了
-	if time.Now().After(groupBuy.Deadline) {
+	if time.Now().UTC().After(groupBuy.Deadline) {
 		return nil, utils.NewAppError(utils.CodeGroupBuyExpired, "该拼单已超过截止时间", nil)
 	}
 
@@ -237,9 +237,9 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		FollowStatus:   "pending",
 		FavoriteStatus: "pending",
 		Status:         "pending",
-		ExpireTime:     time.Now().Add(24 * time.Hour), // 设置24小时后过期
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ExpireTime:     time.Now().UTC().Add(24 * time.Hour), // 设置24小时后过期
+		CreatedAt:      time.Now().UTC(),
+		UpdatedAt:      time.Now().UTC(),
 	}
 
 	// 13. 保存订单
@@ -273,7 +273,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	// 15. 更新拼单信息
 	groupBuy.OrderNo = &orderNo
 	groupBuy.Status = "pending" // 更新为pending状态
-	groupBuy.UpdatedAt = time.Now()
+	groupBuy.UpdatedAt = time.Now().UTC()
 
 	err = s.groupBuyRepo.UpdateGroupBuy(ctx, groupBuy)
 	if err != nil {
@@ -312,7 +312,7 @@ func (s *GroupBuyService) calculateProfitAmount(ctx context.Context, experience 
 // generateTransactionNo 生成交易流水号
 func (s *GroupBuyService) generateTransactionNo() string {
 	// 格式：TX + 年月日 + 时分秒 + 4位随机数
-	now := time.Now()
+	now := time.Now().UTC()
 	timestamp := now.Format("20060102150405")
 	random := utils.RandomString(4)
 	return fmt.Sprintf("TX%s%s", timestamp, random)

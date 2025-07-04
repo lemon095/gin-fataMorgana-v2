@@ -39,18 +39,18 @@ func (LotteryPeriod) TableComment() string {
 
 // IsActive 检查期数是否活跃（在开始时间和结束时间范围内）
 func (lp *LotteryPeriod) IsActive() bool {
-	now := time.Now()
+	now := time.Now().UTC()
 	return now.After(lp.OrderStartTime) && now.Before(lp.OrderEndTime)
 }
 
 // IsExpired 检查期数是否已过期
 func (lp *LotteryPeriod) IsExpired() bool {
-	return time.Now().After(lp.OrderEndTime)
+	return time.Now().UTC().After(lp.OrderEndTime)
 }
 
 // IsPending 检查期数是否待开始
 func (lp *LotteryPeriod) IsPending() bool {
-	return time.Now().Before(lp.OrderStartTime)
+	return time.Now().UTC().Before(lp.OrderStartTime)
 }
 
 // IsValidTimeRange 检查期数时间范围是否有效

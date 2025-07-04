@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"gin-fataMorgana/models"
+	"time"
 )
 
 // LotteryPeriodRepository 期数仓库
@@ -18,25 +19,24 @@ func NewLotteryPeriodRepository() *LotteryPeriodRepository {
 }
 
 // GetCurrentPeriod 获取当前活跃期数
-// 暂时注释掉时间检测，直接查询 active 状态的数据
 func (r *LotteryPeriodRepository) GetCurrentPeriod(ctx context.Context) (*models.LotteryPeriod, error) {
 	var period models.LotteryPeriod
 
-	// 注释掉时间检测逻辑
-	// now := time.Now()
-	// err := r.db.WithContext(ctx).
-	// 	Where("order_start_time <= ? AND order_end_time > ? AND order_start_time < order_end_time", now, now).
-	// 	Order("created_at DESC").
-	// 	First(&period).Error
-
-	// 直接查询 active 状态的数据
+	// 按 status = 'active' 查询当前活跃期数，获取最新的一条
 	err := r.db.WithContext(ctx).
 		Where("status = ?", "active").
 		Order("created_at DESC").
 		First(&period).Error
 
 	if err != nil {
-		return nil, err
+		// 如果没有活跃期数，尝试获取最近的期数
+		err = r.db.WithContext(ctx).
+			Order("created_at DESC").
+			First(&period).Error
+		
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &period, nil
@@ -55,4 +55,35 @@ func (r *LotteryPeriodRepository) GetPeriodByNumber(ctx context.Context, periodN
 	}
 
 	return &period, nil
+}
+
+// UpdatePeriodStatus 更新期数状态
+func (r *LotteryPeriodRepository) UpdatePeriodStatus(ctx context.Context) error {
+	now := time.Now().UTC()
+	
+	// 更新已过期的期数为 closed
+	err := r.db.WithContext(ctx).
+		Model(&models.LotteryPeriod{}).
+		Where("order_end_time <= ? AND status != ?", now, "closed").
+		Update("status", "closed").Error
+	if err != nil {
+		return err
+	}
+	
+	// 更新正在进行的期数为 active
+	err = r.db.WithContext(ctx).
+		Model(&models.LotteryPeriod{}).
+		Where("order_start_time <= ? AND order_end_time > ? AND status != ?", now, now, "active").
+		Update("status", "active").Error
+	if err != nil {
+		return err
+	}
+	
+	// 更新待开始的期数为 pending
+	err = r.db.WithContext(ctx).
+		Model(&models.LotteryPeriod{}).
+		Where("order_start_time > ? AND status != ?", now, "pending").
+		Update("status", "pending").Error
+	
+	return err
 } 
