@@ -44,8 +44,6 @@ func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekSt
 		FROM orders o
 		JOIN users u ON o.uid = u.uid
 		WHERE o.status = ? 
-		AND o.updated_at >= ? 
-		AND o.updated_at <= ?
 		GROUP BY o.uid, u.username
 		ORDER BY 
 			order_count DESC,
@@ -54,7 +52,7 @@ func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekSt
 		LIMIT 10;
 	`
 
-	err := r.db.WithContext(ctx).Raw(query, "success", weekStart, weekEnd).Scan(&results).Error
+	err := r.db.WithContext(ctx).Raw(query, "success").Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +77,10 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 		JOIN users u ON o.uid = u.uid
 		WHERE o.status = ? 
 		AND o.uid = ?
-		AND o.updated_at >= ? 
-		AND o.updated_at <= ?
 		GROUP BY o.uid, u.username
 	`
 
-	err := r.db.WithContext(ctx).Raw(userQuery, "success", uid, weekStart, weekEnd).Scan(&userData).Error
+	err := r.db.WithContext(ctx).Raw(userQuery, "success", uid).Scan(&userData).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -105,8 +101,6 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 				MAX(o.updated_at) as completed_at
 			FROM orders o
 			WHERE o.status = ? 
-			AND o.updated_at >= ? 
-			AND o.updated_at <= ?
 			GROUP BY o.uid
 			HAVING 
 				order_count > ? 
@@ -117,7 +111,7 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 
 	var rank int
 	err = r.db.WithContext(ctx).Raw(rankQuery,
-		"success", weekStart, weekEnd,
+		"success",
 		userData.OrderCount,
 		userData.OrderCount, userData.TotalAmount,
 		userData.OrderCount, userData.TotalAmount, userData.CompletedAt).Scan(&rank).Error
