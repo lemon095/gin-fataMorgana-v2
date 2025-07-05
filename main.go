@@ -340,7 +340,6 @@ func main() {
 	{
 		leaderboard.Use(middleware.AuthMiddleware()) // 需要认证
 		leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜 - 查询周度任务完成排行榜
-		leaderboard.POST("/clear-cache", leaderboardController.ClearLeaderboardCache) // 清除排行榜缓存
 	}
 
 	// 金额配置路由

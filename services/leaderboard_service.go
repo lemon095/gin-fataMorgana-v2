@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
@@ -21,30 +19,11 @@ func NewLeaderboardService() *LeaderboardService {
 }
 
 func (s *LeaderboardService) GetLeaderboard(uid string) (*models.LeaderboardResponse, error) {
-	ctx := context.Background()
 	weekStart, weekEnd := models.GetCurrentWeekRange()
-	cacheKey := fmt.Sprintf("leaderboard:weekly:%s", weekStart.Format("2006-01-02"))
 
-	var response *models.LeaderboardResponse
-	cachedData, err := database.RedisClient.Get(ctx, cacheKey).Result()
-	if err == nil && cachedData != "" {
-		if err := json.Unmarshal([]byte(cachedData), &response); err == nil {
-			s.updateMyRankInfo(response, uid, weekStart, weekEnd)
-			return response, nil
-		}
-	}
-
-	response, err = s.buildLeaderboardResponse(uid, weekStart, weekEnd)
+	response, err := s.buildLeaderboardResponse(uid, weekStart, weekEnd)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取热榜数据失败")
-	}
-
-	cacheExpire := time.Now().UTC().Add(5 * time.Minute)
-	response.CacheExpire = cacheExpire
-
-	cacheData, err := json.Marshal(response)
-	if err == nil {
-		database.RedisClient.Set(ctx, cacheKey, cacheData, 5*time.Minute)
 	}
 
 	return response, nil
@@ -73,11 +52,10 @@ func (s *LeaderboardService) buildLeaderboardResponse(uid string, weekStart, wee
 	}
 	myRank := s.getMyRankInfo(uid, weekStart, weekEnd, topEntries)
 	response := &models.LeaderboardResponse{
-		WeekStart:   weekStart,
-		WeekEnd:     weekEnd,
-		MyRank:      myRank,
-		TopUsers:    topEntries,
-		CacheExpire: time.Now().UTC().Add(5 * time.Minute),
+		WeekStart: weekStart,
+		WeekEnd:   weekEnd,
+		MyRank:    myRank,
+		TopUsers:  topEntries,
 	}
 	return response, nil
 }
@@ -133,30 +111,4 @@ func (s *LeaderboardService) getDefaultUserRankInfo(uid string) *models.Leaderbo
 		Rank:        999,
 		IsRank:      false,
 	}
-}
-
-func (s *LeaderboardService) updateMyRankInfo(response *models.LeaderboardResponse, uid string, weekStart, weekEnd time.Time) {
-	for _, entry := range response.TopUsers {
-		if entry.Uid == uid {
-			response.MyRank = &entry
-			return
-		}
-	}
-	myRank := s.getMyRankInfo(uid, weekStart, weekEnd, response.TopUsers)
-	response.MyRank = myRank
-}
-
-// ClearCache 清除排行榜缓存
-func (s *LeaderboardService) ClearCache() error {
-	ctx := context.Background()
-	weekStart, _ := models.GetCurrentWeekRange()
-	cacheKey := fmt.Sprintf("leaderboard:weekly:%s", weekStart.Format("2006-01-02"))
-	
-	// 删除缓存
-	err := database.RedisClient.Del(ctx, cacheKey).Err()
-	if err != nil {
-		return utils.NewAppError(utils.CodeDatabaseError, "清除缓存失败")
-	}
-	
-	return nil
 }
