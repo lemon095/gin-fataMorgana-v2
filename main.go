@@ -284,6 +284,7 @@ func main() {
 	// 认证相关接口
 	v1.POST("/auth/register", authController.Register) // 注册接口（已移除频率限制）
 	v1.POST("/auth/login", authController.Login)               // 登录接口（已移除频率限制）
+	v1.POST("/auth/logout", middleware.AuthMiddleware(), authController.Logout)                    // 用户登出 - 撤销当前token
 	v1.POST("/auth/profile", middleware.AuthMiddleware(), authController.GetProfile)                 // 获取用户信息 - 获取当前用户完整资料
 	v1.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
 	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)       // 绑定银行卡
