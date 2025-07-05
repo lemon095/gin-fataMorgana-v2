@@ -254,9 +254,9 @@ func main() {
 	{
 		order.Use(middleware.AuthMiddleware())                // 需要认证
 		order.POST("/create", orderController.CreateOrder)    // 创建订单 - 用户创建新任务订单
-		order.POST("/list", orderController.GetOrderList)     // 获取订单列表 - 查询用户订单历史（支持状态筛选）
-		order.POST("/my-list", orderController.GetMyOrderList) // 获取我的订单列表 - 只获取当前用户的订单
-		order.POST("/all-list", orderController.GetAllOrderList) // 获取所有订单列表 - 只需登录即可
+		order.POST("/all-list", orderController.GetOrderList)     // 获取订单列表 - 查询用户订单历史（支持状态筛选）
+		order.POST("/my-orders", orderController.GetMyOrderList) // 获取我的订单列表 - 只获取当前用户的订单
+		order.POST("/list", orderController.GetAllOrderList) // 获取所有订单列表 - 只需登录即可
 		order.POST("/detail", orderController.GetOrderDetail) // 获取订单详情 - 查询具体订单的详细信息
 		order.POST("/stats", orderController.GetOrderStats)   // 获取订单统计 - 查询用户订单统计数据
 		order.POST("/period", orderController.GetPeriodList)  // 获取期数列表 - 获取当前活跃期数和价格配置
