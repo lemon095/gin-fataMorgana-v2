@@ -58,8 +58,12 @@
   ```
 
 ### 1.3 获取用户信息
-- **接口**：`GET /auth/profile`
+- **接口**：`POST /auth/profile`
 - **Header**：`Authorization: Bearer <token>`
+- **参数**（JSON）：
+  ```json
+  {}
+  ```
 - **返回**：
   ```json
   {
@@ -72,7 +76,13 @@
         "username": "test_xxxxxx",
         "email": "t***@example.com",
         "phone": "",
+        "bank_card_info": "",
+        "experience": 0,
+        "credit_score": 100,
         "status": 1,
+        "invited_by": "7TRABJ",
+        "has_group_buy_qualification": false,
+        "rate": 0,
         "created_at": "2025-06-29T18:44:49.114+08:00"
       }
     }

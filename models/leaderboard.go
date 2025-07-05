@@ -56,28 +56,16 @@ func GetCurrentWeekRange() (time.Time, time.Time) {
 	return weekStart, weekEnd
 }
 
-// MaskUsername 对用户名进行脱敏处理（优化版本）
+// MaskUsername 对用户名进行脱敏处理（统一版本）
 func MaskUsername(username string) string {
 	if len(username) <= 1 {
 		return username // 如果用户名太短（只有1个字符），直接返回
 	}
 	
-	// 对于2个字符的用户名，在中间加*
-	if len(username) == 2 {
-		return username[:1] + "*" + username[1:]
-	}
-	
-	// 对于3-4个字符的用户名，只显示首尾
-	if len(username) <= 4 {
-		first := username[:1]
-		last := username[len(username)-1:]
-		return first + "*" + last
-	}
-	
-	// 对于5个字符及以上的用户名，显示首尾各2个字符
-	first := username[:2]
-	last := username[len(username)-2:]
-	return first + "*" + last
+	// 统一脱敏规则：显示首位，中间用**替换，显示末位
+	first := username[:1]
+	last := username[len(username)-1:]
+	return first + "**" + last
 }
 
 // LeaderboardQuery 热榜查询参数

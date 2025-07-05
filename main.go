@@ -224,6 +224,7 @@ func main() {
 	// 认证相关接口
 	v1.POST("/auth/register", middleware.RateLimitMiddleware(3, 1*time.Hour), authController.Register) // 注册限流：每小时3次
 	v1.POST("/auth/login", middleware.LoginRateLimitMiddleware(), authController.Login)               // 登录限流：每分钟10次
+	v1.POST("/auth/profile", middleware.AuthMiddleware(), authController.GetProfile)                 // 获取用户信息 - 获取当前用户完整资料
 	v1.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
 	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)       // 绑定银行卡
 	v1.POST("/auth/get-bank-card-info", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
