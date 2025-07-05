@@ -154,7 +154,12 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 
 	transactionNo, err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description)
 	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		// 检查是否是AppError类型
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
+		} else {
+			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		}
 		return
 	}
 
@@ -188,7 +193,12 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 
 	response, err := wc.walletService.RequestWithdraw(&req, user.Uid)
 	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		// 检查是否是AppError类型
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
+		} else {
+			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		}
 		return
 	}
 

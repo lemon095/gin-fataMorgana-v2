@@ -250,10 +250,6 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 		return "", utils.NewAppError(utils.CodeRechargeAmountInvalid, "充值金额必须大于0")
 	}
 
-	// 检查是否超过单笔充值限额（可选，这里设置100万）
-	if amount > 1000000 {
-		return "", utils.NewAppError(utils.CodeRechargeAmountExceeded, "单笔充值金额不能超过100万元")
-	}
 
 	// 记录交易前余额
 	balanceBefore := wallet.Balance
