@@ -241,7 +241,7 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 	}
 
 	// 检查钱包状态
-	if wallet.Status == 1 { // 已冻结
+	if wallet.Status == 0 { // 已冻结
 		return "", utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法充值")
 	}
 
@@ -349,7 +349,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 	}
 
 	// 检查钱包状态
-	if wallet.Status == 1 { // 已冻结
+	if wallet.Status == 0 { // 已冻结
 		return nil, utils.NewAppError(utils.CodeWalletFrozenWithdraw, "钱包已被冻结，无法提现")
 	}
 
