@@ -169,10 +169,10 @@ func setDefaults() {
 	
 	// 假数据配置默认值
 	if GlobalConfig.FakeData.CronExpression == "" {
-		GlobalConfig.FakeData.CronExpression = "*/5 * * * *"
+		GlobalConfig.FakeData.CronExpression = "0 */5 * * * *"
 	}
 	if GlobalConfig.FakeData.CleanupCron == "" {
-		GlobalConfig.FakeData.CleanupCron = "0 2 * * *"
+		GlobalConfig.FakeData.CleanupCron = "0 0 2 * * *"
 	}
 	if GlobalConfig.FakeData.MinOrders == 0 {
 		GlobalConfig.FakeData.MinOrders = 80

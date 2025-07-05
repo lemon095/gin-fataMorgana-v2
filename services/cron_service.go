@@ -116,16 +116,19 @@ func (s *CronService) Stop() {
 // StartFakeOrderCron 启动假订单生成定时任务
 func (s *CronService) StartFakeOrderCron() error {
 	if s.config.OrderCronExpr == "" {
-		s.config.OrderCronExpr = "*/5 * * * *" // 默认每5分钟
+		s.config.OrderCronExpr = "0 */5 * * * *" // 默认每5分钟（包含秒）
 	}
 
+	log.Printf("⏰ 验证cron表达式: %s", s.config.OrderCronExpr)
+	
 	entryID, err := s.cron.AddFunc(s.config.OrderCronExpr, s.generateFakeOrders)
 	if err != nil {
+		log.Printf("❌ cron表达式验证失败: %v", err)
 		return err
 	}
 
 	s.orderEntryID = entryID
-	log.Printf("假订单生成定时任务已启动，表达式: %s", s.config.OrderCronExpr)
+	log.Printf("✅ 假订单生成定时任务已启动，表达式: %s", s.config.OrderCronExpr)
 	return nil
 }
 
@@ -141,16 +144,19 @@ func (s *CronService) StopFakeOrderCron() {
 // StartCleanupCron 启动数据清理定时任务
 func (s *CronService) StartCleanupCron() error {
 	if s.config.CleanupCronExpr == "" {
-		s.config.CleanupCronExpr = "0 2 * * *" // 默认每天凌晨2点
+		s.config.CleanupCronExpr = "0 0 2 * * *" // 默认每天凌晨2点（包含秒）
 	}
 
+	log.Printf("🧹 验证清理cron表达式: %s", s.config.CleanupCronExpr)
+	
 	entryID, err := s.cron.AddFunc(s.config.CleanupCronExpr, s.cleanupOldData)
 	if err != nil {
+		log.Printf("❌ 清理cron表达式验证失败: %v", err)
 		return err
 	}
 
 	s.cleanupEntryID = entryID
-	log.Printf("数据清理定时任务已启动，表达式: %s", s.config.CleanupCronExpr)
+	log.Printf("✅ 数据清理定时任务已启动，表达式: %s", s.config.CleanupCronExpr)
 	return nil
 }
 

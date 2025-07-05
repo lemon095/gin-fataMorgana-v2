@@ -66,8 +66,8 @@ snowflake:
 # 假订单生成配置
 fake_data:
   enabled: true
-  cron_expression: "*/5 * * * *"  # 每5分钟生成订单
-  cleanup_cron: "0 2 * * *"       # 每天凌晨2点清理
+  cron_expression: "0 */5 * * * *"  # 每5分钟生成订单（包含秒）
+  cleanup_cron: "0 0 2 * * *"       # 每天凌晨2点清理（包含秒）
   min_orders: 80
   max_orders: 100
   purchase_ratio: 0.7  # 70%购买单，30%拼单
