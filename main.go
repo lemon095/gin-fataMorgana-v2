@@ -116,6 +116,12 @@ func main() {
 
 	// 启动定时任务服务
 	var cronService *services.CronService
+	// 强制启用假数据配置（如果配置文件中的enabled为false）
+	if !config.GlobalConfig.FakeData.Enabled {
+		log.Println("⚠️  配置文件显示假数据已禁用，强制启用...")
+		config.GlobalConfig.FakeData.Enabled = true
+	}
+	
 	if config.GlobalConfig.FakeData.Enabled {
 		log.Println("🚀 启动定时任务服务...")
 		log.Printf("📋 假数据配置: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d", 

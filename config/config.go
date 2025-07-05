@@ -113,11 +113,15 @@ func LoadConfig() error {
 		return utils.NewAppError(utils.CodeConfigParseFailed, "解析配置文件失败")
 	}
 
+	log.Printf("📄 配置文件解析完成")
+
 	// 设置默认值
 	setDefaults()
+	log.Printf("🔧 默认值设置完成")
 
 	// 使用环境变量覆盖配置
 	overrideWithEnvVars()
+	log.Printf("🌍 环境变量覆盖完成")
 
 	// 打印假数据配置状态
 	log.Printf("📋 假数据配置状态: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d", 
@@ -126,7 +130,7 @@ func LoadConfig() error {
 		GlobalConfig.FakeData.MinOrders,
 		GlobalConfig.FakeData.MaxOrders)
 
-	log.Printf("配置加载成功，使用文件: %s", configFile)
+	log.Printf("✅ 配置加载成功，使用文件: %s", configFile)
 	return nil
 }
 
@@ -249,7 +253,9 @@ func overrideWithEnvVars() {
 		GlobalConfig.Redis.Password = env
 	}
 
-	// 假数据配置
+	// 假数据配置 - 不使用环境变量覆盖，直接使用配置文件中的值
+	// 注释掉环境变量覆盖，确保在任何环境下都使用配置文件中的设置
+	/*
 	if env := os.Getenv("FAKE_DATA_ENABLED"); env != "" {
 		GlobalConfig.FakeData.Enabled = env == "true" || env == "1"
 	}
@@ -269,6 +275,7 @@ func overrideWithEnvVars() {
 			GlobalConfig.FakeData.MaxOrders = maxOrders
 		}
 	}
+	*/
 }
 
 // parsePort 解析端口号
