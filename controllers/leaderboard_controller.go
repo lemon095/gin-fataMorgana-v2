@@ -39,3 +39,23 @@ func (c *LeaderboardController) GetLeaderboard(ctx *gin.Context) {
 	// 返回成功响应
 	utils.Success(ctx, response)
 }
+
+// ClearLeaderboardCache 清除排行榜缓存
+func (c *LeaderboardController) ClearLeaderboardCache(ctx *gin.Context) {
+	// 获取当前用户UID（从认证中间件中获取）
+	uid := middleware.GetCurrentUID(ctx)
+	if uid == "" {
+		utils.Unauthorized(ctx)
+		return
+	}
+
+	// 清除排行榜缓存
+	err := c.leaderboardService.ClearCache()
+	if err != nil {
+		utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, "清除缓存失败")
+		return
+	}
+
+	// 返回成功响应
+	utils.Success(ctx, gin.H{"message": "排行榜缓存已清除"})
+}

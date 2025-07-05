@@ -145,3 +145,18 @@ func (s *LeaderboardService) updateMyRankInfo(response *models.LeaderboardRespon
 	myRank := s.getMyRankInfo(uid, weekStart, weekEnd, response.TopUsers)
 	response.MyRank = myRank
 }
+
+// ClearCache 清除排行榜缓存
+func (s *LeaderboardService) ClearCache() error {
+	ctx := context.Background()
+	weekStart, _ := models.GetCurrentWeekRange()
+	cacheKey := fmt.Sprintf("leaderboard:weekly:%s", weekStart.Format("2006-01-02"))
+	
+	// 删除缓存
+	err := database.RedisClient.Del(ctx, cacheKey).Err()
+	if err != nil {
+		return utils.NewAppError(utils.CodeDatabaseError, "清除缓存失败")
+	}
+	
+	return nil
+}

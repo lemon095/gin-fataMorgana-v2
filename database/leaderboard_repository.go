@@ -46,6 +46,7 @@ func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekSt
 		WHERE o.status = ? 
 		AND o.updated_at >= ? 
 		AND o.updated_at <= ?
+		AND o.updated_at <= NOW()
 		GROUP BY o.uid, u.username
 		ORDER BY 
 			order_count DESC,
@@ -81,6 +82,7 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 		AND o.uid = ?
 		AND o.updated_at >= ? 
 		AND o.updated_at <= ?
+		AND o.updated_at <= NOW()
 		GROUP BY o.uid, u.username
 	`
 
@@ -107,6 +109,7 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 			WHERE o.status = ? 
 			AND o.updated_at >= ? 
 			AND o.updated_at <= ?
+			AND o.updated_at <= NOW()
 			GROUP BY o.uid
 			HAVING 
 				order_count > ? 

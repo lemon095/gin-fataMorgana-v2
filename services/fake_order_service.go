@@ -187,7 +187,7 @@ func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 		FavoriteStatus: s.getTaskStatus(favoriteCount, status),
 		IsSystemOrder:  true,
 		CreatedAt:      createdAt,
-		UpdatedAt:      createdAt,
+		UpdatedAt:      createdAt, // 确保更新时间也是过去时间
 	}
 
 	return order
@@ -233,13 +233,13 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 	return groupBuy
 }
 
-// generateRandomTime 生成随机时间（10分钟窗口）
+// generateRandomTime 生成随机时间（过去10分钟到未来10分钟）
 func (s *FakeOrderService) generateRandomTime() time.Time {
 	now := time.Now()
 	
-	// 10分钟时间窗口：当前时间前后各5分钟
-	startTime := now.Add(-5 * time.Minute)
-	endTime := now.Add(5 * time.Minute)
+	// 时间窗口：当前时间前后各10分钟（过去10分钟到未来10分钟）
+	startTime := now.Add(-10 * time.Minute)
+	endTime := now.Add(10 * time.Minute)
 	
 	// 计算时间差
 	timeDiff := endTime.Sub(startTime)
@@ -322,8 +322,6 @@ func (s *FakeOrderService) getRandomGroupBuyStatus() string {
 		return models.GroupBuyStatusSuccess // 30% 已完成
 	}
 }
-
-
 
 // getStatusBasedExpireTime 根据状态设置过期时间
 func (s *FakeOrderService) getStatusBasedExpireTime(status string, createdAt time.Time) time.Time {
@@ -431,8 +429,6 @@ func (s *FakeOrderService) calculateGroupBuyAmount() float64 {
 	
 	return totalAmount
 }
-
-
 
 // contains 检查切片是否包含元素
 func contains(slice []string, item string) bool {
