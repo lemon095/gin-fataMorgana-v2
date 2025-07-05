@@ -8,19 +8,21 @@ import (
 
 // SystemUIDGenerator 系统UID生成器
 type SystemUIDGenerator struct {
-	mutex     sync.Mutex
-	sequence  int64
-	lastTime  int64
-	machineID int64
+	mutex           sync.Mutex
+	sequence        int64
+	lastTime        int64
+	machineID       int64
 	groupBuyCounter int64 // 拼单计数器，确保拼单号唯一性
+	orderCounter    int64 // 订单计数器，确保订单号唯一性
 }
 
 // NewSystemUIDGenerator 创建新的系统UID生成器
 func NewSystemUIDGenerator(machineID int64) *SystemUIDGenerator {
 	return &SystemUIDGenerator{
-		lastTime:  0,
-		sequence:  0,
-		machineID: machineID % 100, // 确保机器ID在0-99范围内
+		lastTime:     0,
+		sequence:     0,
+		machineID:    machineID % 100, // 确保机器ID在0-99范围内
+		orderCounter: 0,
 	}
 }
 
@@ -61,7 +63,18 @@ func (s *SystemUIDGenerator) GenerateSystemUID() string {
 
 // GenerateSystemOrderNo 生成系统订单号
 func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
-	return "ORD" + s.GenerateSystemUID()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// 订单计数器递增
+	s.orderCounter = (s.orderCounter + 1) % 10000 // 计数器范围0-9999
+
+	// 获取当前时间戳（毫秒）
+	currentTime := time.Now().UnixNano() / 1e6
+
+	// 生成订单号：ORD + 时间戳后3位 + 机器ID2位 + 计数器4位
+	timestamp := currentTime % 1000 // 取时间戳后3位
+	return fmt.Sprintf("ORD%03d%02d%04d", timestamp, s.machineID, s.orderCounter)
 }
 
 // GenerateSystemGroupBuyNo 生成系统拼单号
