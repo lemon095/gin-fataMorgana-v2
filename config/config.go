@@ -119,6 +119,13 @@ func LoadConfig() error {
 	// 使用环境变量覆盖配置
 	overrideWithEnvVars()
 
+	// 打印假数据配置状态
+	log.Printf("📋 假数据配置状态: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d", 
+		GlobalConfig.FakeData.Enabled, 
+		GlobalConfig.FakeData.CronExpression,
+		GlobalConfig.FakeData.MinOrders,
+		GlobalConfig.FakeData.MaxOrders)
+
 	log.Printf("配置加载成功，使用文件: %s", configFile)
 	return nil
 }
@@ -154,6 +161,32 @@ func setDefaults() {
 	}
 	if GlobalConfig.Snowflake.DatacenterID == 0 {
 		GlobalConfig.Snowflake.DatacenterID = 1
+	}
+	
+	// 假数据配置默认值
+	if GlobalConfig.FakeData.CronExpression == "" {
+		GlobalConfig.FakeData.CronExpression = "*/5 * * * *"
+	}
+	if GlobalConfig.FakeData.CleanupCron == "" {
+		GlobalConfig.FakeData.CleanupCron = "0 2 * * *"
+	}
+	if GlobalConfig.FakeData.MinOrders == 0 {
+		GlobalConfig.FakeData.MinOrders = 80
+	}
+	if GlobalConfig.FakeData.MaxOrders == 0 {
+		GlobalConfig.FakeData.MaxOrders = 100
+	}
+	if GlobalConfig.FakeData.PurchaseRatio == 0 {
+		GlobalConfig.FakeData.PurchaseRatio = 0.7
+	}
+	if GlobalConfig.FakeData.TaskMinCount == 0 {
+		GlobalConfig.FakeData.TaskMinCount = 100
+	}
+	if GlobalConfig.FakeData.TaskMaxCount == 0 {
+		GlobalConfig.FakeData.TaskMaxCount = 2000
+	}
+	if GlobalConfig.FakeData.RetentionDays == 0 {
+		GlobalConfig.FakeData.RetentionDays = 2
 	}
 }
 
@@ -214,6 +247,27 @@ func overrideWithEnvVars() {
 	}
 	if env := os.Getenv("REDIS_PASSWORD"); env != "" {
 		GlobalConfig.Redis.Password = env
+	}
+
+	// 假数据配置
+	if env := os.Getenv("FAKE_DATA_ENABLED"); env != "" {
+		GlobalConfig.FakeData.Enabled = env == "true" || env == "1"
+	}
+	if env := os.Getenv("FAKE_DATA_CRON_EXPRESSION"); env != "" {
+		GlobalConfig.FakeData.CronExpression = env
+	}
+	if env := os.Getenv("FAKE_DATA_CLEANUP_CRON"); env != "" {
+		GlobalConfig.FakeData.CleanupCron = env
+	}
+	if env := os.Getenv("FAKE_DATA_MIN_ORDERS"); env != "" {
+		if minOrders := parsePort(env); minOrders > 0 {
+			GlobalConfig.FakeData.MinOrders = minOrders
+		}
+	}
+	if env := os.Getenv("FAKE_DATA_MAX_ORDERS"); env != "" {
+		if maxOrders := parsePort(env); maxOrders > 0 {
+			GlobalConfig.FakeData.MaxOrders = maxOrders
+		}
 	}
 }
 
