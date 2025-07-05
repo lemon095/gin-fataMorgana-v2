@@ -158,7 +158,7 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 		if appErr, ok := err.(*utils.AppError); ok {
 			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
 		} else {
-			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		}
 		return
 	}
@@ -197,7 +197,7 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 		if appErr, ok := err.(*utils.AppError); ok {
 			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
 		} else {
-			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		}
 		return
 	}

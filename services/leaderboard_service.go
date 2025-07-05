@@ -35,8 +35,8 @@ func (s *LeaderboardService) GetLeaderboard(uid string) (*models.LeaderboardResp
 		response, err := s.buildLeaderboardResponse(uid, weekStart, weekEnd)
 		if err != nil {
 			log.Printf("❌ [排行榜] 构建排行榜响应失败: %v", err)
-			return nil, utils.NewAppError(utils.CodeDatabaseError, "获取热榜数据失败")
-		}
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取热榜数据失败")
+	}
 		log.Printf("✅ [排行榜] 从数据库查询完成，返回 %d 条数据", len(response.TopUsers))
 		return response, nil
 	}

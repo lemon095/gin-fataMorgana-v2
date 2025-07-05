@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -163,23 +162,40 @@ func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 	// 生成随机创建时间（10分钟窗口）
 	createdAt := s.generateRandomTime()
 	
-	// 生成任务数量
-	likeCount := rand.Intn(s.config.TaskMaxCount-s.config.TaskMinCount+1) + s.config.TaskMinCount
-	shareCount := rand.Intn(s.config.TaskMaxCount-s.config.TaskMinCount+1) + s.config.TaskMinCount
-	followCount := rand.Intn(s.config.TaskMaxCount-s.config.TaskMinCount+1) + s.config.TaskMinCount
-	favoriteCount := rand.Intn(s.config.TaskMaxCount-s.config.TaskMinCount+1) + s.config.TaskMinCount
+	// 随机选择1-4个类型，每个类型数量为1
+	likeCount := 0
+	shareCount := 0
+	followCount := 0
+	favoriteCount := 0
+	
+	// 随机选择类型数量（1-4个）
+	typeCount := rand.Intn(4) + 1
+	
+	// 创建类型数组并随机打乱
+	types := []string{"like", "share", "follow", "favorite"}
+	rand.Shuffle(len(types), func(i, j int) {
+		types[i], types[j] = types[j], types[i]
+	})
+	
+	// 选择前typeCount个类型，数量设为1
+	for i := 0; i < typeCount; i++ {
+		switch types[i] {
+		case "like":
+			likeCount = 1
+		case "share":
+			shareCount = 1
+		case "follow":
+			followCount = 1
+		case "favorite":
+			favoriteCount = 1
+		}
+	}
 
-	// 获取价格配置
-	purchaseConfig := s.getPurchaseConfig()
-
-	// 计算订单金额
-	amount := float64(likeCount)*purchaseConfig.LikeAmount +
-		float64(shareCount)*purchaseConfig.ShareAmount +
-		float64(followCount)*purchaseConfig.ForwardAmount +
-		float64(favoriteCount)*purchaseConfig.FavoriteAmount
+	// 生成总金额（10万到1000万之间）
+	totalAmount := float64(rand.Intn(9900000)+100000) // 100000-10000000
 
 	// 随机选择用户等级计算利润
-	profitAmount := s.calculateProfitAmount(amount)
+	profitAmount := s.calculateProfitAmount(totalAmount)
 
 	// 随机选择状态
 	status := s.getRandomPurchaseStatus()
@@ -191,7 +207,7 @@ func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 		OrderNo:        utils.GenerateSystemOrderNo(),
 		Uid:            utils.GenerateSystemUID(),
 		PeriodNumber:   s.getPeriodNumberByTime(createdAt),
-		Amount:         amount,
+		Amount:         totalAmount,
 		ProfitAmount:   profitAmount,
 		Status:         status,
 		ExpireTime:     expireTime,
@@ -216,21 +232,56 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 	// 生成随机创建时间
 	createdAt := s.generateRandomTime()
 	
-	// 基于价格配置计算人均金额
-	perPersonAmount := s.calculateGroupBuyAmount()
+	// 随机选择1-4个类型，每个类型数量为1
+	likeCount := 0
+	shareCount := 0
+	followCount := 0
+	favoriteCount := 0
+	
+	// 随机选择类型数量（1-4个）
+	typeCount := rand.Intn(4) + 1
+	
+	// 创建类型数组并随机打乱
+	types := []string{"like", "share", "follow", "favorite"}
+	rand.Shuffle(len(types), func(i, j int) {
+		types[i], types[j] = types[j], types[i]
+	})
+	
+	// 选择前typeCount个类型，数量设为1
+	for i := 0; i < typeCount; i++ {
+		switch types[i] {
+		case "like":
+			likeCount = 1
+		case "share":
+			shareCount = 1
+		case "follow":
+			followCount = 1
+		case "favorite":
+			favoriteCount = 1
+		}
+	}
+
+	// 随机生成单价（1万到10万之间）
+	unitPrice := float64(rand.Intn(90000)+10000) // 10000-100000
+	
+	// 计算总任务数量
+	totalTaskCount := likeCount + shareCount + followCount + favoriteCount
+	
+	// 计算总金额：单价 × 总任务数量
+	totalAmount := unitPrice * float64(totalTaskCount)
+
+	// 随机生成参与人数和目标人数
+	currentParticipants := rand.Intn(3) + 1 // 1-3人
+	targetParticipants := rand.Intn(5) + 3  // 3-7人
+	
+	// 计算人均金额：总金额 ÷ 目标人数
+	perPersonAmount := totalAmount / float64(targetParticipants)
 
 	// 随机选择状态
 	status := s.getRandomGroupBuyStatus()
 	
 	// 根据状态设置截止时间
 	deadline := s.getGroupBuyDeadline(status, createdAt)
-
-	// 随机生成参与人数和目标人数
-	currentParticipants := rand.Intn(3) + 1 // 1-3人
-	targetParticipants := rand.Intn(5) + 3  // 3-7人
-	
-	// 计算总金额
-	totalAmount := perPersonAmount * float64(targetParticipants)
 
 	groupBuy := &models.GroupBuy{
 		GroupBuyNo:        utils.GenerateSystemGroupBuyNo(),
@@ -268,32 +319,15 @@ func (s *FakeOrderService) generateRandomTime() time.Time {
 	return startTime.Add(randomOffset)
 }
 
-// getPurchaseConfig 获取价格配置
+// getPurchaseConfig 获取价格配置（已废弃，不再使用缓存的价格配置）
 func (s *FakeOrderService) getPurchaseConfig() *models.PurchaseConfig {
-	// 从Redis获取价格配置，如果获取失败则使用默认配置
-	ctx := context.Background()
-	configJSON, err := database.RedisClient.Get(ctx, "purchase_config").Result()
-	if err != nil {
-		// 返回默认配置
-		return &models.PurchaseConfig{
-			LikeAmount:     0.1,
-			ShareAmount:    0.2,
-			ForwardAmount:  0.3,
-			FavoriteAmount: 0.4,
-		}
+	// 新的逻辑不再使用缓存的价格配置
+	return &models.PurchaseConfig{
+		LikeAmount:     0.1,
+		ShareAmount:    0.2,
+		ForwardAmount:  0.3,
+		FavoriteAmount: 0.4,
 	}
-
-	var config models.PurchaseConfig
-	if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
-		return &models.PurchaseConfig{
-			LikeAmount:     0.1,
-			ShareAmount:    0.2,
-			ForwardAmount:  0.3,
-			FavoriteAmount: 0.4,
-		}
-	}
-
-	return &config
 }
 
 // calculateProfitAmount 计算利润金额
@@ -400,52 +434,10 @@ func (s *FakeOrderService) getTaskStatus(count int, orderStatus string) string {
 	}
 }
 
-// calculateGroupBuyAmount 计算拼单人均金额
+// calculateGroupBuyAmount 计算拼单人均金额（已废弃，新的逻辑直接生成随机金额）
 func (s *FakeOrderService) calculateGroupBuyAmount() float64 {
-	// 获取价格配置
-	purchaseConfig := s.getPurchaseConfig()
-	
-	// 基于价格配置计算合理的拼单金额
-	// 拼单金额应该是一个合理的任务组合价格
-	maxTaskCountPerType := rand.Intn(5) + 3 // 每种任务类型的最大数量：3-7个
-	
-	// 随机选择任务类型组合
-	taskTypes := []string{"like", "share", "follow", "favorite"}
-	selectedTasks := make([]string, 0)
-	
-	// 随机选择2-4种任务类型
-	numTaskTypes := rand.Intn(3) + 2 // 2-4种任务类型
-	for i := 0; i < numTaskTypes; i++ {
-		taskType := taskTypes[rand.Intn(len(taskTypes))]
-		if !contains(selectedTasks, taskType) {
-			selectedTasks = append(selectedTasks, taskType)
-		}
-	}
-	
-	// 计算人均金额
-	var totalAmount float64
-	for _, taskType := range selectedTasks {
-		taskCount := rand.Intn(maxTaskCountPerType) + 1
-		switch taskType {
-		case "like":
-			totalAmount += float64(taskCount) * purchaseConfig.LikeAmount
-		case "share":
-			totalAmount += float64(taskCount) * purchaseConfig.ShareAmount
-		case "follow":
-			totalAmount += float64(taskCount) * purchaseConfig.ForwardAmount
-		case "favorite":
-			totalAmount += float64(taskCount) * purchaseConfig.FavoriteAmount
-		}
-	}
-	
-	// 确保金额在合理范围内（5.00-50.00）
-	if totalAmount < 5.0 {
-		totalAmount = 5.0
-	} else if totalAmount > 50.0 {
-		totalAmount = 50.0
-	}
-	
-	return totalAmount
+	// 新的逻辑直接生成1万到10万之间的随机金额
+	return float64(rand.Intn(90000)+10000) // 10000-100000
 }
 
 // contains 检查切片是否包含元素

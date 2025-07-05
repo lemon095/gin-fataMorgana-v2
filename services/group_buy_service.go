@@ -221,17 +221,46 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	// 11. 生成订单编号
 	orderNo := utils.GenerateOrderNo()
 
-	// 12. 创建订单数据
+	// 12. 随机选择1-4个类型，每个类型数量为1
+	likeCount := 0
+	shareCount := 0
+	followCount := 0
+	favoriteCount := 0
+	
+	// 随机选择类型数量（1-4个）
+	typeCount := rand.Intn(4) + 1
+	
+	// 创建类型数组并随机打乱
+	types := []string{"like", "share", "follow", "favorite"}
+	rand.Shuffle(len(types), func(i, j int) {
+		types[i], types[j] = types[j], types[i]
+	})
+	
+	// 选择前typeCount个类型，数量设为1
+	for i := 0; i < typeCount; i++ {
+		switch types[i] {
+		case "like":
+			likeCount = 1
+		case "share":
+			shareCount = 1
+		case "follow":
+			followCount = 1
+		case "favorite":
+			favoriteCount = 1
+		}
+	}
+
+	// 13. 创建订单数据
 	order := &models.Order{
 		OrderNo:        orderNo,
 		Uid:            uid,
 		PeriodNumber:   groupBuy.GroupBuyNo, // 将拼单编号写入period_number字段
 		Amount:         groupBuy.PerPersonAmount,
 		ProfitAmount:   profitAmount,
-		LikeCount:      rand.Intn(8000) + 1, // 随机从1-8000生成
-		ShareCount:     rand.Intn(8000) + 1,
-		FollowCount:    rand.Intn(8000) + 1,
-		FavoriteCount:  rand.Intn(8000) + 1,
+		LikeCount:      likeCount,
+		ShareCount:     shareCount,
+		FollowCount:    followCount,
+		FavoriteCount:  favoriteCount,
 		LikeStatus:     "pending",
 		ShareStatus:    "pending",
 		FollowStatus:   "pending",

@@ -127,7 +127,7 @@ func (cc *CronController) GetCronStatus(c *gin.Context) {
 	utils.Success(c, gin.H{
 		"cron_status": status,
 	})
-}
+} 
 
 // ManualUpdateLeaderboardCache 手动更新热榜缓存
 func (cc *CronController) ManualUpdateLeaderboardCache(c *gin.Context) {

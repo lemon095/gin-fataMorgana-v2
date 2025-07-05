@@ -71,10 +71,28 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		return nil, err
 	}
 
-	// 获取价格配置并验证金额
+	// 验证订单金额（确保至少选择一种类型）
 	if err := s.validateOrderAmount(ctx, req); err != nil {
 		return nil, err
 	}
+
+	// 计算有值的类型数量
+	typeCount := 0
+	if req.LikeCount > 0 {
+		typeCount++
+	}
+	if req.ShareCount > 0 {
+		typeCount++
+	}
+	if req.FollowCount > 0 {
+		typeCount++
+	}
+	if req.FavoriteCount > 0 {
+		typeCount++
+	}
+
+	// 计算总价 = 单价 × 类型数量
+	totalAmount := req.Amount * float64(typeCount)
 
 	// 获取用户信息以获取经验值
 	userRepo := database.NewUserRepository()
@@ -84,12 +102,12 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	}
 
 	// 根据用户经验值获取等级配置并计算利润金额
-	profitAmount := s.calculateProfitAmount(ctx, user.Experience, req.Amount)
+	profitAmount := s.calculateProfitAmount(ctx, user.Experience, totalAmount)
 
 	// 创建订单对象
 	order := &models.Order{
 		Uid:           req.Uid,
-		Amount:        req.Amount,
+		Amount:        totalAmount, // 使用计算后的总价
 		ProfitAmount:  profitAmount,
 		LikeCount:     req.LikeCount,
 		ShareCount:    req.ShareCount,
@@ -127,7 +145,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	}
 
 	// 检查余额是否足够
-	if wallet.Balance < req.Amount {
+	if wallet.Balance < totalAmount {
 		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, "余额不足")
 	}
 
@@ -135,7 +153,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	balanceBefore := wallet.Balance
 
 	// 扣减余额
-	if err := wallet.Withdraw(req.Amount); err != nil {
+	if err := wallet.Withdraw(totalAmount); err != nil {
 		return nil, utils.NewAppError(utils.CodeBalanceDeductFailed, "扣减余额失败")
 	}
 
@@ -147,7 +165,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	// 创建订单
 	if err := s.orderRepo.CreateOrder(ctx, order); err != nil {
 		// 如果创建订单失败，需要回滚扣减的余额
-		wallet.Recharge(req.Amount)
+		wallet.Recharge(totalAmount)
 		s.walletRepo.UpdateWallet(ctx, wallet)
 		return nil, utils.NewAppError(utils.CodeOrderCreateFailed, "创建订单失败")
 	}
@@ -157,7 +175,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		TransactionNo:  utils.GenerateTransactionNo("ORDER"),
 		Uid:            req.Uid,
 		Type:           models.TransactionTypeOrderBuy,
-		Amount:         req.Amount,
+		Amount:         totalAmount, // 使用计算后的总价
 		BalanceBefore:  balanceBefore,
 		BalanceAfter:   wallet.Balance,
 		Status:         models.TransactionStatusSuccess,
@@ -173,7 +191,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 
 	return &CreateOrderResponse{
 		OrderNo: order.OrderNo,
-		Amount:  req.Amount,
+		Amount:  totalAmount, // 返回计算后的总价
 		Status:  models.OrderStatusPending,
 		Message: "订单创建成功",
 	}, nil
@@ -203,23 +221,12 @@ func (s *OrderService) validatePeriod(ctx context.Context, periodNumber string) 
 	return nil
 }
 
-// validateOrderAmount 验证订单金额
+// validateOrderAmount 验证订单金额（已简化，不再校验具体金额）
 func (s *OrderService) validateOrderAmount(ctx context.Context, req *CreateOrderRequest) error {
-	// 获取价格配置
-	purchaseConfig, err := s.getPurchaseConfig(ctx)
-	if err != nil {
-		return utils.NewAppError(utils.CodePriceConfigGetFailed, "获取价格配置失败")
-	}
-
-	// 计算订单金额
-	calculatedAmount := float64(req.LikeCount)*purchaseConfig.LikeAmount +
-		float64(req.ShareCount)*purchaseConfig.ShareAmount +
-		float64(req.FollowCount)*purchaseConfig.ForwardAmount +
-		float64(req.FavoriteCount)*purchaseConfig.FavoriteAmount
-
-	// 比较计算金额和请求金额
-	if calculatedAmount != req.Amount {
-		return utils.NewAppError(utils.CodeOrderAmountMismatch, "订单金额不匹配")
+	// 新的逻辑：amount作为单价，不再需要校验具体金额
+	// 只需要确保至少选择了一种类型
+	if req.LikeCount == 0 && req.ShareCount == 0 && req.FollowCount == 0 && req.FavoriteCount == 0 {
+		return utils.NewAppError(utils.CodeOrderAmountMismatch, "请至少选择一种任务类型")
 	}
 
 	return nil
