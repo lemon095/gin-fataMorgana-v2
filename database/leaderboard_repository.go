@@ -28,40 +28,30 @@ type WeeklyLeaderboardData struct {
 	TotalProfit float64   `json:"total_profit"`
 }
 
-// GetWeeklyLeaderboard 获取本周热榜数据（性能优化版本）
+// GetWeeklyLeaderboard 获取本周热榜数据（不使用窗口函数）
 func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekStart, weekEnd time.Time) ([]WeeklyLeaderboardData, error) {
 	var results []WeeklyLeaderboardData
 
-	// 优化查询：使用窗口函数提高性能
+	// 使用简单的GROUP BY和ORDER BY，不使用窗口函数
 	query := `
-		WITH user_stats AS (
-			SELECT 
-				o.uid,
-				u.username,
-				MAX(o.updated_at) as completed_at,
-				COUNT(*) as order_count,
-				SUM(o.amount) as total_amount,
-				SUM(o.profit_amount) as total_profit,
-				ROW_NUMBER() OVER (
-					ORDER BY COUNT(*) DESC, SUM(o.amount) DESC, MAX(o.updated_at) ASC
-				) as rank
-			FROM orders o
-			JOIN users u ON o.uid = u.uid
-			WHERE o.status = ? 
-			AND o.updated_at >= ? 
-			AND o.updated_at <= ?
-			GROUP BY o.uid, u.username
-		)
 		SELECT 
-			uid,
-			username,
-			completed_at,
-			order_count,
-			total_amount,
-			total_profit
-		FROM user_stats
-		WHERE rank <= 10
-		ORDER BY rank
+			o.uid,
+			u.username,
+			MAX(o.updated_at) as completed_at,
+			COUNT(*) as order_count,
+			SUM(o.amount) as total_amount,
+			SUM(o.profit_amount) as total_profit
+		FROM orders o
+		JOIN users u ON o.uid = u.uid
+		WHERE o.status = ? 
+		AND o.updated_at >= ? 
+		AND o.updated_at <= ?
+		GROUP BY o.uid, u.username
+		ORDER BY 
+			order_count DESC,
+			total_amount DESC,
+			completed_at ASC
+		LIMIT 10
 	`
 
 	err := r.db.WithContext(ctx).Raw(query, "success", weekStart, weekEnd).Scan(&results).Error
@@ -72,11 +62,11 @@ func (r *LeaderboardRepository) GetWeeklyLeaderboard(ctx context.Context, weekSt
 	return results, nil
 }
 
-// GetUserWeeklyRank 获取用户本周排名
+// GetUserWeeklyRank 获取用户本周排名（不使用窗口函数）
 func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid string, weekStart, weekEnd time.Time) (*WeeklyLeaderboardData, int, error) {
 	var userData WeeklyLeaderboardData
 
-	// 获取用户数据 - 使用参数化查询
+	// 获取用户数据
 	userQuery := `
 		SELECT 
 			o.uid,
@@ -104,7 +94,7 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 		return nil, 0, nil
 	}
 
-	// 获取用户排名 - 使用参数化查询
+	// 计算用户排名：统计比当前用户成绩更好的用户数量
 	rankQuery := `
 		SELECT COUNT(*) + 1 as rank
 		FROM (
@@ -118,29 +108,19 @@ func (r *LeaderboardRepository) GetUserWeeklyRank(ctx context.Context, uid strin
 			AND o.updated_at >= ? 
 			AND o.updated_at <= ?
 			GROUP BY o.uid
-			HAVING (
-				order_count > (SELECT COUNT(*) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-				OR (
-					order_count = (SELECT COUNT(*) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-					AND total_amount > (SELECT SUM(amount) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-				)
-				OR (
-					order_count = (SELECT COUNT(*) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-					AND total_amount = (SELECT SUM(amount) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-					AND completed_at < (SELECT MAX(updated_at) FROM orders WHERE status = ? AND uid = ? AND updated_at >= ? AND updated_at <= ?)
-				)
-			)
-		) as ranking
+			HAVING 
+				order_count > ? 
+				OR (order_count = ? AND total_amount > ?)
+				OR (order_count = ? AND total_amount = ? AND completed_at < ?)
+		) as better_users
 	`
 
 	var rank int
 	err = r.db.WithContext(ctx).Raw(rankQuery,
 		"success", weekStart, weekEnd,
-		"success", uid, weekStart, weekEnd,
-		"success", uid, weekStart, weekEnd, "success", uid, weekStart, weekEnd,
-		"success", uid, weekStart, weekEnd, "success", uid, weekStart, weekEnd,
-		"success", uid, weekStart, weekEnd, "success", uid, weekStart, weekEnd,
-		"success", uid, weekStart, weekEnd).Scan(&rank).Error
+		userData.OrderCount,
+		userData.OrderCount, userData.TotalAmount,
+		userData.OrderCount, userData.TotalAmount, userData.CompletedAt).Scan(&rank).Error
 
 	if err != nil {
 		return nil, 0, err

@@ -91,32 +91,7 @@ func (s *LeaderboardService) getMyRankInfo(uid string, weekStart, weekEnd time.T
 	}
 	userData, rank, err := s.leaderboardRepo.GetUserWeeklyRank(ctx, uid, weekStart, weekEnd)
 	if err != nil || userData == nil {
-		userRepo := database.NewUserRepository()
-		user, err := userRepo.FindByUid(ctx, uid)
-		if err != nil {
-			return &models.LeaderboardEntry{
-				ID:          999,
-				Uid:         uid,
-				Username:    "",
-				CompletedAt: time.Time{},
-				OrderCount:  0,
-				TotalAmount: 0,
-				TotalProfit: 0,
-				Rank:        999,
-				IsRank:      false,
-			}
-		}
-		return &models.LeaderboardEntry{
-			ID:          999,
-			Uid:         user.Uid,
-			Username:    models.MaskUsername(user.Username),
-			CompletedAt: time.Time{},
-			OrderCount:  0,
-			TotalAmount: 0,
-			TotalProfit: 0,
-			Rank:        999,
-			IsRank:      false,
-		}
+		return s.getDefaultUserRankInfo(uid)
 	}
 	return &models.LeaderboardEntry{
 		ID:          uint(rank),
@@ -127,6 +102,35 @@ func (s *LeaderboardService) getMyRankInfo(uid string, weekStart, weekEnd time.T
 		TotalAmount: userData.TotalAmount,
 		TotalProfit: userData.TotalProfit,
 		Rank:        rank,
+		IsRank:      false,
+	}
+}
+
+func (s *LeaderboardService) getDefaultUserRankInfo(uid string) *models.LeaderboardEntry {
+	userRepo := database.NewUserRepository()
+	user, err := userRepo.FindByUid(context.Background(), uid)
+	if err != nil {
+		return &models.LeaderboardEntry{
+			ID:          999,
+			Uid:         uid,
+			Username:    "",
+			CompletedAt: time.Time{},
+			OrderCount:  0,
+			TotalAmount: 0,
+			TotalProfit: 0,
+			Rank:        999,
+			IsRank:      false,
+		}
+	}
+	return &models.LeaderboardEntry{
+		ID:          999,
+		Uid:         user.Uid,
+		Username:    models.MaskUsername(user.Username),
+		CompletedAt: time.Time{},
+		OrderCount:  0,
+		TotalAmount: 0,
+		TotalProfit: 0,
+		Rank:        999,
 		IsRank:      false,
 	}
 }
