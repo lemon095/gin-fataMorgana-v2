@@ -81,10 +81,10 @@ const (
 	CodeRechargeAmountExceeded  = 3015 // 单笔充值金额不能超过100万元
 	CodeWalletFrozenWithdraw    = 3016 // 钱包已被冻结，无法提现
 	CodeWithdrawAmountInvalid   = 3017 // 提现金额必须大于0
-	CodeWithdrawAmountExceeded2 = 3018 // 单笔提现金额不能超过100万元
+	// CodeWithdrawAmountExceeded2 = 3018 // 单笔提现金额不能超过100万元（已移除）
 	CodeBankCardNotBound        = 3019 // 请先绑定银行卡后再进行提现操作
 	CodeWithdrawPasswordWrong   = 3020 // 登录密码错误
-	CodeDailyWithdrawExceeded   = 3021 // 超过每日提现限额
+	// CodeDailyWithdrawExceeded   = 3021 // 超过每日提现限额（已移除）
 	CodePeriodNotFound          = 3022 // 期数不存在
 	CodePeriodNotStarted        = 3023 // 期数还未开始
 	CodePeriodEnded             = 3024 // 期数已结束
@@ -243,10 +243,10 @@ var ResponseMessage = map[int]string{
 	CodeRechargeAmountExceeded:  "单笔充值金额不能超过100万元",
 	CodeWalletFrozenWithdraw:    "钱包已被冻结，无法提现",
 	CodeWithdrawAmountInvalid:   "提现金额必须大于0",
-	CodeWithdrawAmountExceeded2: "单笔提现金额不能超过100万元",
+	// CodeWithdrawAmountExceeded2: "单笔提现金额不能超过100万元", // 已移除
 	CodeBankCardNotBound:        "请先绑定银行卡后再进行提现操作",
 	CodeWithdrawPasswordWrong:   "登录密码错误",
-	CodeDailyWithdrawExceeded:   "超过每日提现限额",
+	// CodeDailyWithdrawExceeded:   "超过每日提现限额", // 已移除
 	CodePeriodNotFound:          "期数不存在",
 	CodePeriodNotStarted:        "期数还未开始",
 	CodePeriodEnded:             "期数已结束",

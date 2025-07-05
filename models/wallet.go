@@ -12,7 +12,7 @@ type Wallet struct {
 	Uid          string    `gorm:"uniqueIndex;not null;size:8;comment:用户唯一ID" json:"uid"`                // 用户ID
 	Balance      float64   `gorm:"type:decimal(15,2);default:0.00;not null;comment:钱包余额" json:"balance"` // 总余额
 	Status       int       `gorm:"default:1;comment:钱包状态 1:正常 0:冻结" json:"status"`                       // 状态：1-正常，0-冻结
-	Currency     string    `gorm:"default:'CNY';size:3;comment:货币类型" json:"currency"`                    // 货币类型
+	Currency     string    `gorm:"default:'PHP';size:3;comment:货币类型" json:"currency"`                    // 货币类型
 	LastActiveAt time.Time `gorm:"autoUpdateTime;comment:最后活跃时间" json:"last_active_at"`                  // 最后活跃时间
 	CreatedAt    time.Time `gorm:"autoCreateTime;comment:创建时间" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime;comment:更新时间" json:"updated_at"`

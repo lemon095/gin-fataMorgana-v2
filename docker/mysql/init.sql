@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS wallets (
     total_income DECIMAL(15,2) DEFAULT 0.00 COMMENT '总收入',
     total_expense DECIMAL(15,2) DEFAULT 0.00 COMMENT '总支出',
     status TINYINT DEFAULT 1 COMMENT '钱包状态 1:正常 0:冻结',
-    currency VARCHAR(3) DEFAULT 'CNY' COMMENT '货币类型',
+    currency VARCHAR(3) DEFAULT 'PHP' COMMENT '货币类型',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_uid (uid),

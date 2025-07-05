@@ -136,7 +136,7 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 		Uid:      uid,
 		Balance:  0.00,
 		Status:   1,
-		Currency: "CNY",
+		Currency: "PHP",
 	}
 
 	if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
@@ -168,7 +168,7 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 			Uid:      uid,
 			Balance:  0.00,
 			Status:   1,
-			Currency: "CNY",
+			Currency: "PHP",
 		}
 
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
@@ -232,7 +232,7 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 			Uid:      uid,
 			Balance:  0.00,
 			Status:   1,
-			Currency: "CNY",
+			Currency: "PHP",
 		}
 
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
@@ -340,7 +340,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 			Uid:      uid,
 			Balance:  0.00,
 			Status:   1,
-			Currency: "CNY",
+			Currency: "PHP",
 		}
 
 		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
@@ -363,17 +363,9 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*With
 		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, "余额不足，当前余额: "+fmt.Sprintf("%.2f", wallet.Balance)+"元，申请提现: "+fmt.Sprintf("%.2f", req.Amount)+"元")
 	}
 
-	// 检查是否超过单笔提现限额（可选，这里设置100万）
-	if req.Amount > 1000000 {
-		return nil, utils.NewAppError(utils.CodeWithdrawAmountExceeded2, "单笔提现金额不能超过100万元")
-	}
+	// 单笔提现限额已移除，不再限制
 
-	// 检查是否超过每日提现限额（可选，这里设置500万）
-	// 这里可以添加每日提现限额的检查逻辑
-	// dailyWithdrawLimit := 5000000.0
-	// if err := s.checkDailyWithdrawLimit(ctx, uid, req.Amount, dailyWithdrawLimit); err != nil {
-	//     return nil, err
-	// }
+	// 每日提现限额已移除，不再限制
 
 	// 记录交易前余额
 	balanceBefore := wallet.Balance
@@ -454,33 +446,8 @@ func (s *WalletService) hasValidBankCard(user *models.User) bool {
 	return true
 }
 
-// checkDailyWithdrawLimit 检查每日提现限额
-func (s *WalletService) checkDailyWithdrawLimit(ctx context.Context, uid string, amount float64, dailyLimit float64) error {
-	// 获取今日已申请的提现总额
-	today := time.Now().UTC().Format("2006-01-02")
-
-	// 查询今日的提现申请记录
-	transactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
-	if err != nil {
-		return utils.NewAppError(utils.CodeTodayWithdrawQueryFailed, "查询今日提现记录失败")
-	}
-
-	// 计算今日已申请的提现总额
-	var todayTotal float64
-	for _, tx := range transactions {
-		if tx.Type == models.TransactionTypeWithdraw &&
-			(tx.Status == models.TransactionStatusPending || tx.Status == models.TransactionStatusSuccess) {
-			todayTotal += tx.Amount
-		}
-	}
-
-	// 检查是否超过每日限额
-	if todayTotal+amount > dailyLimit {
-		return utils.NewAppError(utils.CodeDailyWithdrawExceeded, "超过每日提现限额")
-	}
-
-	return nil
-}
+// checkDailyWithdrawLimit 检查每日提现限额（已移除）
+// 此方法已不再使用，每日提现限额已被移除
 
 // GetWithdrawSummary 获取提现汇总信息
 func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, error) {
@@ -555,9 +522,7 @@ func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, 
 			"count":  len(pendingTransactions),
 		},
 		"limits": map[string]interface{}{
-			"single_limit":    1000000.0, // 单笔限额
-			"daily_limit":     5000000.0, // 每日限额
-			"remaining_today": 5000000.0 - todayPendingTotal - todaySuccessTotal,
+			// 所有限额已移除
 		},
 	}, nil
 }
