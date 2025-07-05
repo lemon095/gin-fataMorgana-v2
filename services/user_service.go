@@ -281,13 +281,10 @@ func (s *UserService) RefreshToken(req *models.RefreshTokenRequest) (*models.Tok
 	}
 
 	// 检查用户状态
-	if user.Status == 2 { // 已删除
-		return nil, utils.NewAppError(utils.CodeUserDeletedRefresh, "账户已被删除，无法刷新令牌")
-	}
-	if user.Status == 1 { // 已禁用
+	if user.Status == 0 { // 禁用
 		return nil, utils.NewAppError(utils.CodeUserDisabledRefresh, "账户已被禁用，无法刷新令牌")
 	}
-	if user.Status == 0 { // 待审核
+	if user.Status == 2 { // 待审核
 		return nil, utils.NewAppError(utils.CodeUserPendingRefresh, "账户待审核，无法刷新令牌")
 	}
 
@@ -546,11 +543,11 @@ func (s *UserService) ChangePassword(req *models.ChangePasswordRequest, uid stri
 	}
 
 	// 检查用户状态
-	if user.Status == 2 { // 已删除
-		return utils.NewAppError(utils.CodeUserDeletedChangePwd, "用户已被删除，无法修改密码")
-	}
-	if user.Status == 1 { // 已禁用
+	if user.Status == 0 { // 禁用
 		return utils.NewAppError(utils.CodeUserDisabledChangePwd, "账户已被禁用，无法修改密码")
+	}
+	if user.Status == 2 { // 待审核
+		return utils.NewAppError(utils.CodeUserPendingApproval, "账户待审核，无法修改密码")
 	}
 
 	// 验证当前密码

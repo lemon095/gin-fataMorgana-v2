@@ -7,6 +7,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// 用户状态常量
+const (
+	UserStatusDisabled = 0 // 禁用
+	UserStatusActive   = 1 // 正常
+	UserStatusPending  = 2 // 待审核
+)
+
 // User 用户模型
 type User struct {
 	ID                       uint       `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -174,7 +181,7 @@ func (u *User) ToResponse() UserResponse {
 
 // IsActive 检查用户是否激活
 func (u *User) IsActive() bool {
-	return u.Status == 1
+	return u.Status == UserStatusActive
 }
 
 // CheckGroupBuyQualification 检查用户是否有拼单资格
