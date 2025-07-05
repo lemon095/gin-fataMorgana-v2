@@ -485,3 +485,49 @@ func (s *OrderService) checkUserPeriodDuplicate(ctx context.Context, uid string,
 
 	return nil
 }
+
+// GetAllOrderList 获取所有订单列表（只需登录即可查看所有订单）
+func (s *OrderService) GetAllOrderList(req *models.GetOrderListRequest) (*GetOrderListResponse, error) {
+	ctx := context.Background()
+
+	if req.PageSize > 20 {
+		req.PageSize = 20
+	}
+
+	if req.Status < 1 || req.Status > 3 {
+		return nil, utils.NewAppError(utils.CodeOrderStatusInvalid, "状态类型参数无效，必须是1(进行中)、2(已完成)或3(拼单数据)")
+	}
+
+	if req.Status == 3 {
+		// 拼单数据不支持全量查询，直接返回空
+		return &GetOrderListResponse{Orders: []models.OrderResponse{}, Pagination: PaginationInfo{CurrentPage: req.Page, PageSize: req.PageSize, Total: 0, TotalPages: 0, HasNext: false, HasPrev: false}}, nil
+	}
+
+	// 获取所有订单
+	status := models.GetStatusByType(req.Status)
+	orders, total, err := s.orderRepo.GetOrdersByStatus(ctx, status, req.Page, req.PageSize)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeOrderListGetFailed, "获取订单列表失败")
+	}
+
+	var orderResponses []models.OrderResponse
+	for _, order := range orders {
+		orderResponses = append(orderResponses, order.ToResponse())
+	}
+
+	totalPages := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
+	hasNext := req.Page < totalPages
+	hasPrev := req.Page > 1
+
+	return &GetOrderListResponse{
+		Orders: orderResponses,
+		Pagination: PaginationInfo{
+			CurrentPage: req.Page,
+			PageSize:    req.PageSize,
+			Total:       total,
+			TotalPages:  totalPages,
+			HasNext:     hasNext,
+			HasPrev:     hasPrev,
+		},
+	}, nil
+}

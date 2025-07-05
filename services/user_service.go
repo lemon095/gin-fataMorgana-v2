@@ -60,7 +60,7 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	}
 	if isPhone(req.Account) {
 		phoneExists, err := s.userRepo.CheckPhoneExists(ctx, req.Account)
-		if err != nil {
+	if err != nil {
 			return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 		}
 		if phoneExists {
@@ -365,7 +365,7 @@ func (s *UserService) recordSuccessfulLogin(ctx context.Context, user *models.Us
 // recordFailedLogin 记录失败登录
 func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, loginIP, userAgent, reason string) {
 	var uid string
-	
+
 	// 安全的类型断言
 	switch u := user.(type) {
 	case *models.User:
@@ -381,10 +381,10 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 	// 记录失败登录
 	logEntry := &models.UserLoginLog{
 		Uid:        uid,
-		LoginIP:    loginIP,
-		UserAgent:  userAgent,
+			LoginIP:    loginIP,
+			UserAgent:  userAgent,
 		Status:     0, // 0表示失败
-		FailReason: reason,
+			FailReason: reason,
 		LoginTime:  time.Now().UTC(),
 		CreatedAt:  time.Now().UTC(),
 	}

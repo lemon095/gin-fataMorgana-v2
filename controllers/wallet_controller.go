@@ -247,6 +247,29 @@ func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 		return
 	}
 
+	// 根据user_id查询uid，确保只能查看自己的交易
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 先获取交易记录，检查是否属于当前用户
+	walletRepo := database.NewWalletRepository()
+	transaction, err := walletRepo.GetTransactionByNo(context.Background(), req.TransactionNo)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeTransactionDetailGetFailed, "获取交易详情失败")
+		return
+	}
+
+	// 验证交易是否属于当前用户
+	if transaction.Uid != user.Uid {
+		utils.ErrorWithMessage(c, utils.CodeForbidden, "只能查看自己的交易详情")
+		return
+	}
+
 	// 构建服务请求
 	serviceReq := &services.GetTransactionDetailRequest{
 		TransactionNo: req.TransactionNo,
