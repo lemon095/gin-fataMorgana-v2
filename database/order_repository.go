@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"gin-fataMorgana/models"
+	"log"
 )
 
 type OrderRepository struct {
@@ -67,7 +68,16 @@ func (r *OrderRepository) GetUserOrdersByStatus(ctx context.Context, uid string,
 }
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, order *models.Order) error {
-	return r.Create(ctx, order)
+	log.Printf("🗄️  尝试创建订单: OrderNo=%s, UID=%s, Amount=%.2f, IsSystem=%v", 
+		order.OrderNo, order.Uid, order.Amount, order.IsSystemOrder)
+	
+	err := r.Create(ctx, order)
+	if err != nil {
+		log.Printf("❌ 创建订单失败: OrderNo=%s, 错误=%v", order.OrderNo, err)
+	} else {
+		log.Printf("✅ 创建订单成功: OrderNo=%s", order.OrderNo)
+	}
+	return err
 }
 
 func (r *OrderRepository) FindOrderByOrderNo(ctx context.Context, orderNo string) (*models.Order, error) {

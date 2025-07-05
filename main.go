@@ -117,7 +117,12 @@ func main() {
 	// 启动定时任务服务
 	var cronService *services.CronService
 	if config.GlobalConfig.FakeData.Enabled {
-		log.Println("启动定时任务服务...")
+		log.Println("🚀 启动定时任务服务...")
+		log.Printf("📋 假数据配置: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d", 
+			config.GlobalConfig.FakeData.Enabled, 
+			config.GlobalConfig.FakeData.CronExpression,
+			config.GlobalConfig.FakeData.MinOrders,
+			config.GlobalConfig.FakeData.MaxOrders)
 		
 		// 创建定时任务配置
 		cronConfig := &services.CronConfig{
@@ -133,11 +138,12 @@ func main() {
 		}
 		
 		// 创建并启动定时任务服务
+		log.Println("⚙️  创建定时任务服务实例...")
 		cronService = services.NewCronService(cronConfig)
 		if err := cronService.Start(); err != nil {
-			log.Printf("启动定时任务失败: %v", err)
+			log.Printf("❌ 启动定时任务失败: %v", err)
 		} else {
-			log.Println("定时任务服务启动成功")
+			log.Println("✅ 定时任务服务启动成功")
 		}
 		
 		// 注入定时任务服务到控制器
@@ -147,11 +153,11 @@ func main() {
 		defer func() {
 			if cronService != nil {
 				cronService.Stop()
-				log.Println("定时任务服务已停止")
+				log.Println("🛑 定时任务服务已停止")
 			}
 		}()
 	} else {
-		log.Println("定时任务服务已禁用")
+		log.Println("❌ 定时任务服务已禁用")
 	}
 
 	// 注册自定义验证器

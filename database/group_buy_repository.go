@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 	"math/rand"
 	"time"
 
@@ -104,6 +105,20 @@ func (r *GroupBuyRepository) UpdateGroupBuy(ctx context.Context, groupBuy *model
 // CreateOrder 创建订单
 func (r *GroupBuyRepository) CreateOrder(ctx context.Context, order *models.Order) error {
 	return r.db.WithContext(ctx).Create(order).Error
+}
+
+// Create 创建拼单
+func (r *GroupBuyRepository) Create(ctx context.Context, groupBuy *models.GroupBuy) error {
+	log.Printf("🗄️  尝试创建拼单: GroupBuyNo=%s, UID=%s, PerPersonAmount=%.2f", 
+		groupBuy.GroupBuyNo, groupBuy.Uid, groupBuy.PerPersonAmount)
+	
+	err := r.db.WithContext(ctx).Create(groupBuy).Error
+	if err != nil {
+		log.Printf("❌ 创建拼单失败: GroupBuyNo=%s, 错误=%v", groupBuy.GroupBuyNo, err)
+	} else {
+		log.Printf("✅ 创建拼单成功: GroupBuyNo=%s", groupBuy.GroupBuyNo)
+	}
+	return err
 }
 
 // GetActiveGroupBuys 获取活跃拼单列表

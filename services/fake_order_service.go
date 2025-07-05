@@ -72,17 +72,23 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 		count = rand.Intn(s.config.MaxOrders-s.config.MinOrders+1) + s.config.MinOrders
 	}
 
-	log.Printf("开始生成 %d 条假订单", count)
+	log.Printf("🚀 开始生成 %d 条假订单", count)
+	log.Printf("📊 配置信息: 最小任务数=%d, 最大任务数=%d, 购买单比例=%.2f", 
+		s.config.TaskMinCount, s.config.TaskMaxCount, s.config.PurchaseRatio)
 
 	// 预加载期数数据到缓存
+	log.Println("📅 开始预加载期数数据...")
 	if err := s.preloadPeriodData(); err != nil {
-		log.Printf("预加载期数数据失败: %v", err)
+		log.Printf("❌ 预加载期数数据失败: %v", err)
+	} else {
+		log.Printf("✅ 期数数据预加载成功，缓存大小: %d", len(s.periodCache))
 	}
 
 	var purchaseOrders []*models.Order
 	var groupBuyOrders []*models.GroupBuy
 	var totalAmount, totalProfit float64
 
+	log.Println("🔄 开始生成订单数据...")
 	// 生成订单
 	for i := 0; i < count; i++ {
 		if rand.Float64() < s.config.PurchaseRatio {
@@ -98,27 +104,39 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 			totalAmount += groupBuy.PerPersonAmount
 		}
 	}
+	
+	log.Printf("📝 订单数据生成完成: 购买单=%d, 拼单=%d", len(purchaseOrders), len(groupBuyOrders))
 
 	// 逐个插入购买单
 	if len(purchaseOrders) > 0 {
-		for _, order := range purchaseOrders {
+		log.Printf("💾 开始插入 %d 条购买单到数据库...", len(purchaseOrders))
+		successCount := 0
+		for i, order := range purchaseOrders {
 			if err := s.orderRepo.CreateOrder(ctx, order); err != nil {
-				log.Printf("插入购买单失败: %v", err)
+				log.Printf("❌ 插入购买单失败 [%d/%d]: %v", i+1, len(purchaseOrders), err)
 				continue
 			}
+			successCount++
 		}
-		log.Printf("成功插入 %d 条购买单", len(purchaseOrders))
+		log.Printf("✅ 成功插入 %d/%d 条购买单", successCount, len(purchaseOrders))
+	} else {
+		log.Println("⚠️  没有购买单需要插入")
 	}
 
 	// 逐个插入拼单
 	if len(groupBuyOrders) > 0 {
-		for _, groupBuy := range groupBuyOrders {
+		log.Printf("💾 开始插入 %d 条拼单到数据库...", len(groupBuyOrders))
+		successCount := 0
+		for i, groupBuy := range groupBuyOrders {
 			if err := s.groupBuyRepo.Create(ctx, groupBuy); err != nil {
-				log.Printf("插入拼单失败: %v", err)
+				log.Printf("❌ 插入拼单失败 [%d/%d]: %v", i+1, len(groupBuyOrders), err)
 				continue
 			}
+			successCount++
 		}
-		log.Printf("成功插入 %d 条拼单", len(groupBuyOrders))
+		log.Printf("✅ 成功插入 %d/%d 条拼单", successCount, len(groupBuyOrders))
+	} else {
+		log.Println("⚠️  没有拼单需要插入")
 	}
 
 	duration := time.Since(startTime)
@@ -133,7 +151,7 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 		TotalProfit:    totalProfit,
 	}
 
-	log.Printf("假订单生成完成: 总数=%d, 购买单=%d, 拼单=%d, 总金额=%.2f, 总利润=%.2f, 耗时=%v",
+	log.Printf("🎉 假订单生成完成: 总数=%d, 购买单=%d, 拼单=%d, 总金额=%.2f, 总利润=%.2f, 耗时=%v",
 		stats.TotalGenerated, stats.PurchaseOrders, stats.GroupBuyOrders,
 		stats.TotalAmount, stats.TotalProfit, stats.AverageTime)
 

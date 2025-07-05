@@ -64,26 +64,43 @@ func NewCronService(config *CronConfig) *CronService {
 // Start 启动定时任务服务
 func (s *CronService) Start() error {
 	if !s.config.Enabled {
-		log.Println("定时任务服务已禁用")
+		log.Println("❌ 定时任务服务已禁用")
 		return nil
 	}
 
-	log.Println("启动定时任务服务...")
+	log.Println("🚀 启动定时任务服务...")
+	log.Printf("📋 服务配置: 启用=%v, 订单表达式=%s, 清理表达式=%s", 
+		s.config.Enabled, s.config.OrderCronExpr, s.config.CleanupCronExpr)
 
 	// 启动订单生成定时任务
+	log.Println("⏰ 启动订单生成定时任务...")
 	if err := s.StartFakeOrderCron(); err != nil {
+		log.Printf("❌ 启动订单生成定时任务失败: %v", err)
 		return err
 	}
 
 	// 启动数据清理定时任务
+	log.Println("🧹 启动数据清理定时任务...")
 	if err := s.StartCleanupCron(); err != nil {
+		log.Printf("❌ 启动数据清理定时任务失败: %v", err)
 		return err
 	}
 
 	// 启动cron调度器
+	log.Println("⚙️  启动cron调度器...")
 	s.cron.Start()
 
-	log.Println("定时任务服务启动成功")
+	log.Println("✅ 定时任务服务启动成功")
+	// 获取下次执行时间
+	if s.orderEntryID != 0 {
+		entries := s.cron.Entries()
+		for _, entry := range entries {
+			if entry.ID == s.orderEntryID {
+				log.Printf("📅 下次订单生成时间: %s", entry.Next.Format("2006-01-02 15:04:05"))
+				break
+			}
+		}
+	}
 	return nil
 }
 
@@ -154,7 +171,11 @@ func (s *CronService) generateFakeOrders() {
 		}
 	}()
 
-	log.Println("开始执行假订单生成定时任务...")
+	log.Println("=== 开始执行假订单生成定时任务 ===")
+	log.Printf("当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
+	log.Printf("定时任务配置: 最小订单数=%d, 最大订单数=%d, 购买单比例=%.2f", 
+		s.config.MinOrders, s.config.MaxOrders, s.config.PurchaseRatio)
+	
 	startTime := time.Now()
 
 	// 生成随机订单数量
@@ -164,18 +185,22 @@ func (s *CronService) generateFakeOrders() {
 	} else {
 		count = s.config.MinOrders
 	}
+	
+	log.Printf("本次将生成 %d 条假订单", count)
 
 	// 生成假订单
+	log.Println("开始调用假订单生成服务...")
 	stats, err := s.fakeOrderService.GenerateFakeOrders(count)
 	if err != nil {
-		log.Printf("生成假订单失败: %v", err)
+		log.Printf("❌ 生成假订单失败: %v", err)
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("假订单生成定时任务完成: 总数=%d, 购买单=%d, 拼单=%d, 总金额=%.2f, 总利润=%.2f, 耗时=%v",
+	log.Printf("✅ 假订单生成定时任务完成: 总数=%d, 购买单=%d, 拼单=%d, 总金额=%.2f, 总利润=%.2f, 耗时=%v",
 		stats.TotalGenerated, stats.PurchaseOrders, stats.GroupBuyOrders,
 		stats.TotalAmount, stats.TotalProfit, duration)
+	log.Println("=== 假订单生成定时任务结束 ===")
 }
 
 // cleanupOldData 清理旧数据（定时任务回调函数）
