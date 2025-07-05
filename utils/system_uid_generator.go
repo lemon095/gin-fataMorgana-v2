@@ -12,6 +12,7 @@ type SystemUIDGenerator struct {
 	sequence  int64
 	lastTime  int64
 	machineID int64
+	groupBuyCounter int64 // 拼单计数器，确保拼单号唯一性
 }
 
 // NewSystemUIDGenerator 创建新的系统UID生成器
@@ -65,7 +66,18 @@ func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
 
 // GenerateSystemGroupBuyNo 生成系统拼单号
 func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
-	return "GB" + s.GenerateSystemUID()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// 拼单计数器递增
+	s.groupBuyCounter = (s.groupBuyCounter + 1) % 10000 // 计数器范围0-9999
+
+	// 获取当前时间戳（毫秒）
+	currentTime := time.Now().UnixNano() / 1e6
+
+	// 生成拼单号：GB + 时间戳后3位 + 机器ID2位 + 计数器4位
+	timestamp := currentTime % 1000 // 取时间戳后3位
+	return fmt.Sprintf("GB%03d%02d%04d", timestamp, s.machineID, s.groupBuyCounter)
 }
 
 // 全局系统UID生成器实例
