@@ -127,4 +127,34 @@ func (cc *CronController) GetCronStatus(c *gin.Context) {
 	utils.Success(c, gin.H{
 		"cron_status": status,
 	})
+}
+
+// ManualUpdateLeaderboardCache 手动更新热榜缓存
+func (cc *CronController) ManualUpdateLeaderboardCache(c *gin.Context) {
+	// 检查是否有定时任务服务
+	if cc.cronService == nil {
+		utils.ErrorWithMessage(c, utils.CodeOperationFailed, "定时任务服务未初始化")
+		return
+	}
+
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	// 检查用户权限（这里可以添加管理员权限检查）
+	// TODO: 添加管理员权限验证
+
+	// 手动更新热榜缓存
+	err := cc.cronService.ManualUpdateLeaderboardCache()
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeOperationFailed, "手动更新热榜缓存失败: "+err.Error())
+		return
+	}
+
+	utils.SuccessWithMessage(c, "手动更新热榜缓存成功", gin.H{
+		"update_time": "now",
+	})
 } 

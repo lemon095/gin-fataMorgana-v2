@@ -11,31 +11,52 @@ import (
 
 type LeaderboardService struct {
 	leaderboardRepo *database.LeaderboardRepository
+	leaderboardCacheService *LeaderboardCacheService
 }
 
 func NewLeaderboardService() *LeaderboardService {
 	return &LeaderboardService{
 		leaderboardRepo: database.NewLeaderboardRepository(),
+		leaderboardCacheService: NewLeaderboardCacheService(),
 	}
 }
 
 func (s *LeaderboardService) GetLeaderboard(uid string) (*models.LeaderboardResponse, error) {
-	weekStart, weekEnd := models.GetCurrentWeekRange()
-	
-	// 添加日志输出
 	log.Printf("🔍 [排行榜] 开始查询排行榜数据")
 	log.Printf("🔍 [排行榜] 用户UID: %s", uid)
-	log.Printf("🔍 [排行榜] 本周开始时间: %s", weekStart.Format("2006-01-02 15:04:05"))
-	log.Printf("🔍 [排行榜] 本周结束时间: %s", weekEnd.Format("2006-01-02 15:04:05"))
 	log.Printf("🔍 [排行榜] 当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
 
-	response, err := s.buildLeaderboardResponse(uid, weekStart, weekEnd)
+	// 尝试从缓存获取数据
+	cachedData, err := s.leaderboardCacheService.GetCachedLeaderboardData()
 	if err != nil {
-		log.Printf("❌ [排行榜] 构建排行榜响应失败: %v", err)
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取热榜数据失败")
+		log.Printf("⚠️ [排行榜] 缓存未命中，从数据库查询: %v", err)
+		// 缓存未命中，从数据库查询
+		weekStart, weekEnd := models.GetCurrentWeekRange()
+		response, err := s.buildLeaderboardResponse(uid, weekStart, weekEnd)
+		if err != nil {
+			log.Printf("❌ [排行榜] 构建排行榜响应失败: %v", err)
+			return nil, utils.NewAppError(utils.CodeDatabaseError, "获取热榜数据失败")
+		}
+		log.Printf("✅ [排行榜] 从数据库查询完成，返回 %d 条数据", len(response.TopUsers))
+		return response, nil
 	}
 
-	log.Printf("✅ [排行榜] 排行榜查询完成，返回 %d 条数据", len(response.TopUsers))
+	// 从缓存获取数据成功
+	log.Printf("✅ [排行榜] 从缓存获取数据成功，包含 %d 条记录", len(cachedData.TopUsers))
+	
+	// 获取用户排名信息
+	myRank := s.leaderboardCacheService.GetUserRankFromCache(uid, cachedData)
+	
+	response := &models.LeaderboardResponse{
+		WeekStart:  cachedData.WeekStart,
+		WeekEnd:    cachedData.WeekEnd,
+		MyRank:     myRank,
+		TopUsers:   cachedData.TopUsers,
+		NextUpdate: cachedData.NextUpdate,
+	}
+
+	log.Printf("✅ [排行榜] 从缓存查询完成，返回 %d 条数据，下次更新时间: %s", 
+		len(response.TopUsers), cachedData.NextUpdate.Format("2006-01-02 15:04:05"))
 	return response, nil
 }
 

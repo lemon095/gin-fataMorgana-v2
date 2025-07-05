@@ -135,6 +135,7 @@ func main() {
 			Enabled:           config.GlobalConfig.FakeData.Enabled,
 			OrderCronExpr:     config.GlobalConfig.FakeData.CronExpression,
 			CleanupCronExpr:   config.GlobalConfig.FakeData.CleanupCron,
+			LeaderboardCronExpr: config.GlobalConfig.FakeData.LeaderboardCron,
 			MinOrders:         config.GlobalConfig.FakeData.MinOrders,
 			MaxOrders:         config.GlobalConfig.FakeData.MaxOrders,
 			PurchaseRatio:     config.GlobalConfig.FakeData.PurchaseRatio,
@@ -373,6 +374,7 @@ func main() {
 		cron.Use(middleware.AuthMiddleware()) // 需要认证
 		cron.POST("/manual-generate", cronController.ManualGenerateOrders) // 手动生成订单
 		cron.POST("/manual-cleanup", cronController.ManualCleanup)         // 手动清理数据
+		cron.POST("/update-leaderboard-cache", cronController.ManualUpdateLeaderboardCache) // 手动更新热榜缓存
 		cron.GET("/status", cronController.GetCronStatus)                  // 获取定时任务状态
 	}
 

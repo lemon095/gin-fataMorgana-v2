@@ -67,6 +67,7 @@ type FakeDataConfig struct {
 	Enabled         bool    `mapstructure:"enabled"`
 	CronExpression  string  `mapstructure:"cron_expression"`
 	CleanupCron     string  `mapstructure:"cleanup_cron"`
+	LeaderboardCron string  `mapstructure:"leaderboard_cron"`
 	MinOrders       int     `mapstructure:"min_orders"`
 	MaxOrders       int     `mapstructure:"max_orders"`
 	PurchaseRatio   float64 `mapstructure:"purchase_ratio"`
@@ -173,6 +174,9 @@ func setDefaults() {
 	}
 	if GlobalConfig.FakeData.CleanupCron == "" {
 		GlobalConfig.FakeData.CleanupCron = "0 0 2 * * *"
+	}
+	if GlobalConfig.FakeData.LeaderboardCron == "" {
+		GlobalConfig.FakeData.LeaderboardCron = "0 */5 * * * *"
 	}
 	if GlobalConfig.FakeData.MinOrders == 0 {
 		GlobalConfig.FakeData.MinOrders = 80

@@ -14,9 +14,11 @@ type CronService struct {
 	cron              *cron.Cron
 	fakeOrderService  *FakeOrderService
 	dataCleanupService *DataCleanupService
+	leaderboardCacheService *LeaderboardCacheService
 	config            *CronConfig
 	orderEntryID      cron.EntryID
 	cleanupEntryID    cron.EntryID
+	leaderboardEntryID cron.EntryID
 }
 
 // CronConfig 定时任务配置
@@ -24,6 +26,7 @@ type CronConfig struct {
 	Enabled           bool   `yaml:"enabled"`
 	OrderCronExpr     string `yaml:"order_cron_expr"`     // 订单生成定时表达式
 	CleanupCronExpr   string `yaml:"cleanup_cron_expr"`   // 数据清理定时表达式
+	LeaderboardCronExpr string `yaml:"leaderboard_cron_expr"` // 热榜缓存更新定时表达式
 	MinOrders         int    `yaml:"min_orders"`
 	MaxOrders         int    `yaml:"max_orders"`
 	PurchaseRatio     float64 `yaml:"purchase_ratio"`
@@ -57,6 +60,7 @@ func NewCronService(config *CronConfig) *CronService {
 		cron:              cron.New(cron.WithSeconds()),
 		fakeOrderService:  NewFakeOrderService(fakeOrderConfig),
 		dataCleanupService: NewDataCleanupService(cleanupConfig),
+		leaderboardCacheService: NewLeaderboardCacheService(),
 		config:            config,
 	}
 }
@@ -69,8 +73,8 @@ func (s *CronService) Start() error {
 	}
 
 	log.Println("🚀 启动定时任务服务...")
-	log.Printf("📋 服务配置: 启用=%v, 订单表达式=%s, 清理表达式=%s", 
-		s.config.Enabled, s.config.OrderCronExpr, s.config.CleanupCronExpr)
+	log.Printf("📋 服务配置: 启用=%v, 订单表达式=%s, 清理表达式=%s, 热榜表达式=%s", 
+		s.config.Enabled, s.config.OrderCronExpr, s.config.CleanupCronExpr, s.config.LeaderboardCronExpr)
 
 	// 启动订单生成定时任务
 	log.Println("⏰ 启动订单生成定时任务...")
@@ -83,6 +87,13 @@ func (s *CronService) Start() error {
 	log.Println("🧹 启动数据清理定时任务...")
 	if err := s.StartCleanupCron(); err != nil {
 		log.Printf("❌ 启动数据清理定时任务失败: %v", err)
+		return err
+	}
+
+	// 启动热榜缓存更新定时任务
+	log.Println("🏆 启动热榜缓存更新定时任务...")
+	if err := s.StartLeaderboardCacheCron(); err != nil {
+		log.Printf("❌ 启动热榜缓存更新定时任务失败: %v", err)
 		return err
 	}
 
@@ -169,6 +180,34 @@ func (s *CronService) StopCleanupCron() {
 	}
 }
 
+// StartLeaderboardCacheCron 启动热榜缓存更新定时任务
+func (s *CronService) StartLeaderboardCacheCron() error {
+	if s.config.LeaderboardCronExpr == "" {
+		s.config.LeaderboardCronExpr = "0 */5 * * * *" // 默认每5分钟（包含秒）
+	}
+
+	log.Printf("🏆 验证热榜缓存cron表达式: %s", s.config.LeaderboardCronExpr)
+	
+	entryID, err := s.cron.AddFunc(s.config.LeaderboardCronExpr, s.updateLeaderboardCache)
+	if err != nil {
+		log.Printf("❌ 热榜缓存cron表达式验证失败: %v", err)
+		return err
+	}
+
+	s.leaderboardEntryID = entryID
+	log.Printf("✅ 热榜缓存更新定时任务已启动，表达式: %s", s.config.LeaderboardCronExpr)
+	return nil
+}
+
+// StopLeaderboardCacheCron 停止热榜缓存更新定时任务
+func (s *CronService) StopLeaderboardCacheCron() {
+	if s.leaderboardEntryID != 0 {
+		s.cron.Remove(s.leaderboardEntryID)
+		s.leaderboardEntryID = 0
+		log.Println("热榜缓存更新定时任务已停止")
+	}
+}
+
 // generateFakeOrders 生成假订单（定时任务回调函数）
 func (s *CronService) generateFakeOrders() {
 	defer func() {
@@ -232,6 +271,31 @@ func (s *CronService) cleanupOldData() {
 		stats.DeletedOrders, stats.DeletedGroupBuys, duration)
 }
 
+// updateLeaderboardCache 更新热榜缓存（定时任务回调函数）
+func (s *CronService) updateLeaderboardCache() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("更新热榜缓存时发生panic: %v", r)
+		}
+	}()
+
+	log.Println("=== 开始执行热榜缓存更新定时任务 ===")
+	log.Printf("当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
+	
+	startTime := time.Now()
+
+	// 更新热榜缓存
+	err := s.leaderboardCacheService.UpdateLeaderboardCache()
+	if err != nil {
+		log.Printf("❌ 更新热榜缓存失败: %v", err)
+		return
+	}
+
+	duration := time.Since(startTime)
+	log.Printf("✅ 热榜缓存更新定时任务完成，耗时=%v", duration)
+	log.Println("=== 热榜缓存更新定时任务结束 ===")
+}
+
 // GetCronStatus 获取定时任务状态
 func (s *CronService) GetCronStatus() map[string]interface{} {
 	entries := s.cron.Entries()
@@ -258,4 +322,10 @@ func (s *CronService) ManualGenerateOrders(count int) (*GenerationStats, error) 
 func (s *CronService) ManualCleanup() (*CleanupStats, error) {
 	log.Println("手动清理旧数据")
 	return s.dataCleanupService.CleanupOldSystemOrders()
+}
+
+// ManualUpdateLeaderboardCache 手动更新热榜缓存
+func (s *CronService) ManualUpdateLeaderboardCache() error {
+	log.Println("手动更新热榜缓存")
+	return s.leaderboardCacheService.UpdateLeaderboardCache()
 } 

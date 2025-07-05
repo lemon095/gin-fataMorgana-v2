@@ -19,10 +19,11 @@ type LeaderboardEntry struct {
 
 // LeaderboardResponse 热榜响应
 type LeaderboardResponse struct {
-	WeekStart time.Time          `json:"week_start"`   // 本周开始时间
-	WeekEnd   time.Time          `json:"week_end"`     // 本周结束时间
-	MyRank    *LeaderboardEntry  `json:"my_rank"`      // 我的排名信息
-	TopUsers  []LeaderboardEntry `json:"top_users"`    // 前10名用户
+	WeekStart  time.Time          `json:"week_start"`   // 本周开始时间
+	WeekEnd    time.Time          `json:"week_end"`     // 本周结束时间
+	MyRank     *LeaderboardEntry  `json:"my_rank"`      // 我的排名信息
+	TopUsers   []LeaderboardEntry `json:"top_users"`    // 前10名用户
+	NextUpdate time.Time          `json:"next_update"`  // 下次更新时间
 }
 
 // GetWeekStart 获取本周开始时间（周一）
