@@ -18,6 +18,7 @@ type Config struct {
 	Redis     RedisConfig     `mapstructure:"redis"`
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
+	FakeData  FakeDataConfig  `mapstructure:"fake_data"`
 }
 
 // ServerConfig 服务器配置
@@ -59,6 +60,19 @@ type JWTConfig struct {
 type SnowflakeConfig struct {
 	WorkerID     int64 `mapstructure:"worker_id"`
 	DatacenterID int64 `mapstructure:"datacenter_id"`
+}
+
+// FakeDataConfig 假订单生成配置
+type FakeDataConfig struct {
+	Enabled         bool    `mapstructure:"enabled"`
+	CronExpression  string  `mapstructure:"cron_expression"`
+	CleanupCron     string  `mapstructure:"cleanup_cron"`
+	MinOrders       int     `mapstructure:"min_orders"`
+	MaxOrders       int     `mapstructure:"max_orders"`
+	PurchaseRatio   float64 `mapstructure:"purchase_ratio"`
+	TaskMinCount    int     `mapstructure:"task_min_count"`
+	TaskMaxCount    int     `mapstructure:"task_max_count"`
+	RetentionDays   int     `mapstructure:"retention_days"`
 }
 
 // GlobalConfig 全局配置实例

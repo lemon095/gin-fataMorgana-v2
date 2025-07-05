@@ -34,6 +34,7 @@ import (
 	"gin-fataMorgana/controllers"
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/middleware"
+	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
 
 	"runtime/debug"
@@ -78,6 +79,9 @@ func main() {
 	// 初始化雪花算法
 	utils.InitSnowflake(config.GlobalConfig.Snowflake.WorkerID)
 
+	// 初始化系统UID生成器
+	utils.InitSystemUIDGenerator(config.GlobalConfig.Snowflake.WorkerID)
+
 	// 启动幂等性清理器
 	ctx := context.Background()
 	go func() {
@@ -105,6 +109,49 @@ func main() {
 	if err := database.InitRedis(); err != nil {
 		log.Printf("初始化Redis失败: %v", err)
 		os.Exit(1)
+	}
+
+	// 初始化定时任务控制器
+	cronController := controllers.NewCronController()
+
+	// 启动定时任务服务
+	var cronService *services.CronService
+	if config.GlobalConfig.FakeData.Enabled {
+		log.Println("启动定时任务服务...")
+		
+		// 创建定时任务配置
+		cronConfig := &services.CronConfig{
+			Enabled:           config.GlobalConfig.FakeData.Enabled,
+			OrderCronExpr:     config.GlobalConfig.FakeData.CronExpression,
+			CleanupCronExpr:   config.GlobalConfig.FakeData.CleanupCron,
+			MinOrders:         config.GlobalConfig.FakeData.MinOrders,
+			MaxOrders:         config.GlobalConfig.FakeData.MaxOrders,
+			PurchaseRatio:     config.GlobalConfig.FakeData.PurchaseRatio,
+			TaskMinCount:      config.GlobalConfig.FakeData.TaskMinCount,
+			TaskMaxCount:      config.GlobalConfig.FakeData.TaskMaxCount,
+			RetentionDays:     config.GlobalConfig.FakeData.RetentionDays,
+		}
+		
+		// 创建并启动定时任务服务
+		cronService = services.NewCronService(cronConfig)
+		if err := cronService.Start(); err != nil {
+			log.Printf("启动定时任务失败: %v", err)
+		} else {
+			log.Println("定时任务服务启动成功")
+		}
+		
+		// 注入定时任务服务到控制器
+		cronController.SetCronService(cronService)
+		
+		// 优雅关闭时停止定时任务
+		defer func() {
+			if cronService != nil {
+				cronService.Stop()
+				log.Println("定时任务服务已停止")
+			}
+		}()
+	} else {
+		log.Println("定时任务服务已禁用")
 	}
 
 	// 注册自定义验证器
@@ -307,6 +354,15 @@ func main() {
 
 	// 分享链接接口 - 获取分享链接
 	v1.POST("/shareLink", shareController.GetShareLink)
+
+	// 定时任务管理路由
+	cron := v1.Group("/cron")
+	{
+		cron.Use(middleware.AuthMiddleware()) // 需要认证
+		cron.POST("/manual-generate", cronController.ManualGenerateOrders) // 手动生成订单
+		cron.POST("/manual-cleanup", cronController.ManualCleanup)         // 手动清理数据
+		cron.GET("/status", cronController.GetCronStatus)                  // 获取定时任务状态
+	}
 
 	// 启动服务器
 	port := fmt.Sprintf("%d", config.GlobalConfig.Server.Port)

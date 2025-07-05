@@ -1,4 +1,4 @@
--- 创建订单表
+-- 创建订单表（包含系统订单字段）
 CREATE TABLE IF NOT EXISTS `orders` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `order_no` varchar(32) NOT NULL COMMENT '订单编号',
@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `follow_status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT '关注完成状态',
   `favorite_status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT '收藏完成状态',
   `auditor_uid` varchar(8) DEFAULT NULL COMMENT '审核员ID',
+  `is_system_order` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否系统订单 0-否 1-是',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -26,5 +27,6 @@ CREATE TABLE IF NOT EXISTS `orders` (
   KEY `idx_status` (`status`),
   KEY `idx_expire_time` (`expire_time`),
   KEY `idx_auditor_uid` (`auditor_uid`),
+  KEY `idx_is_system_order` (`is_system_order`),
   KEY `idx_created_at` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表 - 记录用户订单信息'; 
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表 - 记录用户订单信息，包含系统订单标识'; 

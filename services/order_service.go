@@ -98,6 +98,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		Status:        models.OrderStatusPending,
 		ExpireTime:    time.Now().UTC().Add(5 * time.Minute), // 创建时间+5分钟
 		AuditorUid:    operatorUid,
+		IsSystemOrder: false, // 默认为用户订单，不是系统订单
 	}
 
 	// 验证订单数据
@@ -299,6 +300,7 @@ func (s *OrderService) getGroupBuyList(ctx context.Context, uid string, page, pa
 			ExpireTime:   groupBuy.Deadline,
 			CreatedAt:    groupBuy.CreatedAt,
 			UpdatedAt:    groupBuy.UpdatedAt,
+			IsSystemOrder: false, // 拼单不是系统订单
 			IsExpired:    time.Now().UTC().After(groupBuy.Deadline),
 			RemainingTime: func() int64 {
 				if time.Now().UTC().After(groupBuy.Deadline) {
@@ -495,12 +497,7 @@ func (s *OrderService) GetAllOrderList(req *models.GetOrderListRequest) (*GetOrd
 	}
 
 	if req.Status < 1 || req.Status > 3 {
-		return nil, utils.NewAppError(utils.CodeOrderStatusInvalid, "状态类型参数无效，必须是1(进行中)、2(已完成)或3(拼单数据)")
-	}
-
-	if req.Status == 3 {
-		// 拼单数据不支持全量查询，直接返回空
-		return &GetOrderListResponse{Orders: []models.OrderResponse{}, Pagination: PaginationInfo{CurrentPage: req.Page, PageSize: req.PageSize, Total: 0, TotalPages: 0, HasNext: false, HasPrev: false}}, nil
+		return nil, utils.NewAppError(utils.CodeOrderStatusInvalid, "状态类型参数无效，必须是1(进行中)、2(已完成)或3(全部)")
 	}
 
 	// 获取所有订单

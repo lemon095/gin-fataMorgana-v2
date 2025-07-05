@@ -19,6 +19,10 @@ func (r *OrderRepository) GetOrdersByStatus(ctx context.Context, status string, 
 	var orders []models.Order
 	var total int64
 	query := r.db.WithContext(ctx).Model(&models.Order{})
+	
+	// 添加时间过滤条件：只查询创建时间不超过当前时间的订单
+	query = query.Where("created_at <= NOW()")
+	
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -43,6 +47,10 @@ func (r *OrderRepository) GetUserOrdersByStatus(ctx context.Context, uid string,
 	var orders []models.Order
 	var total int64
 	query := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid)
+	
+	// 添加时间过滤条件：只查询创建时间不超过当前时间的订单
+	query = query.Where("created_at <= NOW()")
+	
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -85,32 +93,36 @@ func (r *OrderRepository) GetOrderStats(ctx context.Context, uid string) (map[st
 		TotalProfit   float64 `json:"total_profit"`
 	}
 
-	err := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid).Count(&stats.TotalOrders).Error
+	// 添加时间过滤条件：只统计创建时间不超过当前时间的订单
+	timeFilter := "uid = ? AND created_at <= NOW()"
+	timeFilterWithStatus := "uid = ? AND status = ? AND created_at <= NOW()"
+
+	err := r.db.WithContext(ctx).Model(&models.Order{}).Where(timeFilter, uid).Count(&stats.TotalOrders).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusPending).Count(&stats.PendingOrders).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Where(timeFilterWithStatus, uid, models.OrderStatusPending).Count(&stats.PendingOrders).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusSuccess).Count(&stats.SuccessOrders).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Where(timeFilterWithStatus, uid, models.OrderStatusSuccess).Count(&stats.SuccessOrders).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ? AND status = ?", uid, models.OrderStatusFailed).Count(&stats.FailedOrders).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Where(timeFilterWithStatus, uid, models.OrderStatusFailed).Count(&stats.FailedOrders).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Select("COALESCE(SUM(amount), 0)").Where("uid = ?", uid).Scan(&stats.TotalAmount).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Select("COALESCE(SUM(amount), 0)").Where(timeFilter, uid).Scan(&stats.TotalAmount).Error
 	if err != nil {
 		return nil, err
 	}
 
-	err = r.db.WithContext(ctx).Model(&models.Order{}).Select("COALESCE(SUM(profit_amount), 0)").Where("uid = ?", uid).Scan(&stats.TotalProfit).Error
+	err = r.db.WithContext(ctx).Model(&models.Order{}).Select("COALESCE(SUM(profit_amount), 0)").Where(timeFilter, uid).Scan(&stats.TotalProfit).Error
 	if err != nil {
 		return nil, err
 	}

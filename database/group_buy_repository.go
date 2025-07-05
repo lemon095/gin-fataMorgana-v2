@@ -107,13 +107,13 @@ func (r *GroupBuyRepository) CreateOrder(ctx context.Context, order *models.Orde
 }
 
 // GetActiveGroupBuys 获取活跃拼单列表
-// 查询条件：用户ID匹配，截止时间比当前大，按创建时间倒序排列
+// 查询条件：用户ID匹配，截止时间比当前大，创建时间不超过当前时间，按创建时间倒序排列
 func (r *GroupBuyRepository) GetActiveGroupBuys(ctx context.Context, uid string, page, pageSize int) ([]models.GroupBuy, int64, error) {
 	var groupBuys []models.GroupBuy
 	var total int64
 
-	// 构建查询条件：用户ID匹配，截止时间比当前大
-	query := r.db.WithContext(ctx).Where("uid = ? AND deadline > ?", uid, time.Now())
+	// 构建查询条件：用户ID匹配，截止时间比当前大，创建时间不超过当前时间
+	query := r.db.WithContext(ctx).Where("uid = ? AND deadline > ? AND created_at <= NOW()", uid, time.Now())
 
 	// 获取总数
 	err := query.Model(&models.GroupBuy{}).Count(&total).Error

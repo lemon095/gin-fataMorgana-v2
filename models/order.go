@@ -16,8 +16,9 @@ const (
 
 // TaskStatus 任务完成状态枚举
 const (
-	TaskStatusPending = "pending" // 待完成
-	TaskStatusSuccess = "success" // 已完成
+	TaskStatusPending = "pending"   // 待完成
+	TaskStatusSuccess = "success"   // 已完成
+	TaskStatusCancelled = "cancelled" // 已关闭/已取消
 )
 
 // Order 订单表
@@ -39,6 +40,7 @@ type Order struct {
 	FollowStatus   string    `json:"follow_status" gorm:"not null;size:20;default:'pending';comment:关注完成状态"`
 	FavoriteStatus string    `json:"favorite_status" gorm:"not null;size:20;default:'pending';comment:收藏完成状态"`
 	AuditorUid     string    `json:"auditor_uid" gorm:"size:8;index;comment:审核员ID"`
+	IsSystemOrder  bool      `json:"is_system_order" gorm:"default:false;comment:是否系统订单"`
 	CreatedAt      time.Time `json:"created_at" gorm:"autoCreateTime;index;comment:创建时间"`
 	UpdatedAt      time.Time `json:"updated_at" gorm:"autoUpdateTime;comment:更新时间"`
 }
@@ -77,6 +79,7 @@ type OrderResponse struct {
 	FavoriteStatus     string    `json:"favorite_status"`
 	FavoriteStatusName string    `json:"favorite_status_name"`
 	AuditorUid         string    `json:"auditor_uid"`
+	IsSystemOrder      bool      `json:"is_system_order"`
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
 	IsExpired          bool      `json:"is_expired"`
@@ -108,6 +111,7 @@ func (o *Order) ToResponse() OrderResponse {
 		FavoriteStatus:     o.FavoriteStatus,
 		FavoriteStatusName: o.GetTaskStatusName(o.FavoriteStatus),
 		AuditorUid:         o.AuditorUid,
+		IsSystemOrder:      o.IsSystemOrder,
 		CreatedAt:          o.CreatedAt,
 		UpdatedAt:          o.UpdatedAt,
 		IsExpired:          o.IsExpired(),
@@ -130,8 +134,9 @@ func (o *Order) GetStatusName() string {
 // GetTaskStatusName 获取任务状态名称
 func (o *Order) GetTaskStatusName(status string) string {
 	statusNames := map[string]string{
-		TaskStatusPending: "待完成",
-		TaskStatusSuccess: "已完成",
+		TaskStatusPending:   "待完成",
+		TaskStatusSuccess:   "已完成",
+		TaskStatusCancelled: "已关闭",
 	}
 	return statusNames[status]
 }
@@ -269,7 +274,7 @@ func GetStatusTypeName(statusType int) string {
 	case OrderStatusTypeCompleted:
 		return "已完成"
 	case OrderStatusTypeAll:
-		return "期数数据"
+		return "全部"
 	default:
 		return "未知"
 	}

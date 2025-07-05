@@ -57,6 +57,47 @@ func (r *LotteryPeriodRepository) GetPeriodByNumber(ctx context.Context, periodN
 	return &period, nil
 }
 
+// GetPeriodsByTimeRange 根据时间范围获取期数列表
+func (r *LotteryPeriodRepository) GetPeriodsByTimeRange(ctx context.Context, startTime, endTime time.Time) ([]*models.LotteryPeriod, error) {
+	var periods []*models.LotteryPeriod
+
+	// 查询与指定时间范围有重叠的期数
+	err := r.db.WithContext(ctx).
+		Where("(order_start_time <= ? AND order_end_time > ?) OR (order_start_time < ? AND order_end_time >= ?) OR (order_start_time >= ? AND order_end_time <= ?)",
+			endTime, startTime, endTime, startTime, startTime, endTime).
+		Order("order_start_time ASC").
+		Find(&periods).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return periods, nil
+}
+
+// GetPeriodByTime 根据时间获取对应的期数
+func (r *LotteryPeriodRepository) GetPeriodByTime(ctx context.Context, targetTime time.Time) (*models.LotteryPeriod, error) {
+	var period models.LotteryPeriod
+
+	// 查询在指定时间范围内的期数
+	err := r.db.WithContext(ctx).
+		Where("order_start_time <= ? AND order_end_time > ?", targetTime, targetTime).
+		First(&period).Error
+
+	if err != nil {
+		// 如果没有找到对应时间的期数，返回最近的期数
+		err = r.db.WithContext(ctx).
+			Order("created_at DESC").
+			First(&period).Error
+		
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &period, nil
+}
+
 // UpdatePeriodStatus 更新期数状态
 func (r *LotteryPeriodRepository) UpdatePeriodStatus(ctx context.Context) error {
 	now := time.Now().UTC()

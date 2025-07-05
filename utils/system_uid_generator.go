@@ -1,0 +1,103 @@
+package utils
+
+import (
+	"fmt"
+	"sync"
+	"time"
+)
+
+// SystemUIDGenerator 系统UID生成器
+type SystemUIDGenerator struct {
+	mutex     sync.Mutex
+	sequence  int64
+	lastTime  int64
+	machineID int64
+}
+
+// NewSystemUIDGenerator 创建新的系统UID生成器
+func NewSystemUIDGenerator(machineID int64) *SystemUIDGenerator {
+	return &SystemUIDGenerator{
+		lastTime:  0,
+		sequence:  0,
+		machineID: machineID % 100, // 确保机器ID在0-99范围内
+	}
+}
+
+// GenerateSystemUID 生成7位系统UID
+func (s *SystemUIDGenerator) GenerateSystemUID() string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// 获取当前时间戳（毫秒）
+	currentTime := time.Now().UnixNano() / 1e6
+
+	// 处理时钟回退
+	if currentTime < s.lastTime {
+		// 等待到下一个毫秒
+		time.Sleep(time.Millisecond)
+		currentTime = time.Now().UnixNano() / 1e6
+
+		// 如果仍然回退，使用上次时间
+		if currentTime < s.lastTime {
+			currentTime = s.lastTime
+		}
+	}
+
+	// 如果是同一毫秒内，序列号递增
+	if currentTime == s.lastTime {
+		s.sequence = (s.sequence + 1) % 100 // 序列号范围0-99
+	} else {
+		// 不同毫秒，序列号重置
+		s.sequence = 0
+	}
+
+	s.lastTime = currentTime
+
+	// 生成7位UID：时间戳(3位) + 机器ID(2位) + 序列号(2位)
+	timestamp := currentTime % 1000 // 取时间戳后3位
+	return fmt.Sprintf("%03d%02d%02d", timestamp, s.machineID, s.sequence)
+}
+
+// GenerateSystemOrderNo 生成系统订单号
+func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
+	return "ORD" + s.GenerateSystemUID()
+}
+
+// GenerateSystemGroupBuyNo 生成系统拼单号
+func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
+	return "GB" + s.GenerateSystemUID()
+}
+
+// 全局系统UID生成器实例
+var globalSystemUIDGenerator *SystemUIDGenerator
+
+// InitSystemUIDGenerator 初始化系统UID生成器
+func InitSystemUIDGenerator(workerID int64) {
+	globalSystemUIDGenerator = NewSystemUIDGenerator(workerID)
+}
+
+// GenerateSystemUID 全局系统UID生成函数
+func GenerateSystemUID() string {
+	if globalSystemUIDGenerator == nil {
+		// 备用方案：使用时间戳生成7位UID
+		timestamp := time.Now().UnixNano() / 1e6
+		return fmt.Sprintf("%07d", timestamp%10000000)
+	}
+	return globalSystemUIDGenerator.GenerateSystemUID()
+}
+
+// GenerateSystemOrderNo 全局系统订单号生成函数
+func GenerateSystemOrderNo() string {
+	if globalSystemUIDGenerator == nil {
+		return "ORD" + GenerateSystemUID()
+	}
+	return globalSystemUIDGenerator.GenerateSystemOrderNo()
+}
+
+// GenerateSystemGroupBuyNo 全局系统拼单号生成函数
+func GenerateSystemGroupBuyNo() string {
+	if globalSystemUIDGenerator == nil {
+		return "GB" + GenerateSystemUID()
+	}
+	return globalSystemUIDGenerator.GenerateSystemGroupBuyNo()
+} 

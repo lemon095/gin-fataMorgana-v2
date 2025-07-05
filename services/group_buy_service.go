@@ -238,6 +238,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		FavoriteStatus: "pending",
 		Status:         "pending",
 		ExpireTime:     time.Now().UTC().Add(24 * time.Hour), // 设置24小时后过期
+		IsSystemOrder:  false, // 拼单订单也是用户订单，不是系统订单
 		CreatedAt:      time.Now().UTC(),
 		UpdatedAt:      time.Now().UTC(),
 	}

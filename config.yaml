@@ -61,4 +61,16 @@ log:
 # 雪花算法配置
 snowflake:
   worker_id: 1
-  datacenter_id: 1 
+  datacenter_id: 1
+
+# 假订单生成配置
+fake_data:
+  enabled: true
+  cron_expression: "*/5 * * * *"  # 每5分钟生成订单
+  cleanup_cron: "0 2 * * *"       # 每天凌晨2点清理
+  min_orders: 80
+  max_orders: 100
+  purchase_ratio: 0.7  # 70%购买单，30%拼单
+  task_min_count: 100  # 任务数最小值
+  task_max_count: 2000 # 任务数最大值
+  retention_days: 2    # 保留天数 

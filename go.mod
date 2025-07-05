@@ -10,6 +10,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/redis/go-redis/v9 v9.11.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.8.12
