@@ -229,7 +229,7 @@ func main() {
 	v1.POST("/auth/get-bank-card-info", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
 
 	// 会话管理路由
-	session := api.Group("/session")
+	session := v1.Group("/session")
 	{
 		session.POST("/status", sessionController.CheckLoginStatus) // 检查登录状态 - 验证用户是否已登录
 		session.POST("/user", sessionController.GetCurrentUserInfo) // 获取当前用户信息 - 获取会话中的用户信息
@@ -238,7 +238,7 @@ func main() {
 	}
 
 	// 钱包相关路由
-	wallet := api.Group("/wallet")
+	wallet := v1.Group("/wallet")
 	{
 		wallet.Use(middleware.AuthMiddleware())                                                             // 需要认证
 		wallet.POST("/info", walletController.GetWallet)                                                    // 获取钱包信息 - 查询用户余额和钱包状态
@@ -250,40 +250,40 @@ func main() {
 	}
 
 	// 订单相关路由
-	order := api.Group("/order")
+	order := v1.Group("/order")
 	{
 		order.Use(middleware.AuthMiddleware())                // 需要认证
 		order.POST("/create", orderController.CreateOrder)    // 创建订单 - 用户创建新任务订单
-		order.POST("/all-list", orderController.GetOrderList)     // 获取订单列表 - 查询用户订单历史（支持状态筛选）
-		order.POST("/my-orders", orderController.GetMyOrderList) // 获取我的订单列表 - 只获取当前用户的订单
-		order.POST("/list", orderController.GetAllOrderList) // 获取所有登录订单列表 - 只需登录即可
+		order.POST("/list", orderController.GetOrderList)     // 获取订单列表 - 查询用户订单历史（支持状态筛选）
+		order.POST("/my-list", orderController.GetMyOrderList) // 获取我的订单列表 - 只获取当前用户的订单
+		order.POST("/all-list", orderController.GetAllOrderList) // 获取所有订单列表 - 只需登录即可
 		order.POST("/detail", orderController.GetOrderDetail) // 获取订单详情 - 查询具体订单的详细信息
 		order.POST("/stats", orderController.GetOrderStats)   // 获取订单统计 - 查询用户订单统计数据
 		order.POST("/period", orderController.GetPeriodList)  // 获取期数列表 - 获取当前活跃期数和价格配置
 	}
 
 	// 管理员路由
-	admin := api.Group("/admin")
+	admin := v1.Group("/admin")
 	{
 		admin.Use(middleware.AuthMiddleware()) // 需要认证
 		// 这里可以添加管理员相关的路由
 	}
 
 	// 假数据路由
-	fake := api.Group("/fake")
+	fake := v1.Group("/fake")
 	{
 		fake.POST("/activities", controllers.GetFakeRealtimeActivities) // 获取假数据实时动态 - 生成模拟活动数据用于前端测试
 	}
 
 	// 排行榜路由
-	leaderboard := api.Group("/leaderboard")
+	leaderboard := v1.Group("/leaderboard")
 	{
 		leaderboard.Use(middleware.AuthMiddleware()) // 需要认证
 		leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜 - 查询周度任务完成排行榜
 	}
 
 	// 金额配置路由
-	amountConfig := api.Group("/amountConfig")
+	amountConfig := v1.Group("/amountConfig")
 	{
 		amountConfig.Use(middleware.AuthMiddleware())                             // 需要认证
 		amountConfig.POST("/list", amountConfigController.GetAmountConfigsByType) // 获取金额配置列表 - 根据类型获取金额配置
@@ -291,13 +291,13 @@ func main() {
 	}
 
 	// 公告路由
-	announcements := api.Group("/announcements")
+	announcements := v1.Group("/announcements")
 	{
 		announcements.POST("/list", announcementController.GetAnnouncementList) // 获取公告列表 - 分页获取公告信息
 	}
 
 	// 拼单路由
-	groupBuy := api.Group("/groupBuy")
+	groupBuy := v1.Group("/groupBuy")
 	{
 		groupBuy.Use(middleware.AuthMiddleware())                                    // 需要认证
 		groupBuy.POST("/active-detail", groupBuyController.GetActiveGroupBuyDetail) // 获取活跃拼单详情 - 获取当前可参与的拼单信息
@@ -305,7 +305,7 @@ func main() {
 	}
 
 	// 分享链接接口 - 获取分享链接
-	api.POST("/shareLink", shareController.GetShareLink)
+	v1.POST("/shareLink", shareController.GetShareLink)
 
 	// 启动服务器
 	port := fmt.Sprintf("%d", config.GlobalConfig.Server.Port)
