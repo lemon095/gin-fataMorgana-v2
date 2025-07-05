@@ -282,8 +282,8 @@ func main() {
 	v1.GET("/health/redis", healthController.RedisHealth)
 
 	// 认证相关接口
-	v1.POST("/auth/register", middleware.RateLimitMiddleware(3, 1*time.Hour), authController.Register) // 注册限流：每小时3次
-	v1.POST("/auth/login", middleware.LoginRateLimitMiddleware(), authController.Login)               // 登录限流：每分钟10次
+	v1.POST("/auth/register", authController.Register) // 注册接口（已移除频率限制）
+	v1.POST("/auth/login", authController.Login)               // 登录接口（已移除频率限制）
 	v1.POST("/auth/profile", middleware.AuthMiddleware(), authController.GetProfile)                 // 获取用户信息 - 获取当前用户完整资料
 	v1.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
 	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)       // 绑定银行卡
@@ -305,7 +305,7 @@ func main() {
 		wallet.POST("/info", walletController.GetWallet)                                                    // 获取钱包信息 - 查询用户余额和钱包状态
 		wallet.POST("/transactions", walletController.GetUserTransactions)                                  // 获取资金记录 - 查询用户交易流水历史
 		wallet.POST("/transaction-detail", walletController.GetTransactionDetail)                           // 获取交易详情 - 根据流水号查询具体交易信息
-		wallet.POST("/withdraw", middleware.GeneralRateLimitMiddleware(), walletController.RequestWithdraw) // 申请提现 - 用户申请从钱包提现到银行卡
+		wallet.POST("/withdraw", walletController.RequestWithdraw) // 申请提现 - 用户申请从钱包提现到银行卡（已移除频率限制）
 		wallet.POST("/withdraw-summary", walletController.GetWithdrawSummary)                               // 获取提现汇总 - 查询用户提现统计信息
 		wallet.POST("/recharge", walletController.Recharge)                                                 // 充值申请 - 用户申请从银行卡充值到钱包
 	}

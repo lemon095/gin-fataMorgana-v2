@@ -42,7 +42,7 @@ func main() {
 EOF
 
 # 运行测试
-cd /tmp && go run test_group_buy_no.go
+cd /tmp && GOPATH=/Users/wangfukang/Desktop/go-frame/gin-fataMorgana go run test_group_buy_no.go
 
 echo ""
 echo "2. 测试高并发拼单号生成"
@@ -92,7 +92,7 @@ func main() {
 EOF
 
 # 运行并发测试
-cd /tmp && go run test_concurrent_group_buy_no.go
+cd /tmp && GOPATH=/Users/wangfukang/Desktop/go-frame/gin-fataMorgana go run test_concurrent_group_buy_no.go
 
 echo ""
 echo "3. 清理临时文件"
