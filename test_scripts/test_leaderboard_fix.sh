@@ -100,7 +100,7 @@ if [ "$RESPONSE_CODE" = "0" ]; then
     else
         echo -e "\n${YELLOW}⚠️  排行榜数据为空，可能需要检查：${NC}"
         echo -e "1. 水单状态是否为 'success'"
-        echo -e "2. 水单创建时间是否在本周范围内"
+        echo -e "2. 水单完成时间（updated_at）是否在本周范围内"
         echo -e "3. 本周时间范围是否正确"
     fi
     
@@ -110,6 +110,7 @@ fi
 
 echo -e "\n${BLUE}=== 排行榜修复测试完成 ===${NC}"
 echo -e "${GREEN}修复内容:${NC}"
-echo -e "1. 将时间字段从 updated_at 改为 created_at"
+echo -e "1. 将时间字段从 created_at 改为 updated_at（按完成时间统计）"
 echo -e "2. 移除了 o.updated_at <= NOW() 的时间限制"
-echo -e "3. 现在统计的是本周创建且状态为success的订单" 
+echo -e "3. 现在统计的是本周完成且状态为success的订单"
+echo -e "4. 这样更公平，反映用户本周的实际完成情况" 
