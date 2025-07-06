@@ -43,7 +43,7 @@ func randomTime() string {
 }
 
 func randomAmount() float64 {
-	return math.Round((rand.Float64()*800+200)*100) / 100 // 200~1000
+	return math.Round((rand.Float64()*49900000+100000)*100) / 100 // 100000~50000000
 }
 func randomType() string {
 	types := []string{"点赞", "关注", "收藏", "转发"}
