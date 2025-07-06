@@ -243,12 +243,39 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 
 	// 验证状态类型参数
 	if req.Status < 1 || req.Status > 3 {
-		return nil, utils.NewAppError(utils.CodeOrderStatusInvalid, "状态类型参数无效，必须是1(进行中)、2(已完成)或3(拼单数据)")
+		return nil, utils.NewAppError(utils.CodeOrderStatusInvalid, "状态类型参数无效，必须是1(进行中)、2(已完成)或3(全部)")
 	}
 
-	// 如果status为3，从拼单表获取数据
+	// 如果status为3，获取全部订单（不限制状态）
 	if req.Status == 3 {
-		return s.getGroupBuyList(ctx, uid, req.Page, req.PageSize)
+		// 获取全部订单，不限制状态
+		orders, total, err := s.orderRepo.GetUserOrdersByStatus(ctx, uid, "", req.Page, req.PageSize)
+		if err != nil {
+			return nil, utils.NewAppError(utils.CodeOrderListGetFailed, "获取订单列表失败")
+		}
+
+		// 转换为响应格式
+		var orderResponses []models.OrderResponse
+		for _, order := range orders {
+			orderResponses = append(orderResponses, order.ToResponse())
+		}
+
+		// 计算分页信息
+		totalPages := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
+		hasNext := req.Page < totalPages
+		hasPrev := req.Page > 1
+
+		return &GetOrderListResponse{
+			Orders: orderResponses,
+			Pagination: PaginationInfo{
+				CurrentPage: req.Page,
+				PageSize:    req.PageSize,
+				Total:       total,
+				TotalPages:  totalPages,
+				HasNext:     hasNext,
+				HasPrev:     hasPrev,
+			},
+		}, nil
 	}
 
 	// 获取订单列表
