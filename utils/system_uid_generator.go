@@ -31,42 +31,7 @@ func (s *SystemUIDGenerator) GenerateSystemUID() string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// 获取当前时间戳（毫秒）
-	currentTime := time.Now().UnixNano() / 1e6
-
-	// 处理时钟回退
-	if currentTime < s.lastTime {
-		// 等待到下一个毫秒
-		time.Sleep(time.Millisecond)
-		currentTime = time.Now().UnixNano() / 1e6
-
-		// 如果仍然回退，使用上次时间
-		if currentTime < s.lastTime {
-			currentTime = s.lastTime
-		}
-	}
-
-	// 如果是同一毫秒内，序列号递增
-	if currentTime == s.lastTime {
-		s.sequence = (s.sequence + 1) % 100 // 序列号范围0-99
-	} else {
-		// 不同毫秒，序列号重置
-		s.sequence = 0
-	}
-
-	s.lastTime = currentTime
-
-	// 生成7位UID：时间戳(3位) + 机器ID(2位) + 序列号(2位)
-	timestamp := currentTime % 1000 // 取时间戳后3位
-	return fmt.Sprintf("%03d%02d%02d", timestamp, s.machineID, s.sequence)
-}
-
-// GenerateSystemOrderNo 生成系统订单号
-func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	// 获取当前时间戳（纳秒）
+	// 获取当前时间戳（纳秒级精度）
 	currentTime := time.Now().UnixNano()
 
 	// 处理时钟回退
@@ -91,12 +56,47 @@ func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
 
 	s.lastTime = currentTime
 
+	// 生成7位UID：时间戳(4位) + 机器ID(2位) + 序列号(1位)
+	timestamp := (currentTime / 1000000) % 10000 // 取纳秒时间戳后4位
+	return fmt.Sprintf("%04d%02d%01d", timestamp, s.machineID, s.sequence%10)
+}
+
+// GenerateSystemOrderNo 生成系统订单号
+func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	// 订单计数器递增
 	s.orderCounter = (s.orderCounter + 1) % 10000 // 计数器范围0-9999
 
+	// 获取当前时间戳（纳秒级精度）
+	currentTime := time.Now().UnixNano()
+	
+	// 处理时钟回退
+	if currentTime < s.lastTime {
+		// 等待到下一个微秒
+		time.Sleep(time.Microsecond)
+		currentTime = time.Now().UnixNano()
+
+		// 如果仍然回退，使用上次时间
+		if currentTime < s.lastTime {
+			currentTime = s.lastTime
+		}
+	}
+
+	// 如果是同一微秒内，序列号递增
+	if currentTime == s.lastTime {
+		s.sequence = (s.sequence + 1) % 1000 // 序列号范围0-999
+	} else {
+		// 不同微秒，序列号重置
+		s.sequence = 0
+	}
+
+	s.lastTime = currentTime
+
 	// 生成订单号：ORD + 时间戳后4位 + 机器ID2位 + 计数器4位
-	// 使用纳秒时间戳的后4位，提供更高的唯一性
-	timestamp := (currentTime / 1000) % 10000 // 取微秒时间戳后4位
+	// 使用纳秒时间戳的后4位，提高唯一性
+	timestamp := (currentTime / 1000000) % 10000 // 取纳秒时间戳后4位
 	return fmt.Sprintf("ORD%04d%02d%04d", timestamp, s.machineID, s.orderCounter)
 }
 
@@ -105,9 +105,12 @@ func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	// 获取当前时间戳（纳秒）
-	currentTime := time.Now().UnixNano()
+	// 拼单计数器递增
+	s.groupBuyCounter = (s.groupBuyCounter + 1) % 10000 // 计数器范围0-9999
 
+	// 获取当前时间戳（纳秒级精度）
+	currentTime := time.Now().UnixNano()
+	
 	// 处理时钟回退
 	if currentTime < s.lastTime {
 		// 等待到下一个微秒
@@ -130,12 +133,9 @@ func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
 
 	s.lastTime = currentTime
 
-	// 拼单计数器递增
-	s.groupBuyCounter = (s.groupBuyCounter + 1) % 10000 // 计数器范围0-9999
-
 	// 生成拼单号：GB + 时间戳后4位 + 机器ID2位 + 计数器4位
-	// 使用纳秒时间戳的后4位，提供更高的唯一性
-	timestamp := (currentTime / 1000) % 10000 // 取微秒时间戳后4位
+	// 使用纳秒时间戳的后4位，提高唯一性
+	timestamp := (currentTime / 1000000) % 10000 // 取纳秒时间戳后4位
 	return fmt.Sprintf("GB%04d%02d%04d", timestamp, s.machineID, s.groupBuyCounter)
 }
 

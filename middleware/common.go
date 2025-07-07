@@ -155,18 +155,25 @@ func SetTraceID(c *gin.Context, traceID string) {
 }
 
 // GetUserID 获取用户ID
-func GetUserID(c *gin.Context) (int64, error) {
-	userIDStr, exists := c.Get("user_id")
+func GetUserID(c *gin.Context) (uint, error) {
+	userID, exists := c.Get("user_id")
 	if !exists {
 		return 0, utils.NewAppError(401, "User not authenticated")
 	}
 	
-	userID, ok := userIDStr.(int64)
-	if !ok {
-		return 0, utils.NewAppError(400, "Invalid user ID")
+	// 处理不同类型的user_id
+	switch v := userID.(type) {
+	case uint:
+		return v, nil
+	case int64:
+		return uint(v), nil
+	case int:
+		return uint(v), nil
+	case float64:
+		return uint(v), nil
+	default:
+		return 0, utils.NewAppError(400, "Invalid user ID type")
 	}
-	
-	return userID, nil
 }
 
 // GetUserIDFromParam 从路径参数获取用户ID
