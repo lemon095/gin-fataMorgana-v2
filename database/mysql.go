@@ -112,13 +112,40 @@ func AutoMigrate() error {
 		log.Println("✅ 表注释添加完成")
 	}
 
-	// 第三步：创建复合索引和优化索引
+	// 第三步：检测和创建复合索引和优化索引
 	log.Println("🔍 第三步：检测和创建优化索引...")
+	
+	// ===== 索引自动创建功能 =====
+	// 方法1：简单注释方式（当前使用）
+	// 如需禁用索引自动创建，请注释下面的代码块
+	/*
 	if err := createOptimizedIndexes(); err != nil {
 		log.Printf("⚠️  创建优化索引失败: %v", err)
 	} else {
 		log.Println("✅ 索引检测和创建完成")
 	}
+	*/
+	// ===== 索引自动创建功能结束 =====
+	
+	// 如需启用索引自动创建，请取消注释上面的代码块，并注释下面这行
+	log.Println("⏭️  索引自动创建已禁用，跳过索引创建")
+	
+	// 方法2：条件编译方式（可选）
+	// 如需使用条件编译，请：
+	// 1. 注释掉上面的简单注释代码
+	// 2. 取消注释下面的条件编译代码
+	// 3. 编译时使用：go build -tags=autoindex 启用索引创建
+	// 4. 编译时使用：go build 禁用索引创建
+	/*
+	// +build autoindex
+	if err := createOptimizedIndexes(); err != nil {
+		log.Printf("⚠️  创建优化索引失败: %v", err)
+	} else {
+		log.Println("✅ 索引检测和创建完成")
+	}
+	// +build !autoindex
+	log.Println("⏭️  索引自动创建已禁用，跳过索引创建")
+	*/
 
 	// 第四步：为拼单表添加注释
 	log.Println("📝 第四步：添加特殊表注释...")

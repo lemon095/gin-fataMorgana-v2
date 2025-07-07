@@ -30,15 +30,21 @@ type ServerConfig struct {
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Host            string `mapstructure:"host"`
-	Port            int    `mapstructure:"port"`
-	Username        string `mapstructure:"username"`
-	Password        string `mapstructure:"password"`
-	DBName          string `mapstructure:"dbname"`
-	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
-	MaxOpenConns    int    `mapstructure:"max_open_conns"`
-	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`  // 单位秒
-	ConnMaxIdleTime int    `mapstructure:"conn_max_idle_time"` // 单位秒
+	Driver          string `yaml:"driver"`
+	Host            string `yaml:"host"`
+	Port            int    `yaml:"port"`
+	Username        string `yaml:"username"`
+	Password        string `yaml:"password"`
+	DBName          string `yaml:"dbname"`
+	Charset         string `yaml:"charset"`
+	ParseTime       bool   `yaml:"parse_time"`
+	Loc             string `yaml:"loc"`
+	MaxIdleConns    int    `yaml:"max_idle_conns"`
+	MaxOpenConns    int    `yaml:"max_open_conns"`
+	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`
+	ConnMaxIdleTime int    `yaml:"conn_max_idle_time"`
+	// 索引自动创建控制
+	AutoCreateIndex bool `yaml:"auto_create_index" default:"true"`
 }
 
 // RedisConfig Redis配置
