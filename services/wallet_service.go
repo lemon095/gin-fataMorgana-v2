@@ -43,7 +43,7 @@ func (s *WalletService) acquireLock(ctx context.Context, uid string, timeout tim
 	// 使用SET NX EX命令实现分布式锁
 	// NX: 只在key不存在时设置
 	// EX: 设置过期时间（秒）
-	success, err := database.GlobalRedisHelper.SetNX(ctx, lockKey, lockValue, timeout)
+	success, err := database.GetGlobalRedisHelper().SetNX(ctx, lockKey, lockValue, timeout)
 	if err != nil {
 		return "", utils.NewAppError(utils.CodeRedisError, "获取分布式锁失败")
 	}
@@ -62,7 +62,7 @@ func (s *WalletService) acquireLockWithRetry(ctx context.Context, uid string, ti
 	
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		// 使用SET NX EX命令实现分布式锁
-		success, err := database.GlobalRedisHelper.SetNX(ctx, lockKey, lockValue, timeout)
+		success, err := database.GetGlobalRedisHelper().SetNX(ctx, lockKey, lockValue, timeout)
 		if err != nil {
 			return "", utils.NewAppError(utils.CodeRedisError, "获取分布式锁失败")
 		}
@@ -472,7 +472,7 @@ func (s *WalletService) GetLockStatus(ctx context.Context, uid string) (map[stri
 	lockKey := s.generateLockKey(uid)
 	
 	// 检查锁是否存在
-	exists, err := database.GlobalRedisHelper.Exists(ctx, lockKey)
+	exists, err := database.GetGlobalRedisHelper().Exists(ctx, lockKey)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeRedisError, "检查锁状态失败")
 	}
@@ -486,13 +486,13 @@ func (s *WalletService) GetLockStatus(ctx context.Context, uid string) (map[stri
 
 	if exists > 0 {
 		// 获取锁的剩余过期时间
-		ttl, err := database.GlobalRedisHelper.TTL(ctx, lockKey)
+		ttl, err := database.GetGlobalRedisHelper().TTL(ctx, lockKey)
 		if err == nil {
 			status["ttl_seconds"] = ttl.Seconds()
 		}
 		
 		// 获取锁的值（持有者标识）
-		lockValue, err := database.GlobalRedisHelper.Get(ctx, lockKey)
+		lockValue, err := database.GetGlobalRedisHelper().Get(ctx, lockKey)
 		if err == nil {
 			status["lock_value"] = lockValue
 		}
@@ -506,7 +506,7 @@ func (s *WalletService) ForceReleaseLock(ctx context.Context, uid string) error 
 	lockKey := s.generateLockKey(uid)
 	
 	// 直接删除锁
-	err := database.GlobalRedisHelper.Del(ctx, lockKey)
+	err := database.GetGlobalRedisHelper().Del(ctx, lockKey)
 	if err != nil {
 		return utils.NewAppError(utils.CodeRedisError, "强制释放锁失败")
 	}

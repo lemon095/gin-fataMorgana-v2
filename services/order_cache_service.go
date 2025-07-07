@@ -40,13 +40,13 @@ func (s *OrderCacheService) CacheOrder(ctx context.Context, order *models.Order)
 	}
 
 	// 使用Hash结构存储，小key为订单号
-	err = database.GlobalRedisHelper.HSet(ctx, cacheKey, order.OrderNo, string(orderJSON))
+	err = database.GetGlobalRedisHelper().HSet(ctx, cacheKey, order.OrderNo, string(orderJSON))
 	if err != nil {
 		return utils.NewAppError(utils.CodeDatabaseError, "缓存订单数据失败")
 	}
 
 	// 设置过期时间（24小时）
-	err = database.GlobalRedisHelper.Expire(ctx, cacheKey, 24*time.Hour)
+	err = database.GetGlobalRedisHelper().Expire(ctx, cacheKey, 24*time.Hour)
 	if err != nil {
 		// 过期时间设置失败不影响主流程，只记录日志
 		utils.LogWarn(nil, "设置缓存过期时间失败: %v", err)
@@ -65,7 +65,7 @@ func (s *OrderCacheService) GetOrdersByPeriod(ctx context.Context, periodNumber 
 	cacheKey := s.generateCacheKey(periodNumber)
 	
 	// 获取Hash中的所有数据
-	orderMap, err := database.GlobalRedisHelper.HGetAll(ctx, cacheKey)
+	orderMap, err := database.GetGlobalRedisHelper().HGetAll(ctx, cacheKey)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取缓存订单数据失败")
 	}
@@ -94,7 +94,7 @@ func (s *OrderCacheService) GetOrder(ctx context.Context, periodNumber, orderNo 
 	cacheKey := s.generateCacheKey(periodNumber)
 	
 	// 获取指定订单数据
-	orderJSON, err := database.GlobalRedisHelper.HGet(ctx, cacheKey, orderNo)
+	orderJSON, err := database.GetGlobalRedisHelper().HGet(ctx, cacheKey, orderNo)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取缓存订单数据失败")
 	}
@@ -123,7 +123,7 @@ func (s *OrderCacheService) DeleteOrder(ctx context.Context, periodNumber, order
 	cacheKey := s.generateCacheKey(periodNumber)
 	
 	// 删除指定订单
-	err := database.GlobalRedisHelper.HDel(ctx, cacheKey, orderNo)
+	err := database.GetGlobalRedisHelper().HDel(ctx, cacheKey, orderNo)
 	if err != nil {
 		return utils.NewAppError(utils.CodeDatabaseError, "删除缓存订单数据失败")
 	}
@@ -141,7 +141,7 @@ func (s *OrderCacheService) DeletePeriodOrders(ctx context.Context, periodNumber
 	cacheKey := s.generateCacheKey(periodNumber)
 	
 	// 删除整个Key
-	err := database.GlobalRedisHelper.Del(ctx, cacheKey)
+	err := database.GetGlobalRedisHelper().Del(ctx, cacheKey)
 	if err != nil {
 		return utils.NewAppError(utils.CodeDatabaseError, "删除期数缓存数据失败")
 	}
@@ -159,7 +159,7 @@ func (s *OrderCacheService) GetOrderCount(ctx context.Context, periodNumber stri
 	cacheKey := s.generateCacheKey(periodNumber)
 	
 	// 获取Hash的长度（订单数量）
-	count, err := database.GlobalRedisHelper.HLen(ctx, cacheKey)
+	count, err := database.GetGlobalRedisHelper().HLen(ctx, cacheKey)
 	if err != nil {
 		return 0, utils.NewAppError(utils.CodeDatabaseError, "获取订单数量失败")
 	}
@@ -177,7 +177,7 @@ func (s *OrderCacheService) IsOrderCached(ctx context.Context, periodNumber, ord
 	cacheKey := s.generateCacheKey(periodNumber)
 	
 	// 检查Hash中是否存在该字段
-	exists, err := database.GlobalRedisHelper.HExists(ctx, cacheKey, orderNo)
+	exists, err := database.GetGlobalRedisHelper().HExists(ctx, cacheKey, orderNo)
 	if err != nil {
 		return false, utils.NewAppError(utils.CodeDatabaseError, "检查订单缓存状态失败")
 	}
@@ -215,13 +215,13 @@ func (s *OrderCacheService) BatchCacheOrders(ctx context.Context, orders []*mode
 		}
 
 		// 批量设置
-		err := database.GlobalRedisHelper.HSet(ctx, cacheKey, orderMap)
+		err := database.GetGlobalRedisHelper().HSet(ctx, cacheKey, orderMap)
 		if err != nil {
 			return utils.NewAppError(utils.CodeDatabaseError, "批量缓存订单数据失败")
 		}
 
 		// 设置过期时间
-		err = database.GlobalRedisHelper.Expire(ctx, cacheKey, 24*time.Hour)
+		err = database.GetGlobalRedisHelper().Expire(ctx, cacheKey, 24*time.Hour)
 		if err != nil {
 			return utils.NewAppError(utils.CodeDatabaseError, "批量设置缓存过期时间失败")
 		}

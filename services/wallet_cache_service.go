@@ -62,7 +62,7 @@ func (s *WalletCacheService) CacheWalletBalance(ctx context.Context, wallet *mod
 	expiration := 30 * 24 * time.Hour
 
 	// 缓存钱包数据（带过期时间）
-	err = database.GlobalRedisHelper.Set(ctx, cacheKey, string(walletJSON), expiration)
+	err = database.GetGlobalRedisHelper().Set(ctx, cacheKey, string(walletJSON), expiration)
 	if err != nil {
 		return utils.NewAppError(utils.CodeRedisError, "缓存钱包余额失败")
 	}
@@ -80,7 +80,7 @@ func (s *WalletCacheService) CacheEmptyWallet(ctx context.Context, uid string) e
 	emptyKey := s.generateEmptyKey(uid)
 	
 	// 缓存空值，过期时间较短（10分钟）
-	err := database.GlobalRedisHelper.Set(ctx, emptyKey, "empty", 10*time.Minute)
+	err := database.GetGlobalRedisHelper().Set(ctx, emptyKey, "empty", 10*time.Minute)
 	if err != nil {
 		return utils.NewAppError(utils.CodeRedisError, "缓存空值失败")
 	}
@@ -98,7 +98,7 @@ func (s *WalletCacheService) IsEmptyCached(ctx context.Context, uid string) (boo
 	emptyKey := s.generateEmptyKey(uid)
 	
 	// 检查空值缓存是否存在
-	exists, err := database.GlobalRedisHelper.Exists(ctx, emptyKey)
+	exists, err := database.GetGlobalRedisHelper().Exists(ctx, emptyKey)
 	if err != nil {
 		return false, utils.NewAppError(utils.CodeRedisError, "检查空值缓存失败")
 	}
@@ -116,7 +116,7 @@ func (s *WalletCacheService) GetCachedWalletBalance(ctx context.Context, uid str
 	cacheKey := s.generateWalletKey(uid)
 	
 	// 获取缓存数据
-	walletJSON, err := database.GlobalRedisHelper.Get(ctx, cacheKey)
+	walletJSON, err := database.GetGlobalRedisHelper().Get(ctx, cacheKey)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeRedisError, "获取缓存钱包数据失败")
 	}
@@ -217,7 +217,7 @@ func (s *WalletCacheService) ExtendWalletCacheOnLogin(ctx context.Context, uid s
 
 	// 1. 更新用户登录时间
 	loginKey := s.generateUserLoginKey(uid)
-	err := database.GlobalRedisHelper.Set(ctx, loginKey, time.Now().UTC().Unix(), 30*24*time.Hour)
+	err := database.GetGlobalRedisHelper().Set(ctx, loginKey, time.Now().UTC().Unix(), 30*24*time.Hour)
 	if err != nil {
 		return utils.NewAppError(utils.CodeRedisError, "更新用户登录时间失败")
 	}
@@ -247,7 +247,7 @@ func (s *WalletCacheService) HasRecentLogin(ctx context.Context, uid string, dur
 	}
 
 	loginKey := s.generateUserLoginKey(uid)
-	loginTimeStr, err := database.GlobalRedisHelper.Get(ctx, loginKey)
+	loginTimeStr, err := database.GetGlobalRedisHelper().Get(ctx, loginKey)
 	if err != nil {
 		return false, nil // 没有登录记录，返回false
 	}
@@ -295,7 +295,7 @@ func (s *WalletCacheService) CleanupExpiredWalletCache(ctx context.Context) erro
 
 		// 如果用户30天内没有登录，删除钱包缓存
 		if !hasRecentLogin {
-			err = database.GlobalRedisHelper.Del(ctx, key)
+			err = database.GetGlobalRedisHelper().Del(ctx, key)
 			if err != nil {
 				utils.LogWarn(nil, "删除过期钱包缓存失败: %v", err)
 			} else {

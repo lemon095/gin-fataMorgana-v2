@@ -247,5 +247,16 @@ func (r *RedisHelper) Unlock(ctx context.Context, key string) error {
 	return r.Del(ctx, key)
 }
 
-// 全局Redis助手实例
-var GlobalRedisHelper = NewRedisHelper() 
+// 全局Redis助手实例（延迟初始化）
+var GlobalRedisHelper *RedisHelper
+
+// GetGlobalRedisHelper 获取全局Redis助手实例（延迟初始化）
+func GetGlobalRedisHelper() *RedisHelper {
+	if GlobalRedisHelper == nil {
+		if RedisClient == nil {
+			panic("Redis客户端未初始化，请先调用 InitRedis()")
+		}
+		GlobalRedisHelper = &RedisHelper{client: RedisClient}
+	}
+	return GlobalRedisHelper
+} 
