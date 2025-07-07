@@ -66,15 +66,38 @@ func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	// 获取当前时间戳（纳秒）
+	currentTime := time.Now().UnixNano()
+
+	// 处理时钟回退
+	if currentTime < s.lastTime {
+		// 等待到下一个微秒
+		time.Sleep(time.Microsecond)
+		currentTime = time.Now().UnixNano()
+
+		// 如果仍然回退，使用上次时间
+		if currentTime < s.lastTime {
+			currentTime = s.lastTime
+		}
+	}
+
+	// 如果是同一微秒内，序列号递增
+	if currentTime == s.lastTime {
+		s.sequence = (s.sequence + 1) % 1000 // 序列号范围0-999
+	} else {
+		// 不同微秒，序列号重置
+		s.sequence = 0
+	}
+
+	s.lastTime = currentTime
+
 	// 订单计数器递增
 	s.orderCounter = (s.orderCounter + 1) % 10000 // 计数器范围0-9999
 
-	// 获取当前时间戳（毫秒）
-	currentTime := time.Now().UnixNano() / 1e6
-
-	// 生成订单号：ORD + 时间戳后3位 + 机器ID2位 + 计数器4位
-	timestamp := currentTime % 1000 // 取时间戳后3位
-	return fmt.Sprintf("ORD%03d%02d%04d", timestamp, s.machineID, s.orderCounter)
+	// 生成订单号：ORD + 时间戳后4位 + 机器ID2位 + 计数器4位
+	// 使用纳秒时间戳的后4位，提供更高的唯一性
+	timestamp := (currentTime / 1000) % 10000 // 取微秒时间戳后4位
+	return fmt.Sprintf("ORD%04d%02d%04d", timestamp, s.machineID, s.orderCounter)
 }
 
 // GenerateSystemGroupBuyNo 生成系统拼单号
@@ -82,15 +105,38 @@ func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	// 获取当前时间戳（纳秒）
+	currentTime := time.Now().UnixNano()
+
+	// 处理时钟回退
+	if currentTime < s.lastTime {
+		// 等待到下一个微秒
+		time.Sleep(time.Microsecond)
+		currentTime = time.Now().UnixNano()
+
+		// 如果仍然回退，使用上次时间
+		if currentTime < s.lastTime {
+			currentTime = s.lastTime
+		}
+	}
+
+	// 如果是同一微秒内，序列号递增
+	if currentTime == s.lastTime {
+		s.sequence = (s.sequence + 1) % 1000 // 序列号范围0-999
+	} else {
+		// 不同微秒，序列号重置
+		s.sequence = 0
+	}
+
+	s.lastTime = currentTime
+
 	// 拼单计数器递增
 	s.groupBuyCounter = (s.groupBuyCounter + 1) % 10000 // 计数器范围0-9999
 
-	// 获取当前时间戳（毫秒）
-	currentTime := time.Now().UnixNano() / 1e6
-
-	// 生成拼单号：GB + 时间戳后3位 + 机器ID2位 + 计数器4位
-	timestamp := currentTime % 1000 // 取时间戳后3位
-	return fmt.Sprintf("GB%03d%02d%04d", timestamp, s.machineID, s.groupBuyCounter)
+	// 生成拼单号：GB + 时间戳后4位 + 机器ID2位 + 计数器4位
+	// 使用纳秒时间戳的后4位，提供更高的唯一性
+	timestamp := (currentTime / 1000) % 10000 // 取微秒时间戳后4位
+	return fmt.Sprintf("GB%04d%02d%04d", timestamp, s.machineID, s.groupBuyCounter)
 }
 
 // 全局系统UID生成器实例
