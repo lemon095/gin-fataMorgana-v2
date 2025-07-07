@@ -17,6 +17,7 @@ type GroupBuyService struct {
 	walletRepo      *database.WalletRepository
 	memberLevelRepo *database.MemberLevelRepository
 	cacheService    *WalletCacheService
+	walletService   *WalletService
 }
 
 // NewGroupBuyService 创建拼单服务实例
@@ -26,6 +27,7 @@ func NewGroupBuyService() *GroupBuyService {
 		walletRepo:      database.NewWalletRepository(),
 		memberLevelRepo: database.NewMemberLevelRepository(database.DB),
 		cacheService:    NewWalletCacheService(),
+		walletService:   NewWalletService(),
 	}
 }
 
@@ -180,8 +182,8 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		return nil, utils.NewAppError(utils.CodeGroupBuyExpired, "该拼单已超过截止时间")
 	}
 
-	// 5. 检查用户钱包余额
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
+	// 5. 使用并发安全的钱包服务检查余额
+	wallet, err := s.walletService.GetWallet(uid)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取钱包失败，请稍后重试")
 	}
@@ -197,39 +199,26 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 			fmt.Sprintf("余额不足，当前余额: %.2f，拼单金额: %.2f", wallet.Balance, groupBuy.PerPersonAmount))
 	}
 
-	// 6. 记录交易前余额
-	balanceBefore := wallet.Balance
-
-	// 7. 扣减余额
-	if err := wallet.Withdraw(groupBuy.PerPersonAmount); err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "扣减余额失败，请稍后重试")
+	// 6. 使用并发安全的钱包服务扣减余额
+	err = s.walletService.WithdrawBalance(ctx, uid, groupBuy.PerPersonAmount, fmt.Sprintf("参与拼单 %s", groupBuy.GroupBuyNo))
+	if err != nil {
+		return nil, err
 	}
 
-	// 8. 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "更新钱包失败，请稍后重试")
-	}
-
-	// 9. 更新缓存
-	if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, uid, wallet.Balance); cacheErr != nil {
-		// 缓存更新失败不影响主流程，只记录日志
-		fmt.Printf("更新钱包余额缓存失败: %v\n", cacheErr)
-	}
-
-	// 10. 获取用户信息以获取经验值
+	// 7. 获取用户信息以获取经验值
 	userRepo := database.NewUserRepository()
 	user, err := userRepo.FindByUid(ctx, uid)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取用户信息失败")
 	}
 
-	// 11. 根据用户经验值获取等级配置并计算利润金额
+	// 8. 根据用户经验值获取等级配置并计算利润金额
 	profitAmount := s.calculateProfitAmount(ctx, user.Experience, groupBuy.PerPersonAmount)
 
-	// 12. 生成订单编号
+	// 9. 生成订单编号
 	orderNo := utils.GenerateOrderNo()
 
-	// 13. 随机选择1-4个类型，每个类型数量为1
+	// 10. 随机选择1-4个类型，每个类型数量为1
 	likeCount := 0
 	shareCount := 0
 	followCount := 0
@@ -258,7 +247,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		}
 	}
 
-	// 14. 创建订单数据
+	// 11. 创建订单数据
 	order := &models.Order{
 		OrderNo:        orderNo,
 		Uid:            uid,
@@ -280,27 +269,31 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		UpdatedAt:      time.Now().UTC(),
 	}
 
-	// 15. 保存订单
+	// 12. 保存订单
 	err = s.groupBuyRepo.CreateOrder(ctx, order)
 	if err != nil {
-		// 如果创建订单失败，需要回滚扣减的余额
-		wallet.Recharge(groupBuy.PerPersonAmount)
-		s.walletRepo.UpdateWallet(ctx, wallet)
-		// 回滚缓存
-		if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, uid, wallet.Balance); cacheErr != nil {
-			fmt.Printf("回滚钱包余额缓存失败: %v\n", cacheErr)
+		// 如果创建订单失败，使用并发安全的钱包服务回滚余额
+		if rollbackErr := s.walletService.AddBalance(ctx, uid, groupBuy.PerPersonAmount, "拼单订单创建失败回滚"); rollbackErr != nil {
+			// 回滚失败，记录严重错误
+			utils.LogError(nil, "拼单订单创建失败且余额回滚失败: %v, 回滚错误: %v", err, rollbackErr)
 		}
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "创建订单失败，请稍后重试")
 	}
 
-	// 16. 创建钱包流水记录
+	// 13. 获取扣减后的钱包信息用于创建交易记录
+	updatedWallet, err := s.walletService.GetWallet(uid)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包失败")
+	}
+
+	// 14. 创建钱包流水记录
 	transaction := &models.WalletTransaction{
 		TransactionNo:  utils.GenerateTransactionNo("GROUP"),
 		Uid:            uid,
 		Type:           models.TransactionTypeGroupBuy,
 		Amount:         groupBuy.PerPersonAmount,
-		BalanceBefore:  balanceBefore,
-		BalanceAfter:   wallet.Balance,
+		BalanceBefore:  wallet.Balance,
+		BalanceAfter:   updatedWallet.Balance,
 		Status:         models.TransactionStatusSuccess,
 		Description:    fmt.Sprintf("参与拼单 %s", groupBuy.GroupBuyNo),
 		RelatedOrderNo: orderNo,
@@ -309,10 +302,10 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
 		// 如果创建交易记录失败，记录日志但不影响拼单参与
-		fmt.Printf("创建拼单交易记录失败: %v\n", err)
+		utils.LogWarn(nil, "创建拼单交易记录失败: %v", err)
 	}
 
-	// 17. 更新拼单信息
+	// 15. 更新拼单信息
 	groupBuy.OrderNo = &orderNo
 	groupBuy.Status = "pending" // 更新为pending状态
 	groupBuy.UpdatedAt = time.Now().UTC()
@@ -320,17 +313,15 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	err = s.groupBuyRepo.UpdateGroupBuy(ctx, groupBuy)
 	if err != nil {
 		// 如果更新拼单失败，需要回滚扣减的余额和创建的订单
-		wallet.Recharge(groupBuy.PerPersonAmount)
-		s.walletRepo.UpdateWallet(ctx, wallet)
-		// 回滚缓存
-		if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, uid, wallet.Balance); cacheErr != nil {
-			fmt.Printf("回滚钱包余额缓存失败: %v\n", cacheErr)
+		if rollbackErr := s.walletService.AddBalance(ctx, uid, groupBuy.PerPersonAmount, "拼单状态更新失败回滚"); rollbackErr != nil {
+			// 回滚失败，记录严重错误
+			utils.LogError(nil, "拼单状态更新失败且余额回滚失败: %v, 回滚错误: %v", err, rollbackErr)
 		}
 		// 注意：这里可能需要删除已创建的订单，但为了简化，我们只回滚余额
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "更新拼单状态失败，请稍后重试")
 	}
 
-	// 18. 返回订单ID
+	// 16. 返回订单ID
 	response := &models.JoinGroupBuyResponse{
 		OrderID: order.ID,
 	}

@@ -164,7 +164,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		// 如果创建订单失败，需要回滚扣减的余额
 		if rollbackErr := s.walletService.AddBalance(ctx, req.Uid, totalAmount, "订单创建失败回滚"); rollbackErr != nil {
 			// 回滚失败，记录严重错误
-			fmt.Printf("订单创建失败且余额回滚失败: %v, 回滚错误: %v\n", err, rollbackErr)
+			utils.LogError(nil, "订单创建失败且余额回滚失败: %v, 回滚错误: %v", err, rollbackErr)
 		}
 		return nil, utils.NewAppError(utils.CodeOrderCreateFailed, "创建订单失败")
 	}
@@ -185,13 +185,13 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
 		// 如果创建交易记录失败，记录日志但不影响订单创建
-		fmt.Printf("创建交易记录失败: %v\n", err)
+		utils.LogWarn(nil, "创建交易记录失败: %v", err)
 	}
 
 	// 缓存订单数据到Redis
 	if err := s.cacheOrderData(ctx, order); err != nil {
 		// 缓存失败不影响主流程，只记录日志
-		fmt.Printf("缓存订单数据失败: %v\n", err)
+		utils.LogWarn(nil, "缓存订单数据失败: %v", err)
 	}
 
 	return &CreateOrderResponse{
