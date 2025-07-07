@@ -28,23 +28,23 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 	var req models.GetTransactionsRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.HandleValidationError(c, err)
+		middleware.ErrorResponse(c, utils.CodeInvalidParams, "参数验证失败")
 		return
 	}
 
 	// 获取当前用户ID
-	userID := middleware.GetCurrentUser(c)
-	if userID == 0 {
-		utils.Unauthorized(c)
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		middleware.ErrorResponse(c, utils.CodeAuth, "用户未认证")
 		return
 	}
 
 	// 根据user_id查询uid，确保获取正确的uid
 	userRepo := database.NewUserRepository()
 	var user models.User
-	err := userRepo.FindByID(context.Background(), userID, &user)
+	err = userRepo.FindByID(context.Background(), uint(userID), &user)
 	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		middleware.ErrorResponse(c, utils.CodeDatabaseError, "获取用户信息失败")
 		return
 	}
 
@@ -59,11 +59,15 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 	// 调用服务
 	response, err := wc.walletService.GetUserTransactions(serviceReq)
 	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		if appErr, ok := err.(*utils.AppError); ok {
+			middleware.ErrorResponse(c, appErr.Code, appErr.Message)
+		} else {
+			middleware.ErrorResponse(c, utils.CodeDatabaseError, "获取交易记录失败")
+		}
 		return
 	}
 
-	utils.Success(c, response)
+	middleware.SuccessResponse(c, response)
 }
 
 // GetWallet 获取钱包信息
@@ -71,33 +75,37 @@ func (wc *WalletController) GetWallet(c *gin.Context) {
 	var req models.GetWalletRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.HandleValidationError(c, err)
+		middleware.ErrorResponse(c, utils.CodeInvalidParams, "参数验证失败")
 		return
 	}
 
 	// 获取当前用户ID
-	userID := middleware.GetCurrentUser(c)
-	if userID == 0 {
-		utils.Unauthorized(c)
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		middleware.ErrorResponse(c, utils.CodeAuth, "用户未认证")
 		return
 	}
 
 	// 根据user_id查询uid，确保获取正确的uid
 	userRepo := database.NewUserRepository()
 	var user models.User
-	err := userRepo.FindByID(context.Background(), userID, &user)
+	err = userRepo.FindByID(context.Background(), uint(userID), &user)
 	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		middleware.ErrorResponse(c, utils.CodeDatabaseError, "获取用户信息失败")
 		return
 	}
 
 	wallet, err := wc.walletService.GetWallet(user.Uid)
 	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		if appErr, ok := err.(*utils.AppError); ok {
+			middleware.ErrorResponse(c, appErr.Code, appErr.Message)
+		} else {
+			middleware.ErrorResponse(c, utils.CodeDatabaseError, "获取钱包信息失败")
+		}
 		return
 	}
 
-	utils.Success(c, wallet.ToResponse())
+	middleware.SuccessResponse(c, wallet.ToResponse())
 }
 
 // CreateWallet 创建钱包

@@ -145,3 +145,80 @@ func (r *WalletRepository) GetTransactionsByDateRange(ctx context.Context, uid s
 func (r *WalletRepository) UpdateTransaction(ctx context.Context, transaction *models.WalletTransaction) error {
 	return r.Update(ctx, transaction)
 }
+
+// GetTransactionsByUid 根据UID获取用户交易记录（支持类型过滤）
+func (r *WalletRepository) GetTransactionsByUid(ctx context.Context, uid string, page, pageSize int, transactionType string) ([]models.WalletTransaction, int64, error) {
+	var transactions []models.WalletTransaction
+	var total int64
+
+	query := r.db.WithContext(ctx).Model(&models.WalletTransaction{}).Where("uid = ?", uid)
+	
+	// 如果指定了交易类型，添加类型过滤
+	if transactionType != "" {
+		query = query.Where("type = ?", transactionType)
+	}
+
+	// 获取总数
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 计算偏移量
+	offset := (page - 1) * pageSize
+
+	// 获取分页数据
+	err = query.Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&transactions).Error
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return transactions, total, nil
+}
+
+// GetWithdrawSummary 获取提现汇总信息
+func (r *WalletRepository) GetWithdrawSummary(ctx context.Context, uid string) (*models.WithdrawSummary, error) {
+	var summary models.WithdrawSummary
+
+	// 获取总提现金额和数量
+	err := r.db.WithContext(ctx).Model(&models.WalletTransaction{}).
+		Select("COALESCE(SUM(amount), 0) as total_withdraw_amount, COUNT(*) as total_withdraw_count").
+		Where("uid = ? AND type = ?", uid, models.TransactionTypeWithdraw).
+		Scan(&summary).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取待处理提现金额和数量
+	err = r.db.WithContext(ctx).Model(&models.WalletTransaction{}).
+		Select("COALESCE(SUM(amount), 0) as pending_amount, COUNT(*) as pending_count").
+		Where("uid = ? AND type = ? AND status = ?", uid, models.TransactionTypeWithdraw, models.TransactionStatusPending).
+		Scan(&summary).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取成功提现金额和数量
+	err = r.db.WithContext(ctx).Model(&models.WalletTransaction{}).
+		Select("COALESCE(SUM(amount), 0) as success_amount, COUNT(*) as success_count").
+		Where("uid = ? AND type = ? AND status = ?", uid, models.TransactionTypeWithdraw, models.TransactionStatusSuccess).
+		Scan(&summary).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取失败提现金额和数量
+	err = r.db.WithContext(ctx).Model(&models.WalletTransaction{}).
+		Select("COALESCE(SUM(amount), 0) as failed_amount, COUNT(*) as failed_count").
+		Where("uid = ? AND type = ? AND status = ?", uid, models.TransactionTypeWithdraw, models.TransactionStatusFailed).
+		Scan(&summary).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &summary, nil
+}

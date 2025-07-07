@@ -170,3 +170,44 @@ func formatAmount(amount float64) string {
 // 2. success (成功) - 交易处理成功
 // 3. failed (失败) - 交易处理失败
 // 4. cancelled (已取消) - 交易已取消
+
+// GetTransactionsResponse 获取交易记录响应
+type GetTransactionsResponse struct {
+	Transactions []WalletTransaction `json:"transactions"`
+	Total        int64               `json:"total"`
+	Page         int                 `json:"page"`
+	PageSize     int                 `json:"page_size"`
+}
+
+// WithdrawResponse 提现响应
+type WithdrawResponse struct {
+	TransactionNo string  `json:"transaction_no"`
+	Amount        float64 `json:"amount"`
+	Balance       float64 `json:"balance"`
+	Status        string  `json:"status"`
+}
+
+// TransactionDetail 交易详情
+type TransactionDetail struct {
+	TransactionNo string    `json:"transaction_no"`
+	Uid           string    `json:"uid"`
+	Type          string    `json:"type"`
+	Amount        float64   `json:"amount"`
+	Balance       float64   `json:"balance"`
+	Description   string    `json:"description"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// WithdrawSummary 提现汇总
+type WithdrawSummary struct {
+	TotalWithdrawAmount float64 `json:"total_withdraw_amount"`
+	TotalWithdrawCount  int64   `json:"total_withdraw_count"`
+	PendingAmount       float64 `json:"pending_amount"`
+	PendingCount        int64   `json:"pending_count"`
+	SuccessAmount       float64 `json:"success_amount"`
+	SuccessCount        int64   `json:"success_count"`
+	FailedAmount        float64 `json:"failed_amount"`
+	FailedCount         int64   `json:"failed_count"`
+}

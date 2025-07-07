@@ -1,0 +1,14 @@
+# gin-fataMorgana/services
+services/wallet_cache_service_old.go:18:6: WalletCacheService redeclared in this block
+	services/wallet_cache_service.go:15:6: other declaration of WalletCacheService
+services/wallet_cache_service_old.go:19:22: undefined: database.RedisRepository
+services/wallet_cache_service_old.go:22:6: NewWalletCacheService redeclared in this block
+	services/wallet_cache_service.go:20:6: other declaration of NewWalletCacheService
+services/wallet_cache_service_old.go:29:30: method WalletCacheService.generateWalletKey already declared at services/wallet_cache_service.go:25:30
+services/wallet_cache_service_old.go:39:30: method WalletCacheService.CacheWalletBalance already declared at services/wallet_cache_service.go:41:30
+services/wallet_cache_service_old.go:63:30: method WalletCacheService.GetCachedWalletBalance already declared at services/wallet_cache_service.go:101:30
+services/wallet_cache_service_old.go:134:30: method WalletCacheService.DeleteWalletBalance already declared at services/wallet_cache_service.go:204:30
+services/wallet_cache_service_old.go:245:30: method WalletCacheService.GetWalletBalanceWithCache already declared at services/wallet_cache_service.go:130:30
+services/order_cache_service.go:15:22: undefined: database.RedisRepository
+services/order_service.go:55:13: undefined: PaginationInfo
+services/wallet_cache_service_old.go:19:22: too many errors

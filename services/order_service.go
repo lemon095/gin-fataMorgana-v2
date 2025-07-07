@@ -16,6 +16,8 @@ type OrderService struct {
 	orderRepo       *database.OrderRepository
 	walletRepo      *database.WalletRepository
 	memberLevelRepo *database.MemberLevelRepository
+	// 使用并发安全的钱包服务
+	walletService *WalletService
 }
 
 // NewOrderService 创建订单服务实例
@@ -24,6 +26,7 @@ func NewOrderService() *OrderService {
 		orderRepo:       database.NewOrderRepository(),
 		walletRepo:      database.NewWalletRepository(),
 		memberLevelRepo: database.NewMemberLevelRepository(database.DB),
+		walletService:   NewWalletService(),
 	}
 }
 
@@ -55,6 +58,17 @@ type GetOrderListResponse struct {
 // GetOrderStatsResponse 获取订单统计响应
 type GetOrderStatsResponse struct {
 	Stats map[string]interface{} `json:"stats"`
+}
+
+// 分页信息结构体
+type PaginationInfo struct {
+	Page       int `json:"page"`
+	PageSize   int `json:"page_size"`
+	Total      int `json:"total"`
+	CurrentPage int `json:"current_page"`
+	TotalPages  int `json:"total_pages"`
+	HasNext     bool `json:"has_next"`
+	HasPrev     bool `json:"has_prev"`
 }
 
 // CreateOrder 创建订单
@@ -133,40 +147,25 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	// 设置期号
 	order.PeriodNumber = req.PeriodNumber
 
-	// 获取用户钱包
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, req.Uid)
+	// 使用并发安全的钱包服务扣减余额
+	err = s.walletService.WithdrawBalance(ctx, req.Uid, totalAmount, fmt.Sprintf("创建订单 %s", req.PeriodNumber))
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取扣减后的钱包信息用于创建交易记录
+	wallet, err := s.walletService.GetWallet(req.Uid)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包失败")
-	}
-
-	// 检查钱包状态
-	if !wallet.IsActive() {
-		return nil, utils.NewAppError(utils.CodeWalletFrozenOrder, "钱包已被冻结，无法创建订单")
-	}
-
-	// 检查余额是否足够
-	if wallet.Balance < totalAmount {
-		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, "余额不足")
-	}
-
-	// 记录交易前余额
-	balanceBefore := wallet.Balance
-
-	// 扣减余额
-	if err := wallet.Withdraw(totalAmount); err != nil {
-		return nil, utils.NewAppError(utils.CodeBalanceDeductFailed, "扣减余额失败")
-	}
-
-	// 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return nil, utils.NewAppError(utils.CodeWalletUpdateFailed, "更新钱包失败")
 	}
 
 	// 创建订单
 	if err := s.orderRepo.CreateOrder(ctx, order); err != nil {
 		// 如果创建订单失败，需要回滚扣减的余额
-		wallet.Recharge(totalAmount)
-		s.walletRepo.UpdateWallet(ctx, wallet)
+		if rollbackErr := s.walletService.AddBalance(ctx, req.Uid, totalAmount, "订单创建失败回滚"); rollbackErr != nil {
+			// 回滚失败，记录严重错误
+			fmt.Printf("订单创建失败且余额回滚失败: %v, 回滚错误: %v\n", err, rollbackErr)
+		}
 		return nil, utils.NewAppError(utils.CodeOrderCreateFailed, "创建订单失败")
 	}
 
@@ -176,7 +175,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		Uid:            req.Uid,
 		Type:           models.TransactionTypeOrderBuy,
 		Amount:         totalAmount, // 使用计算后的总价
-		BalanceBefore:  balanceBefore,
+		BalanceBefore:  wallet.Balance + totalAmount, // 计算扣减前的余额
 		BalanceAfter:   wallet.Balance,
 		Status:         models.TransactionStatusSuccess,
 		Description:    fmt.Sprintf("购买订单 %s", order.OrderNo),
@@ -187,6 +186,12 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
 		// 如果创建交易记录失败，记录日志但不影响订单创建
 		fmt.Printf("创建交易记录失败: %v\n", err)
+	}
+
+	// 缓存订单数据到Redis
+	if err := s.cacheOrderData(ctx, order); err != nil {
+		// 缓存失败不影响主流程，只记录日志
+		fmt.Printf("缓存订单数据失败: %v\n", err)
 	}
 
 	return &CreateOrderResponse{
@@ -270,7 +275,7 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 			Pagination: PaginationInfo{
 				CurrentPage: req.Page,
 				PageSize:    req.PageSize,
-				Total:       total,
+				Total:       int(total),
 				TotalPages:  totalPages,
 				HasNext:     hasNext,
 				HasPrev:     hasPrev,
@@ -300,7 +305,7 @@ func (s *OrderService) GetOrderList(req *models.GetOrderListRequest, uid string)
 		Pagination: PaginationInfo{
 			CurrentPage: req.Page,
 			PageSize:    req.PageSize,
-			Total:       total,
+			Total:       int(total),
 			TotalPages:  totalPages,
 			HasNext:     hasNext,
 			HasPrev:     hasPrev,
@@ -356,7 +361,7 @@ func (s *OrderService) getGroupBuyList(ctx context.Context, uid string, page, pa
 		Pagination: PaginationInfo{
 			CurrentPage: page,
 			PageSize:    pageSize,
-			Total:       total,
+			Total:       int(total),
 			TotalPages:  totalPages,
 			HasNext:     hasNext,
 			HasPrev:     hasPrev,
@@ -555,10 +560,19 @@ func (s *OrderService) GetAllOrderList(req *models.GetOrderListRequest) (*GetOrd
 		Pagination: PaginationInfo{
 			CurrentPage: req.Page,
 			PageSize:    req.PageSize,
-			Total:       total,
+			Total:       int(total),
 			TotalPages:  totalPages,
 			HasNext:     hasNext,
 			HasPrev:     hasPrev,
 		},
 	}, nil
+}
+
+// cacheOrderData 缓存订单数据到Redis
+func (s *OrderService) cacheOrderData(ctx context.Context, order *models.Order) error {
+	// 创建缓存服务实例
+	cacheService := NewOrderCacheService()
+	
+	// 缓存订单数据
+	return cacheService.CacheOrder(ctx, order)
 }

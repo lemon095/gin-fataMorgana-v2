@@ -3,524 +3,343 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
-	"time"
 )
 
-// WalletService 钱包服务
+// WalletService 统一的钱包服务（支持跨进程并发安全）
 type WalletService struct {
 	walletRepo *database.WalletRepository
-	userRepo   *database.UserRepository
+	// 缓存服务
+	cacheService *WalletCacheService
 }
 
-// NewWalletService 创建钱包服务实例
 func NewWalletService() *WalletService {
 	return &WalletService{
-		walletRepo: database.NewWalletRepository(),
-		userRepo:   database.NewUserRepository(),
+		walletRepo:   database.NewWalletRepository(),
+		cacheService: NewWalletCacheService(),
 	}
 }
 
-// GetUserTransactionsRequest 获取用户交易记录请求
-type GetUserTransactionsRequest struct {
-	Uid      string `json:"uid" binding:"required"`
-	Page     int    `json:"page" binding:"min=1"`
-	PageSize int    `json:"page_size" binding:"min=1"` // 每页大小，最小1
-	Type     string `json:"type"` // 交易类型过滤
+// 生成分布式锁的Key
+func (s *WalletService) generateLockKey(uid string) string {
+	return utils.RedisKeys.GenerateWalletLockKey(uid)
 }
 
-// GetUserTransactionsResponse 获取用户资金记录响应
-type GetUserTransactionsResponse struct {
-	Transactions []models.WalletTransactionResponse `json:"transactions"`
-	Pagination   PaginationInfo                     `json:"pagination"`
+// 生成锁的值（用于标识锁的持有者）
+func (s *WalletService) generateLockValue() string {
+	return fmt.Sprintf("%d_%s", time.Now().UnixNano(), utils.RandomString(8))
 }
 
-// PaginationInfo 分页信息
-type PaginationInfo struct {
-	CurrentPage int   `json:"current_page"`
-	PageSize    int   `json:"page_size"`
-	Total       int64 `json:"total"`
-	TotalPages  int   `json:"total_pages"`
-	HasNext     bool  `json:"has_next"`
-	HasPrev     bool  `json:"has_prev"`
-}
-
-// GetUserTransactions 获取用户资金记录
-func (s *WalletService) GetUserTransactions(req *GetUserTransactionsRequest) (*GetUserTransactionsResponse, error) {
-	ctx := context.Background()
-
-	// 设置默认分页参数
-	page := req.Page
-	pageSize := req.PageSize
-
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
-	// 限制page_size最大值，超出时设置为默认值20
-	if pageSize > 20 {
-		pageSize = 20
-	}
-
-	// 获取交易记录
-	var transactions []models.WalletTransaction
-	var total int64
-	var err error
-
-	if req.Type != "" {
-		// 如果指定了类型，使用类型过滤
-		transactions, total, err = s.walletRepo.GetTransactionsByType(ctx, req.Uid, req.Type, page, pageSize)
-	} else {
-		// 否则获取所有交易记录
-		transactions, total, err = s.walletRepo.GetUserTransactions(ctx, req.Uid, page, pageSize)
-	}
-
+// 尝试获取分布式锁
+func (s *WalletService) acquireLock(ctx context.Context, uid string, timeout time.Duration) (string, error) {
+	lockKey := s.generateLockKey(uid)
+	lockValue := s.generateLockValue()
+	
+	// 使用SET NX EX命令实现分布式锁
+	// NX: 只在key不存在时设置
+	// EX: 设置过期时间（秒）
+	success, err := database.GlobalRedisHelper.SetNX(ctx, lockKey, lockValue, timeout)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeUserFundRecordGetFailed, "获取用户资金记录失败")
+		return "", utils.NewAppError(utils.CodeRedisError, "获取分布式锁失败")
 	}
-
-	// 转换为响应格式
-	var transactionResponses []models.WalletTransactionResponse
-	for _, transaction := range transactions {
-		transactionResponses = append(transactionResponses, transaction.ToResponse())
+	
+	if !success {
+		return "", utils.NewAppError(utils.CodeSystemBusy, "系统繁忙，请稍后重试")
 	}
-
-	// 计算分页信息
-	totalPages := int((total + int64(pageSize) - 1) / int64(pageSize))
-	hasNext := page < totalPages
-	hasPrev := page > 1
-
-	pagination := PaginationInfo{
-		CurrentPage: page,
-		PageSize:    pageSize,
-		Total:       total,
-		TotalPages:  totalPages,
-		HasNext:     hasNext,
-		HasPrev:     hasPrev,
-	}
-
-	return &GetUserTransactionsResponse{
-		Transactions: transactionResponses,
-		Pagination:   pagination,
-	}, nil
+	
+	return lockValue, nil
 }
 
-// CreateWallet 创建钱包
-func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
-	ctx := context.Background()
-
-	// 检查钱包是否已存在
-	existingWallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
-	if err == nil && existingWallet != nil {
-		return existingWallet, nil // 钱包已存在，直接返回
-	}
-
-	// 检查用户是否存在且状态正常
-	user, err := s.userRepo.FindByUid(ctx, uid)
+// 释放分布式锁
+func (s *WalletService) releaseLock(ctx context.Context, uid, lockValue string) error {
+	lockKey := s.generateLockKey(uid)
+	
+	// 使用Lua脚本确保原子性释放锁
+	luaScript := `
+		if redis.call("get", KEYS[1]) == ARGV[1] then
+			return redis.call("del", KEYS[1])
+		else
+			return 0
+		end
+	`
+	
+	// 使用Redis助手的Lock/Unlock方法
+	// 注意：这里需要直接使用Redis客户端执行Lua脚本，因为需要原子性检查
+	result, err := database.RedisClient.Eval(ctx, luaScript, []string{lockKey}, []string{lockValue}).Result()
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
+		return utils.NewAppError(utils.CodeRedisError, "释放分布式锁失败")
 	}
-
-	// 检查用户状态
-	if user.Status == 0 { // 已禁用
-		return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
+	
+	// result为1表示成功释放，0表示锁不存在或不是当前持有者
+	if result == 0 {
+		return utils.NewAppError(utils.CodeSystemBusy, "锁已过期或被其他进程持有")
 	}
-
-	// 创建新钱包
-	wallet := &models.Wallet{
-		Uid:      uid,
-		Balance:  0.00,
-		Status:   1,
-		Currency: "PHP",
-	}
-
-	if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-		return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
-	}
-
-	return wallet, nil
+	
+	return nil
 }
 
-// GetWallet 获取钱包信息
-func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
-	ctx := context.Background()
+// 原子性余额操作（支持跨进程并发安全）
+func (s *WalletService) AtomicBalanceOperation(ctx context.Context, uid string, operation func(*models.Wallet) error) error {
+	if uid == "" {
+		return utils.NewAppError(utils.CodeInvalidParams, "用户ID不能为空")
+	}
 
+	// 1. 获取分布式锁（30秒超时）
+	lockValue, err := s.acquireLock(ctx, uid, 30*time.Second)
+	if err != nil {
+		return err
+	}
+	
+	// 2. 确保锁会被释放
+	defer func() {
+		if releaseErr := s.releaseLock(ctx, uid, lockValue); releaseErr != nil {
+			utils.LogWarn(nil, "释放分布式锁失败: %v", releaseErr)
+		}
+	}()
+
+	// 3. 从数据库获取最新钱包数据
 	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
-		user, err := s.userRepo.FindByUid(ctx, uid)
-		if err != nil {
-			return nil, utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
-		}
-
-		// 检查用户状态
-		if user.Status == 0 { // 已禁用
-			return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
-		}
-
-		// 自动创建钱包
-		wallet = &models.Wallet{
-			Uid:      uid,
-			Balance:  0.00,
-			Status:   1,
-			Currency: "PHP",
-		}
-
-		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-			return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
-		}
+		return utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包数据失败")
 	}
 
-	return wallet, nil
+	// 4. 记录操作前余额
+	balanceBefore := wallet.Balance
+
+	// 5. 执行余额操作
+	if err := operation(wallet); err != nil {
+		return err
+	}
+
+	// 6. 更新钱包
+	wallet.UpdatedAt = time.Now().UTC()
+	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
+		return utils.NewAppError(utils.CodeWalletUpdateFailed, "更新钱包失败")
+	}
+
+	// 7. 立即更新缓存
+	if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, uid, wallet.Balance); cacheErr != nil {
+		// 缓存更新失败不影响主流程，只记录日志
+		utils.LogWarn(nil, "更新钱包余额缓存失败: %v", cacheErr)
+	}
+
+	// 8. 记录操作日志
+	utils.LogInfo(nil, "钱包余额操作成功 - UID: %s, 操作前: %.2f, 操作后: %.2f", 
+		uid, balanceBefore, wallet.Balance)
+
+	return nil
 }
 
-// CreateTransaction 创建交易记录
-func (s *WalletService) CreateTransaction(transaction *models.WalletTransaction) error {
-	ctx := context.Background()
-
-	// 生成交易流水号
-	if transaction.TransactionNo == "" {
-		transaction.TransactionNo = s.generateTransactionNo()
+// 扣减余额（跨进程并发安全）
+func (s *WalletService) WithdrawBalance(ctx context.Context, uid string, amount float64, description string) error {
+	if amount <= 0 {
+		return utils.NewAppError(utils.CodeInvalidParams, "扣减金额必须大于0")
 	}
 
-	// 设置默认状态
-	if transaction.Status == "" {
-		transaction.Status = models.TransactionStatusSuccess
+	return s.AtomicBalanceOperation(ctx, uid, func(wallet *models.Wallet) error {
+		// 检查余额是否足够
+		if wallet.Balance < amount {
+			return utils.NewAppError(utils.CodeBalanceInsufficient, 
+				fmt.Sprintf("余额不足，当前余额: %.2f，扣减金额: %.2f", wallet.Balance, amount))
+		}
+
+		// 检查钱包状态
+		if !wallet.IsActive() {
+			return utils.NewAppError(utils.CodeWalletFrozenWithdraw, "钱包已被冻结，无法扣减余额")
+		}
+
+		// 扣减余额
+		return wallet.Withdraw(amount)
+	})
+}
+
+// 增加余额（跨进程并发安全）
+func (s *WalletService) AddBalance(ctx context.Context, uid string, amount float64, description string) error {
+	if amount <= 0 {
+		return utils.NewAppError(utils.CodeInvalidParams, "增加金额必须大于0")
 	}
 
-	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
-		return utils.NewAppError(utils.CodeTransactionCreateFailed, "创建交易记录失败")
+	return s.AtomicBalanceOperation(ctx, uid, func(wallet *models.Wallet) error {
+		// 检查钱包状态
+		if !wallet.IsActive() {
+			return utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法增加余额")
+		}
+
+		// 增加余额
+		wallet.Recharge(amount)
+		return nil
+	})
+}
+
+// 转账操作（跨进程并发安全）
+func (s *WalletService) TransferBalance(ctx context.Context, fromUid, toUid string, amount float64, description string) error {
+	if amount <= 0 {
+		return utils.NewAppError(utils.CodeInvalidParams, "转账金额必须大于0")
+	}
+
+	if fromUid == toUid {
+		return utils.NewAppError(utils.CodeInvalidParams, "不能向自己转账")
+	}
+
+	// 获取两个用户的分布式锁，按UID排序避免死锁
+	var firstLockValue, secondLockValue string
+	var firstUid, secondUid string
+
+	if fromUid < toUid {
+		firstUid = fromUid
+		secondUid = toUid
+	} else {
+		firstUid = toUid
+		secondUid = fromUid
+	}
+
+	// 1. 获取第一个锁
+	var err error
+	firstLockValue, err = s.acquireLock(ctx, firstUid, 30*time.Second)
+	if err != nil {
+		return err
+	}
+
+	// 2. 获取第二个锁
+	secondLockValue, err = s.acquireLock(ctx, secondUid, 30*time.Second)
+	if err != nil {
+		// 释放第一个锁
+		s.releaseLock(ctx, firstUid, firstLockValue)
+		return err
+	}
+
+	// 3. 确保锁会被释放
+	defer func() {
+		s.releaseLock(ctx, firstUid, firstLockValue)
+		s.releaseLock(ctx, secondUid, secondLockValue)
+	}()
+
+	// 4. 获取转出方钱包
+	fromWallet, err := s.walletRepo.FindWalletByUid(ctx, fromUid)
+	if err != nil {
+		return utils.NewAppError(utils.CodeWalletGetFailed, "获取转出方钱包失败")
+	}
+
+	// 5. 获取转入方钱包
+	toWallet, err := s.walletRepo.FindWalletByUid(ctx, toUid)
+	if err != nil {
+		return utils.NewAppError(utils.CodeWalletGetFailed, "获取转入方钱包失败")
+	}
+
+	// 6. 检查转出方余额
+	if fromWallet.Balance < amount {
+		return utils.NewAppError(utils.CodeBalanceInsufficient, 
+			fmt.Sprintf("转出方余额不足，当前余额: %.2f，转账金额: %.2f", fromWallet.Balance, amount))
+	}
+
+	// 7. 检查钱包状态
+	if !fromWallet.IsActive() {
+		return utils.NewAppError(utils.CodeWalletFrozenWithdraw, "转出方钱包已被冻结")
+	}
+	if !toWallet.IsActive() {
+		return utils.NewAppError(utils.CodeWalletFrozenRecharge, "转入方钱包已被冻结")
+	}
+
+	// 8. 执行转账
+	fromWallet.Withdraw(amount)
+	toWallet.Recharge(amount)
+
+	// 9. 更新钱包
+	fromWallet.UpdatedAt = time.Now().UTC()
+	toWallet.UpdatedAt = time.Now().UTC()
+
+	if err := s.walletRepo.UpdateWallet(ctx, fromWallet); err != nil {
+		return utils.NewAppError(utils.CodeWalletUpdateFailed, "更新转出方钱包失败")
+	}
+
+	if err := s.walletRepo.UpdateWallet(ctx, toWallet); err != nil {
+		return utils.NewAppError(utils.CodeWalletUpdateFailed, "更新转入方钱包失败")
+	}
+
+	// 10. 更新缓存
+	if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, fromUid, fromWallet.Balance); cacheErr != nil {
+		utils.LogWarn(nil, "更新转出方钱包缓存失败: %v", cacheErr)
+	}
+
+	if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, toUid, toWallet.Balance); cacheErr != nil {
+		utils.LogWarn(nil, "更新转入方钱包缓存失败: %v", cacheErr)
+	}
+
+	// 11. 记录操作日志
+	utils.LogInfo(nil, "转账操作成功 - 从: %s, 到: %s, 金额: %.2f", fromUid, toUid, amount)
+
+	return nil
+}
+
+// BalanceOperation 余额操作结构体
+type BalanceOperation struct {
+	UID    string  `json:"uid"`
+	Type   string  `json:"type"` // "withdraw" 或 "add"
+	Amount float64 `json:"amount"`
+}
+
+// 批量余额操作（跨进程并发安全）
+func (s *WalletService) BatchBalanceOperation(ctx context.Context, operations []BalanceOperation) error {
+	if len(operations) == 0 {
+		return nil
+	}
+
+	// 按用户分组操作
+	userOperations := make(map[string][]BalanceOperation)
+	for _, op := range operations {
+		userOperations[op.UID] = append(userOperations[op.UID], op)
+	}
+
+	// 为每个用户执行操作
+	for uid, ops := range userOperations {
+		if err := s.executeUserOperations(ctx, uid, ops); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-// generateTransactionNo 生成交易流水号
-func (s *WalletService) generateTransactionNo() string {
-	// 格式：TX + 年月日 + 时分秒 + 4位随机数
-	now := time.Now().UTC()
-	timestamp := now.Format("20060102150405")
-	random := utils.RandomString(4)
-	return fmt.Sprintf("TX%s%s", timestamp, random)
-}
-
-// Recharge 充值
-func (s *WalletService) Recharge(uid string, amount float64, description string) (string, error) {
-	ctx := context.Background()
-
-	// 获取钱包，如果不存在则自动创建
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
-	if err != nil {
-		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
-		user, err := s.userRepo.FindByUid(ctx, uid)
-		if err != nil {
-			return "", utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
-		}
-
-		// 检查用户状态
-		if user.Status == 0 { // 已禁用
-			return "", utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
-		}
-
-		// 自动创建钱包
-		wallet = &models.Wallet{
-			Uid:      uid,
-			Balance:  0.00,
-			Status:   1,
-			Currency: "PHP",
-		}
-
-		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-			return "", utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
-		}
-	}
-
-	// 检查钱包状态
-	if wallet.Status == 0 { // 已冻结
-		return "", utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法充值")
-	}
-
-	// 检查充值金额是否合理
-	if amount <= 0 {
-		return "", utils.NewAppError(utils.CodeRechargeAmountInvalid, "充值金额必须大于0")
-	}
-
-
-	// 记录交易前余额
-	balanceBefore := wallet.Balance
-
-	// 生成交易流水号
-	transactionNo := s.generateTransactionNo()
-
-	// 创建充值交易记录（不增加余额）
-	transaction := &models.WalletTransaction{
-		TransactionNo: transactionNo,
-		Uid:           uid,
-		Type:          models.TransactionTypeRecharge,
-		Amount:        amount,
-		BalanceBefore: balanceBefore,
-		BalanceAfter:  balanceBefore,                   // 余额不变
-		Status:        models.TransactionStatusPending, // 设置为待处理状态
-		Description:   description,
-		OperatorUid:   "", // 申请时为空，后台处理时由管理员设置
-	}
-
-	// 创建交易记录
-	if err := s.CreateTransaction(transaction); err != nil {
-		return "", utils.NewAppError(utils.CodeTransactionCreateFailed, "创建充值申请失败")
-	}
-
-	return transactionNo, nil
-}
-
-// WithdrawRequest 提现申请请求
-type WithdrawRequest struct {
-	Amount   float64 `json:"amount" binding:"required,gt=0"` // 提现金额
-	Password string  `json:"password" binding:"required"`    // 登录密码
-}
-
-// WithdrawResponse 提现申请响应
-type WithdrawResponse struct {
-	TransactionNo string  `json:"transaction_no"`
-	Amount        float64 `json:"amount"`
-	Status        string  `json:"status"`
-	Message       string  `json:"message"`
-}
-
-// RequestWithdraw 申请提现（锁定金额）
-func (s *WalletService) RequestWithdraw(req *WithdrawRequest, uid string) (*WithdrawResponse, error) {
-	ctx := context.Background()
-
-	// 获取用户信息
-	user, err := s.userRepo.FindByUid(ctx, uid)
-	if err != nil {
-		return nil, utils.NewAppError(utils.CodeUserInfoGetFailed, "获取用户信息失败")
-	}
-
-	// 检查用户状态
-	if user.Status == 0 { // 已禁用
-		return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法提现")
-	}
-
-	// 验证登录密码
-	if !user.CheckPassword(req.Password) {
-		return nil, utils.NewAppError(utils.CodeWithdrawPasswordWrong, "登录密码错误")
-	}
-
-	// 检查是否绑定银行卡
-	if user.BankCardInfo == "" {
-		return nil, utils.NewAppError(utils.CodeBankCardNotBound, "请先绑定银行卡后再进行提现操作")
-	}
-
-	// 获取钱包，如果不存在则自动创建
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
-	if err != nil {
-		// 钱包不存在，检查用户是否存在且状态正常，然后自动创建
-		user, err := s.userRepo.FindByUid(ctx, uid)
-		if err != nil {
-			return nil, utils.NewAppError(utils.CodeUserNotExists, "用户不存在")
-		}
-
-		// 检查用户状态
-		if user.Status == 0 { // 已禁用
-			return nil, utils.NewAppError(utils.CodeUserDisabledCreateWallet, "用户账户已被禁用，无法创建钱包")
-		}
-
-		// 自动创建钱包
-		wallet = &models.Wallet{
-			Uid:      uid,
-			Balance:  0.00,
-			Status:   1,
-			Currency: "PHP",
-		}
-
-		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-			return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
-		}
-	}
-
-	// 检查钱包状态
-	if wallet.Status == 0 { // 已冻结
-		return nil, utils.NewAppError(utils.CodeWalletFrozenWithdraw, "钱包已被冻结，无法提现")
-	}
-
-	// 检查提现金额是否合理
-	if req.Amount <= 0 {
-		return nil, utils.NewAppError(utils.CodeWithdrawAmountInvalid, "提现金额必须大于0")
-	}
-
-	// 检查总余额是否足够
-	if wallet.Balance < req.Amount {
-		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, "余额不足，当前余额: "+fmt.Sprintf("%.2f", wallet.Balance)+"元，申请提现: "+fmt.Sprintf("%.2f", req.Amount)+"元")
-	}
-
-	// 单笔提现限额已移除，不再限制
-
-	// 每日提现限额已移除，不再限制
-
-	// 记录交易前余额
-	balanceBefore := wallet.Balance
-
-	// 直接扣减余额
-	if err := wallet.Withdraw(req.Amount); err != nil {
-		return nil, utils.NewAppError(utils.CodeBalanceDeductFailed, "扣减余额失败")
-	}
-
-	// 更新钱包
-	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
-		return nil, utils.NewAppError(utils.CodeWalletUpdateFailed, "更新钱包失败")
-	}
-
-	// 生成交易流水号
-	transactionNo := s.generateTransactionNo()
-
-	// 获取用户银行卡信息用于备注
-	bankCardInfo := ""
-	if user.BankCardInfo != "" {
-		var bankCard models.BankCardInfo
-		if err := utils.JSONToStruct(user.BankCardInfo, &bankCard); err == nil {
-			bankCardInfo = fmt.Sprintf("%s-%s", bankCard.BankName, utils.MaskBankCard(bankCard.CardNumber))
-		}
-	}
-
-	// 创建提现交易记录
-	transaction := &models.WalletTransaction{
-		TransactionNo: transactionNo,
-		Uid:           uid,
-		Type:          models.TransactionTypeWithdraw,
-		Amount:        req.Amount,
-		BalanceBefore: balanceBefore,
-		BalanceAfter:  wallet.Balance,
-		Status:        models.TransactionStatusPending, // 设置为待处理状态
-		Description:   "提现",                            // 服务端写死
-		Remark:        bankCardInfo,                    // 将银行卡信息存储到备注字段
-		OperatorUid:   "",                              // 申请时为空，后台处理时由管理员设置
-	}
-
-	// 创建交易记录
-	if err := s.CreateTransaction(transaction); err != nil {
-		// 如果创建交易记录失败，需要回滚扣减的余额
-		wallet.Recharge(req.Amount)
-		s.walletRepo.UpdateWallet(ctx, wallet)
-		return nil, utils.NewAppError(utils.CodeWithdrawCreateFailed, "创建提现申请失败")
-	}
-
-	return &WithdrawResponse{
-		TransactionNo: transactionNo,
-		Amount:        req.Amount,
-		Status:        models.TransactionStatusPending,
-		Message:       "提现申请已提交，等待处理",
-	}, nil
-}
-
-// hasValidBankCard 检查用户是否绑定了有效的银行卡
-func (s *WalletService) hasValidBankCard(user *models.User) bool {
-	// 检查银行卡信息是否为空
-	if user.BankCardInfo == "" || user.BankCardInfo == "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}" {
-		return false
-	}
-
-	// 解析银行卡信息
-	var bankCardInfo models.BankCardInfo
-	if err := utils.JSONToStruct(user.BankCardInfo, &bankCardInfo); err != nil {
-		return false
-	}
-
-	// 检查银行卡信息是否完整
-	if bankCardInfo.CardNumber == "" ||
-		bankCardInfo.CardHolder == "" ||
-		bankCardInfo.BankName == "" ||
-		bankCardInfo.CardType == "" {
-		return false
-	}
-
-	return true
-}
-
-// checkDailyWithdrawLimit 检查每日提现限额（已移除）
-// 此方法已不再使用，每日提现限额已被移除
-
-// GetWithdrawSummary 获取提现汇总信息
-func (s *WalletService) GetWithdrawSummary(uid string) (map[string]interface{}, error) {
-	ctx := context.Background()
-
-	// 获取钱包信息
-	wallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
-	if err != nil {
-		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包失败")
-	}
-
-	// 获取今日提现申请
-	today := time.Now().UTC().Format("2006-01-02")
-	todayTransactions, _, err := s.walletRepo.GetTransactionsByDateRange(ctx, uid, today, today, 1, 1000)
-	if err != nil {
-		return nil, utils.NewAppError(utils.CodeTodayWithdrawQueryFailed, "查询今日提现记录失败")
-	}
-
-	// 计算今日提现统计
-	var todayPendingTotal float64
-	var todaySuccessTotal float64
-	var todayCancelledTotal float64
-	var pendingCount int
-	var successCount int
-	var cancelledCount int
-
-	for _, tx := range todayTransactions {
-		if tx.Type == models.TransactionTypeWithdraw {
-			switch tx.Status {
-			case models.TransactionStatusPending:
-				todayPendingTotal += tx.Amount
-				pendingCount++
-			case models.TransactionStatusSuccess:
-				todaySuccessTotal += tx.Amount
-				successCount++
-			case models.TransactionStatusCancelled:
-				todayCancelledTotal += tx.Amount
-				cancelledCount++
+// 执行单个用户的操作
+func (s *WalletService) executeUserOperations(ctx context.Context, uid string, operations []BalanceOperation) error {
+	return s.AtomicBalanceOperation(ctx, uid, func(wallet *models.Wallet) error {
+		for _, op := range operations {
+			switch op.Type {
+			case "withdraw":
+				if wallet.Balance < op.Amount {
+					return utils.NewAppError(utils.CodeBalanceInsufficient, 
+						fmt.Sprintf("余额不足，当前余额: %.2f，扣减金额: %.2f", wallet.Balance, op.Amount))
+				}
+				if err := wallet.Withdraw(op.Amount); err != nil {
+					return err
+				}
+			case "add":
+				wallet.Recharge(op.Amount)
+			default:
+				return utils.NewAppError(utils.CodeInvalidParams, "不支持的操作类型")
 			}
 		}
-	}
+		return nil
+	})
+}
 
-	// 获取所有待处理的提现申请
-	pendingTransactions, _, err := s.walletRepo.GetTransactionsByType(ctx, uid, models.TransactionTypeWithdraw, 1, 1000)
-	if err != nil {
-		return nil, utils.NewAppError(utils.CodePendingWithdrawQueryFailed, "查询待处理提现记录失败")
-	}
+// 提现请求结构体
+type WithdrawRequest struct {
+	Uid         string  `json:"uid" binding:"required"`
+	Amount      float64 `json:"amount" binding:"required,gt=0"`
+	Description string  `json:"description"`
+}
 
-	// 计算待处理提现统计
-	var totalPendingAmount float64
-	for _, tx := range pendingTransactions {
-		if tx.Status == models.TransactionStatusPending {
-			totalPendingAmount += tx.Amount
-		}
-	}
-
-	return map[string]interface{}{
-		"wallet_info": map[string]interface{}{
-			"total_balance":     wallet.Balance,
-			"available_balance": wallet.GetAvailableBalance(),
-		},
-		"today_withdraw": map[string]interface{}{
-			"pending_total":   todayPendingTotal,
-			"success_total":   todaySuccessTotal,
-			"cancelled_total": todayCancelledTotal,
-			"pending_count":   pendingCount,
-			"success_count":   successCount,
-			"cancelled_count": cancelledCount,
-		},
-		"total_pending": map[string]interface{}{
-			"amount": totalPendingAmount,
-			"count":  len(pendingTransactions),
-		},
-		"limits": map[string]interface{}{
-			// 所有限额已移除
-		},
-	}, nil
+// GetUserTransactionsRequest 获取用户交易记录请求
+type GetUserTransactionsRequest struct {
+	Uid      string `json:"uid" binding:"required"`
+	Page     int    `json:"page" binding:"required,min=1"`
+	PageSize int    `json:"page_size" binding:"required,min=1,max=100"`
+	Type     string `json:"type"` // 可选，交易类型过滤
 }
 
 // GetTransactionDetailRequest 获取交易详情请求
@@ -528,18 +347,196 @@ type GetTransactionDetailRequest struct {
 	TransactionNo string `json:"transaction_no" binding:"required"`
 }
 
-// GetTransactionDetail 获取交易详情
-func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (*models.WalletTransactionResponse, error) {
+// GetUserTransactions 获取用户交易记录
+func (s *WalletService) GetUserTransactions(req *GetUserTransactionsRequest) (*models.GetTransactionsResponse, error) {
 	ctx := context.Background()
-
+	
 	// 获取交易记录
+	transactions, total, err := s.walletRepo.GetTransactionsByUid(ctx, req.Uid, req.Page, req.PageSize, req.Type)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取交易记录失败")
+	}
+
+	// 构建响应
+	response := &models.GetTransactionsResponse{
+		Transactions: transactions,
+		Total:        total,
+		Page:         req.Page,
+		PageSize:     req.PageSize,
+	}
+
+	return response, nil
+}
+
+// GetWallet 获取钱包信息
+func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
+	ctx := context.Background()
+	
+	// 先从缓存获取
+	wallet, err := s.cacheService.GetWalletBalanceWithCache(ctx, uid)
+	if err == nil && wallet != nil {
+		return wallet, nil
+	}
+
+	// 缓存未命中，从数据库获取
+	wallet, err = s.walletRepo.FindWalletByUid(ctx, uid)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包信息失败")
+	}
+
+	// 更新缓存
+	if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, uid, wallet.Balance); cacheErr != nil {
+		utils.LogWarn(nil, "更新钱包余额缓存失败: %v", cacheErr)
+	}
+
+	return wallet, nil
+}
+
+// CreateWallet 创建钱包
+func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
+	ctx := context.Background()
+	
+	// 检查钱包是否已存在
+	existingWallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
+	if err == nil && existingWallet != nil {
+		return existingWallet, nil // 钱包已存在，直接返回
+	}
+
+	// 创建新钱包
+	wallet := &models.Wallet{
+		Uid:       uid,
+		Balance:   0,
+		Status:    1, // 1表示正常状态
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
+		return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
+	}
+
+	// 更新缓存
+	if cacheErr := s.cacheService.UpdateWalletBalanceOnEvent(ctx, uid, wallet.Balance); cacheErr != nil {
+		utils.LogWarn(nil, "更新钱包余额缓存失败: %v", cacheErr)
+	}
+
+	return wallet, nil
+}
+
+// Recharge 充值申请
+func (s *WalletService) Recharge(uid string, amount float64, description string) (string, error) {
+	ctx := context.Background()
+	
+	// 生成交易号
+	transactionNo := utils.GenerateTransactionNo("RECHARGE")
+	
+	// 创建充值交易记录
+	transaction := &models.WalletTransaction{
+		TransactionNo: transactionNo,
+		Uid:           uid,
+		Type:          models.TransactionTypeRecharge,
+		Amount:        amount,
+		BalanceBefore: 0, // 充值时余额为0，实际余额在审核通过后更新
+		BalanceAfter:  0, // 充值时余额为0，实际余额在审核通过后更新
+		Description:   description,
+		Status:        models.TransactionStatusPending,
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+	}
+
+	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
+		return "", utils.NewAppError(utils.CodeTransactionCreateFailed, "创建充值申请失败")
+	}
+
+	return transactionNo, nil
+}
+
+// RequestWithdraw 申请提现
+func (s *WalletService) RequestWithdraw(req *WithdrawRequest, userUid string) (*models.WithdrawResponse, error) {
+	ctx := context.Background()
+	
+	// 验证用户权限
+	if req.Uid != userUid {
+		return nil, utils.NewAppError(utils.CodeForbidden, "只能操作自己的钱包")
+	}
+
+	// 检查余额是否足够
+	wallet, err := s.GetWallet(req.Uid)
+	if err != nil {
+		return nil, err
+	}
+
+	if wallet.Balance < req.Amount {
+		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, 
+			fmt.Sprintf("余额不足，当前余额: %.2f，提现金额: %.2f", wallet.Balance, req.Amount))
+	}
+
+	// 生成交易号
+	transactionNo := utils.GenerateTransactionNo("WITHDRAW")
+	
+	// 创建提现交易记录
+	transaction := &models.WalletTransaction{
+		TransactionNo: transactionNo,
+		Uid:           req.Uid,
+		Type:          models.TransactionTypeWithdraw,
+		Amount:        req.Amount,
+		BalanceBefore: wallet.Balance,
+		BalanceAfter:  wallet.Balance, // 提现申请时余额不变，审核通过后才会扣减
+		Description:   req.Description,
+		Status:        models.TransactionStatusPending,
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+	}
+
+	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
+		return nil, utils.NewAppError(utils.CodeTransactionCreateFailed, "创建提现申请失败")
+	}
+
+	response := &models.WithdrawResponse{
+		TransactionNo: transactionNo,
+		Amount:        req.Amount,
+		Balance:       wallet.Balance,
+		Status:        models.TransactionStatusPending,
+	}
+
+	return response, nil
+}
+
+// GetWithdrawSummary 获取提现汇总信息
+func (s *WalletService) GetWithdrawSummary(uid string) (*models.WithdrawSummary, error) {
+	ctx := context.Background()
+	
+	// 获取提现汇总数据
+	summary, err := s.walletRepo.GetWithdrawSummary(ctx, uid)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取提现汇总失败")
+	}
+
+	return summary, nil
+}
+
+// GetTransactionDetail 获取交易详情
+func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (*models.TransactionDetail, error) {
+	ctx := context.Background()
+	
+	// 获取交易详情
 	transaction, err := s.walletRepo.GetTransactionByNo(ctx, req.TransactionNo)
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodeTransactionDetailGetFailed, "获取交易详情失败")
 	}
 
-	// 转换为响应格式
-	response := transaction.ToResponse()
+	// 构建响应
+	detail := &models.TransactionDetail{
+		TransactionNo: transaction.TransactionNo,
+		Uid:           transaction.Uid,
+		Type:          transaction.Type,
+		Amount:        transaction.Amount,
+		Balance:       transaction.BalanceAfter, // 使用交易后余额
+		Description:   transaction.Description,
+		Status:        transaction.Status,
+		CreatedAt:     transaction.CreatedAt,
+		UpdatedAt:     transaction.UpdatedAt,
+	}
 
-	return &response, nil
-}
+	return detail, nil
+} 
