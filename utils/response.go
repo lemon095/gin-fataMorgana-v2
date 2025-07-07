@@ -128,6 +128,7 @@ const (
 	// 中间件错误码
 	CodeRateLimitExceeded       = 8001 // 请求过于频繁，请稍后再试
 	CodeSystemBusy              = 8002 // 系统繁忙，请稍后再试
+	CodeRequestTimeout          = 8004 // 请求超时
 	CodeRegisterNotAllowed      = 8003 // 当前系统不允许注册
 
 	// 服务层错误码
@@ -290,6 +291,7 @@ var ResponseMessage = map[int]string{
 	// 中间件错误消息
 	CodeRateLimitExceeded:       "请求过于频繁，请稍后再试",
 	CodeSystemBusy:              "系统繁忙，请稍后再试",
+	CodeRequestTimeout:          "请求超时",
 	CodeRegisterNotAllowed:      "当前系统不允许注册",
 
 	// 服务层错误消息

@@ -174,6 +174,56 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 	utils.SuccessWithMessage(c, "充值申请已提交", gin.H{"transaction_no": transactionNo})
 }
 
+// AddProfit 添加利润
+func (wc *WalletController) AddProfit(c *gin.Context) {
+	var req struct {
+		Uid         string  `json:"uid" binding:"required"`
+		Amount      float64 `json:"amount" binding:"required,gt=0"`
+		Description string  `json:"description"`
+		OrderNo     string  `json:"order_no"` // 关联订单号（可选）
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.HandleValidationError(c, err)
+		return
+	}
+
+	// 获取当前用户ID
+	userID := middleware.GetCurrentUser(c)
+	if userID == 0 {
+		utils.Unauthorized(c)
+		return
+	}
+
+	// 根据user_id查询uid，确保只能操作自己的钱包
+	userRepo := database.NewUserRepository()
+	var user models.User
+	err := userRepo.FindByID(context.Background(), userID, &user)
+	if err != nil {
+		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
+		return
+	}
+
+	// 校验uid是否与当前登录用户匹配
+	if req.Uid != user.Uid {
+		utils.ErrorWithMessage(c, utils.CodeForbidden, "只能操作自己的钱包")
+		return
+	}
+
+	transactionNo, err := wc.walletService.CreateProfitTransaction(context.Background(), req.Uid, req.Amount, req.Description, req.OrderNo)
+	if err != nil {
+		// 检查是否是AppError类型
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
+		} else {
+			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+		}
+		return
+	}
+
+	utils.SuccessWithMessage(c, "利润添加成功", gin.H{"transaction_no": transactionNo})
+}
+
 // RequestWithdraw 申请提现
 func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 	var req services.WithdrawRequest

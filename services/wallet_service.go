@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"gin-fataMorgana/database"
@@ -34,7 +35,7 @@ func (s *WalletService) generateLockValue() string {
 	return fmt.Sprintf("%d_%s", time.Now().UnixNano(), utils.RandomString(8))
 }
 
-// 尝试获取分布式锁
+// 尝试获取分布式锁（支持等待和重试）
 func (s *WalletService) acquireLock(ctx context.Context, uid string, timeout time.Duration) (string, error) {
 	lockKey := s.generateLockKey(uid)
 	lockValue := s.generateLockValue()
@@ -52,6 +53,40 @@ func (s *WalletService) acquireLock(ctx context.Context, uid string, timeout tim
 	}
 	
 	return lockValue, nil
+}
+
+// 尝试获取分布式锁（支持等待和重试）
+func (s *WalletService) acquireLockWithRetry(ctx context.Context, uid string, timeout time.Duration, maxRetries int, retryDelay time.Duration) (string, error) {
+	lockKey := s.generateLockKey(uid)
+	lockValue := s.generateLockValue()
+	
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// 使用SET NX EX命令实现分布式锁
+		success, err := database.GlobalRedisHelper.SetNX(ctx, lockKey, lockValue, timeout)
+		if err != nil {
+			return "", utils.NewAppError(utils.CodeRedisError, "获取分布式锁失败")
+		}
+		
+		if success {
+			return lockValue, nil
+		}
+		
+		// 如果不是最后一次尝试，则等待后重试
+		if attempt < maxRetries {
+			// 检查上下文是否已取消
+			select {
+			case <-ctx.Done():
+				return "", utils.NewAppError(utils.CodeRequestTimeout, "请求超时")
+			case <-time.After(retryDelay):
+				// 继续重试
+			}
+			
+			// 指数退避：每次重试延迟时间递增
+			retryDelay = time.Duration(float64(retryDelay) * 1.5)
+		}
+	}
+	
+	return "", utils.NewAppError(utils.CodeSystemBusy, "系统繁忙，请稍后重试")
 }
 
 // 释放分布式锁
@@ -82,14 +117,19 @@ func (s *WalletService) releaseLock(ctx context.Context, uid, lockValue string) 
 	return nil
 }
 
-// 原子性余额操作（支持跨进程并发安全）
+// 原子性余额操作（支持跨进程并发安全，带重试机制）
 func (s *WalletService) AtomicBalanceOperation(ctx context.Context, uid string, operation func(*models.Wallet) error) error {
+	return s.AtomicBalanceOperationWithRetry(ctx, uid, operation, 3, 100*time.Millisecond)
+}
+
+// 原子性余额操作（支持跨进程并发安全，可配置重试）
+func (s *WalletService) AtomicBalanceOperationWithRetry(ctx context.Context, uid string, operation func(*models.Wallet) error, maxRetries int, retryDelay time.Duration) error {
 	if uid == "" {
 		return utils.NewAppError(utils.CodeInvalidParams, "用户ID不能为空")
 	}
 
-	// 1. 获取分布式锁（30秒超时）
-	lockValue, err := s.acquireLock(ctx, uid, 30*time.Second)
+	// 1. 获取分布式锁（支持重试）
+	lockValue, err := s.acquireLockWithRetry(ctx, uid, 30*time.Second, maxRetries, retryDelay)
 	if err != nil {
 		return err
 	}
@@ -294,9 +334,26 @@ func (s *WalletService) BatchBalanceOperation(ctx context.Context, operations []
 		userOperations[op.UID] = append(userOperations[op.UID], op)
 	}
 
-	// 为每个用户执行操作
+	// 并发处理不同用户的操作
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(userOperations))
+
 	for uid, ops := range userOperations {
-		if err := s.executeUserOperations(ctx, uid, ops); err != nil {
+		wg.Add(1)
+		go func(userUid string, userOps []BalanceOperation) {
+			defer wg.Done()
+			if err := s.executeUserOperations(ctx, userUid, userOps); err != nil {
+				errChan <- err
+			}
+		}(uid, ops)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// 检查是否有错误
+	for err := range errChan {
+		if err != nil {
 			return err
 		}
 	}
@@ -304,9 +361,9 @@ func (s *WalletService) BatchBalanceOperation(ctx context.Context, operations []
 	return nil
 }
 
-// 执行单个用户的操作
+// 执行单个用户的批量操作
 func (s *WalletService) executeUserOperations(ctx context.Context, uid string, operations []BalanceOperation) error {
-	return s.AtomicBalanceOperation(ctx, uid, func(wallet *models.Wallet) error {
+	return s.AtomicBalanceOperationWithRetry(ctx, uid, func(wallet *models.Wallet) error {
 		for _, op := range operations {
 			switch op.Type {
 			case "withdraw":
@@ -314,17 +371,148 @@ func (s *WalletService) executeUserOperations(ctx context.Context, uid string, o
 					return utils.NewAppError(utils.CodeBalanceInsufficient, 
 						fmt.Sprintf("余额不足，当前余额: %.2f，扣减金额: %.2f", wallet.Balance, op.Amount))
 				}
-				if err := wallet.Withdraw(op.Amount); err != nil {
-					return err
+				if !wallet.IsActive() {
+					return utils.NewAppError(utils.CodeWalletFrozenWithdraw, "钱包已被冻结，无法扣减余额")
 				}
+				wallet.Withdraw(op.Amount)
 			case "add":
+				if !wallet.IsActive() {
+					return utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法增加余额")
+				}
 				wallet.Recharge(op.Amount)
 			default:
-				return utils.NewAppError(utils.CodeInvalidParams, "不支持的操作类型")
+				return utils.NewAppError(utils.CodeInvalidParams, "无效的操作类型")
 			}
 		}
 		return nil
+	}, 5, 200*time.Millisecond) // 批量操作使用更多重试次数和更长延迟
+}
+
+// 批量发奖优化方法（专门用于批量发奖场景）
+func (s *WalletService) BatchAddBalanceForRewards(ctx context.Context, rewards []struct {
+	UID     string  `json:"uid"`
+	Amount  float64 `json:"amount"`
+	Desc    string  `json:"description"`
+}) error {
+	if len(rewards) == 0 {
+		return nil
+	}
+
+	// 按用户分组奖励
+	userRewards := make(map[string][]struct {
+		UID     string  `json:"uid"`
+		Amount  float64 `json:"amount"`
+		Desc    string  `json:"description"`
 	})
+	
+	for _, reward := range rewards {
+		userRewards[reward.UID] = append(userRewards[reward.UID], reward)
+	}
+
+	// 并发处理不同用户的奖励
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(userRewards))
+
+	for uid, userRewardList := range userRewards {
+		wg.Add(1)
+		go func(userUid string, rewardList []struct {
+			UID     string  `json:"uid"`
+			Amount  float64 `json:"amount"`
+			Desc    string  `json:"description"`
+		}) {
+			defer wg.Done()
+			if err := s.executeUserRewards(ctx, userUid, rewardList); err != nil {
+				errChan <- err
+			}
+		}(uid, userRewardList)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	// 检查是否有错误
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// 执行单个用户的批量奖励
+func (s *WalletService) executeUserRewards(ctx context.Context, uid string, rewards []struct {
+	UID     string  `json:"uid"`
+	Amount  float64 `json:"amount"`
+	Desc    string  `json:"description"`
+}) error {
+	return s.AtomicBalanceOperationWithRetry(ctx, uid, func(wallet *models.Wallet) error {
+		// 检查钱包状态
+		if !wallet.IsActive() {
+			return utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法添加奖励")
+		}
+
+		// 批量增加余额
+		totalAmount := 0.0
+		for _, reward := range rewards {
+			if reward.Amount <= 0 {
+				return utils.NewAppError(utils.CodeInvalidParams, "奖励金额必须大于0")
+			}
+			totalAmount += reward.Amount
+		}
+
+		// 一次性增加总金额
+		wallet.Recharge(totalAmount)
+		return nil
+	}, 10, 500*time.Millisecond) // 批量发奖使用更多重试次数和更长延迟
+}
+
+// 获取锁状态信息（用于监控和调试）
+func (s *WalletService) GetLockStatus(ctx context.Context, uid string) (map[string]interface{}, error) {
+	lockKey := s.generateLockKey(uid)
+	
+	// 检查锁是否存在
+	exists, err := database.GlobalRedisHelper.Exists(ctx, lockKey)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeRedisError, "检查锁状态失败")
+	}
+
+	status := map[string]interface{}{
+		"uid":           uid,
+		"lock_key":      lockKey,
+		"lock_exists":   exists > 0,
+		"timestamp":     time.Now().Unix(),
+	}
+
+	if exists > 0 {
+		// 获取锁的剩余过期时间
+		ttl, err := database.GlobalRedisHelper.TTL(ctx, lockKey)
+		if err == nil {
+			status["ttl_seconds"] = ttl.Seconds()
+		}
+		
+		// 获取锁的值（持有者标识）
+		lockValue, err := database.GlobalRedisHelper.Get(ctx, lockKey)
+		if err == nil {
+			status["lock_value"] = lockValue
+		}
+	}
+
+	return status, nil
+}
+
+// 强制释放锁（仅用于紧急情况）
+func (s *WalletService) ForceReleaseLock(ctx context.Context, uid string) error {
+	lockKey := s.generateLockKey(uid)
+	
+	// 直接删除锁
+	err := database.GlobalRedisHelper.Del(ctx, lockKey)
+	if err != nil {
+		return utils.NewAppError(utils.CodeRedisError, "强制释放锁失败")
+	}
+
+	utils.LogWarn(nil, "强制释放钱包锁 - UID: %s", uid)
+	return nil
 }
 
 // 提现请求结构体
@@ -350,7 +538,7 @@ type GetTransactionDetailRequest struct {
 // GetUserTransactions 获取用户交易记录
 func (s *WalletService) GetUserTransactions(req *GetUserTransactionsRequest) (*models.GetTransactionsResponse, error) {
 	ctx := context.Background()
-	
+
 	// 获取交易记录
 	transactions, total, err := s.walletRepo.GetTransactionsByUid(ctx, req.Uid, req.Page, req.PageSize, req.Type)
 	if err != nil {
@@ -395,7 +583,7 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 // CreateWallet 创建钱包
 func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 	ctx := context.Background()
-	
+
 	// 检查钱包是否已存在
 	existingWallet, err := s.walletRepo.FindWalletByUid(ctx, uid)
 	if err == nil && existingWallet != nil {
@@ -426,7 +614,7 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 // Recharge 充值申请
 func (s *WalletService) Recharge(uid string, amount float64, description string) (string, error) {
 	ctx := context.Background()
-	
+
 	// 生成交易号
 	transactionNo := utils.GenerateTransactionNo("RECHARGE")
 	
@@ -446,6 +634,62 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
 		return "", utils.NewAppError(utils.CodeTransactionCreateFailed, "创建充值申请失败")
+	}
+
+	return transactionNo, nil
+}
+
+// AddProfit 添加利润
+func (s *WalletService) AddProfit(ctx context.Context, uid string, amount float64, description string) error {
+	if amount <= 0 {
+		return utils.NewAppError(utils.CodeInvalidParams, "利润金额必须大于0")
+	}
+
+	return s.AtomicBalanceOperation(ctx, uid, func(wallet *models.Wallet) error {
+		// 检查钱包状态
+		if !wallet.IsActive() {
+			return utils.NewAppError(utils.CodeWalletFrozenRecharge, "钱包已被冻结，无法添加利润")
+		}
+
+		// 增加余额（利润）
+		wallet.Recharge(amount)
+		return nil
+	})
+}
+
+// CreateProfitTransaction 创建利润交易记录
+func (s *WalletService) CreateProfitTransaction(ctx context.Context, uid string, amount float64, description string, relatedOrderNo string) (string, error) {
+	// 生成交易号
+	transactionNo := utils.GenerateTransactionNo("PROFIT")
+	
+	// 获取当前钱包余额
+	wallet, err := s.GetWallet(uid)
+	if err != nil {
+		return "", utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包信息失败")
+	}
+	
+	// 创建利润交易记录
+	transaction := &models.WalletTransaction{
+		TransactionNo:  transactionNo,
+		Uid:            uid,
+		Type:           models.TransactionTypeProfit,
+		Amount:         amount,
+		BalanceBefore:  wallet.Balance,
+		BalanceAfter:   wallet.Balance + amount,
+		Description:    description,
+		RelatedOrderNo: relatedOrderNo,
+		Status:         models.TransactionStatusSuccess, // 利润直接成功
+		CreatedAt:      time.Now().UTC(),
+		UpdatedAt:      time.Now().UTC(),
+	}
+
+	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
+		return "", utils.NewAppError(utils.CodeTransactionCreateFailed, "创建利润交易记录失败")
+	}
+
+	// 更新钱包余额
+	if err := s.AddProfit(ctx, uid, amount, description); err != nil {
+		return "", err
 	}
 
 	return transactionNo, nil
@@ -473,7 +717,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, userUid string) (*
 
 	// 生成交易号
 	transactionNo := utils.GenerateTransactionNo("WITHDRAW")
-	
+
 	// 创建提现交易记录
 	transaction := &models.WalletTransaction{
 		TransactionNo: transactionNo,
@@ -505,7 +749,7 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, userUid string) (*
 // GetWithdrawSummary 获取提现汇总信息
 func (s *WalletService) GetWithdrawSummary(uid string) (*models.WithdrawSummary, error) {
 	ctx := context.Background()
-	
+
 	// 获取提现汇总数据
 	summary, err := s.walletRepo.GetWithdrawSummary(ctx, uid)
 	if err != nil {
@@ -518,7 +762,7 @@ func (s *WalletService) GetWithdrawSummary(uid string) (*models.WithdrawSummary,
 // GetTransactionDetail 获取交易详情
 func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (*models.TransactionDetail, error) {
 	ctx := context.Background()
-	
+
 	// 获取交易详情
 	transaction, err := s.walletRepo.GetTransactionByNo(ctx, req.TransactionNo)
 	if err != nil {

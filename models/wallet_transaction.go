@@ -11,6 +11,7 @@ const (
 	TransactionTypeWithdraw = "withdraw"  // 提现
 	TransactionTypeOrderBuy = "purchase"  // 购买
 	TransactionTypeGroupBuy = "group_buy" // 拼单
+	TransactionTypeProfit   = "profit"    // 利润
 )
 
 // TransactionStatus 交易状态枚举
@@ -105,6 +106,7 @@ func (t *WalletTransaction) GetTypeName() string {
 		TransactionTypeWithdraw: "提现",
 		TransactionTypeOrderBuy: "购买订单",
 		TransactionTypeGroupBuy: "拼单",
+		TransactionTypeProfit:   "利润",
 	}
 	return typeNames[t.Type]
 }
@@ -143,7 +145,7 @@ func (t *WalletTransaction) IsCancelled() bool {
 // GetAmountDisplay 获取金额显示（带正负号）
 func (t *WalletTransaction) GetAmountDisplay() string {
 	switch t.Type {
-	case TransactionTypeRecharge:
+	case TransactionTypeRecharge, TransactionTypeProfit:
 		return "+" + formatAmount(t.Amount)
 	case TransactionTypeWithdraw, TransactionTypeOrderBuy, TransactionTypeGroupBuy:
 		return "-" + formatAmount(t.Amount)
@@ -163,6 +165,7 @@ func formatAmount(amount float64) string {
 // 2. withdraw (提现) - 用户从钱包提现到银行卡
 // 3. purchase (购买) - 用户购买订单
 // 4. group_buy (拼单) - 用户参与拼单
+// 5. profit (利润) - 用户获得利润收入
 //
 // 交易状态说明：
 //
