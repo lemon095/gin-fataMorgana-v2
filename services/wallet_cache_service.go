@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,13 +32,18 @@ func (s *WalletCacheService) generateEmptyKey(uid string) string {
 	return utils.RedisKeys.GenerateWalletEmptyKey(uid)
 }
 
+// 生成用户登录时间Key
+func (s *WalletCacheService) generateUserLoginKey(uid string) string {
+	return utils.RedisKeys.GenerateUserLoginTimeKey(uid)
+}
+
 // 获取用户级别的互斥锁（防止缓存击穿）
 func (s *WalletCacheService) getUserMutex(uid string) *sync.Mutex {
 	value, _ := s.mutexMap.LoadOrStore(uid, &sync.Mutex{})
 	return value.(*sync.Mutex)
 }
 
-// 缓存钱包余额（不过期，通过事件驱动更新）
+// 缓存钱包余额（带过期时间，基于用户登录状态）
 func (s *WalletCacheService) CacheWalletBalance(ctx context.Context, wallet *models.Wallet) error {
 	if wallet == nil || wallet.Uid == "" {
 		return utils.NewAppError(utils.CodeInvalidParams, "钱包数据无效")
@@ -52,8 +58,11 @@ func (s *WalletCacheService) CacheWalletBalance(ctx context.Context, wallet *mod
 		return utils.NewAppError(utils.CodeInvalidParams, "钱包数据序列化失败")
 	}
 
-	// 缓存钱包数据（不过期）
-	err = database.GlobalRedisHelper.Set(ctx, cacheKey, string(walletJSON), 0) // 0表示不过期
+	// 计算过期时间（30天）
+	expiration := 30 * 24 * time.Hour
+
+	// 缓存钱包数据（带过期时间）
+	err = database.GlobalRedisHelper.Set(ctx, cacheKey, string(walletJSON), expiration)
 	if err != nil {
 		return utils.NewAppError(utils.CodeRedisError, "缓存钱包余额失败")
 	}
@@ -126,7 +135,7 @@ func (s *WalletCacheService) GetCachedWalletBalance(ctx context.Context, uid str
 	return &wallet, nil
 }
 
-// 获取钱包余额（事件驱动更新策略）
+// 获取钱包余额（基于用户登录状态的缓存策略）
 func (s *WalletCacheService) GetWalletBalanceWithCache(ctx context.Context, uid string) (*models.Wallet, error) {
 	if uid == "" {
 		return nil, utils.NewAppError(utils.CodeInvalidParams, "用户ID不能为空")
@@ -166,7 +175,7 @@ func (s *WalletCacheService) GetWalletBalanceWithCache(ctx context.Context, uid 
 		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包数据失败")
 	}
 
-	// 7. 缓存到Redis（不过期）
+	// 7. 缓存到Redis（带过期时间）
 	if cacheErr := s.CacheWalletBalance(ctx, wallet); cacheErr != nil {
 		// 缓存失败不影响主流程，只记录日志
 		utils.LogWarn(nil, "缓存钱包余额失败: %v", cacheErr)
@@ -196,8 +205,118 @@ func (s *WalletCacheService) UpdateWalletBalanceOnEvent(ctx context.Context, uid
 	wallet.Balance = newBalance
 	wallet.UpdatedAt = time.Now().UTC()
 
-	// 3. 更新缓存
+	// 3. 更新缓存（保持原有过期时间）
 	return s.CacheWalletBalance(ctx, wallet)
+}
+
+// 用户登录时延长钱包缓存过期时间
+func (s *WalletCacheService) ExtendWalletCacheOnLogin(ctx context.Context, uid string) error {
+	if uid == "" {
+		return utils.NewAppError(utils.CodeInvalidParams, "用户ID不能为空")
+	}
+
+	// 1. 更新用户登录时间
+	loginKey := s.generateUserLoginKey(uid)
+	err := database.GlobalRedisHelper.Set(ctx, loginKey, time.Now().UTC().Unix(), 30*24*time.Hour)
+	if err != nil {
+		return utils.NewAppError(utils.CodeRedisError, "更新用户登录时间失败")
+	}
+
+	// 2. 获取当前钱包缓存
+	wallet, err := s.GetCachedWalletBalance(ctx, uid)
+	if err != nil {
+		// 如果缓存不存在，从数据库获取并缓存
+		walletRepo := database.NewWalletRepository()
+		wallet, err = walletRepo.FindWalletByUid(ctx, uid)
+		if err != nil {
+			return utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包数据失败")
+		}
+	}
+
+	// 3. 更新钱包最后活跃时间
+	wallet.UpdateLastActive()
+
+	// 4. 重新缓存钱包数据（延长过期时间）
+	return s.CacheWalletBalance(ctx, wallet)
+}
+
+// 检查用户是否在指定时间内有登录活动
+func (s *WalletCacheService) HasRecentLogin(ctx context.Context, uid string, duration time.Duration) (bool, error) {
+	if uid == "" {
+		return false, utils.NewAppError(utils.CodeInvalidParams, "用户ID不能为空")
+	}
+
+	loginKey := s.generateUserLoginKey(uid)
+	loginTimeStr, err := database.GlobalRedisHelper.Get(ctx, loginKey)
+	if err != nil {
+		return false, nil // 没有登录记录，返回false
+	}
+
+	if loginTimeStr == "" {
+		return false, nil
+	}
+
+	// 解析登录时间
+	var loginTimeUnix int64
+	if err := json.Unmarshal([]byte(loginTimeStr), &loginTimeUnix); err != nil {
+		return false, nil
+	}
+
+	loginTime := time.Unix(loginTimeUnix, 0)
+	now := time.Now().UTC()
+
+	return now.Sub(loginTime) <= duration, nil
+}
+
+// 清理过期钱包缓存
+func (s *WalletCacheService) CleanupExpiredWalletCache(ctx context.Context) error {
+	// 获取所有钱包缓存Key
+	pattern := utils.RedisKeys.GetWalletKeyPattern()
+	keys, err := database.Keys(ctx, pattern)
+	if err != nil {
+		return utils.NewAppError(utils.CodeRedisError, "获取钱包缓存Key失败")
+	}
+
+	expiredCount := 0
+
+	for _, key := range keys {
+		// 提取UID
+		uid := s.extractUidFromKey(key)
+		if uid == "" {
+			continue
+		}
+
+		// 检查用户是否有最近的登录活动
+		hasRecentLogin, err := s.HasRecentLogin(ctx, uid, 30*24*time.Hour)
+		if err != nil {
+			utils.LogWarn(nil, "检查用户登录状态失败: %v", err)
+			continue
+		}
+
+		// 如果用户30天内没有登录，删除钱包缓存
+		if !hasRecentLogin {
+			err = database.GlobalRedisHelper.Del(ctx, key)
+			if err != nil {
+				utils.LogWarn(nil, "删除过期钱包缓存失败: %v", err)
+			} else {
+				expiredCount++
+			}
+		}
+	}
+
+	utils.LogInfo(nil, "清理过期钱包缓存完成，删除 %d 个缓存", expiredCount)
+	return nil
+}
+
+// 从缓存Key中提取UID
+func (s *WalletCacheService) extractUidFromKey(key string) string {
+	// Key格式为 wallet:balance:uid 或 wallet:empty:uid
+	// 使用冒号分割，取最后一部分作为UID
+	parts := strings.Split(key, ":")
+	if len(parts) >= 3 {
+		return parts[len(parts)-1]
+	}
+	return ""
 }
 
 // 删除钱包缓存

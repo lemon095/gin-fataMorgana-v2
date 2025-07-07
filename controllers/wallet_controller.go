@@ -180,7 +180,6 @@ func (wc *WalletController) AddProfit(c *gin.Context) {
 		Uid         string  `json:"uid" binding:"required"`
 		Amount      float64 `json:"amount" binding:"required,gt=0"`
 		Description string  `json:"description"`
-		OrderNo     string  `json:"order_no"` // 关联订单号（可选）
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -210,7 +209,7 @@ func (wc *WalletController) AddProfit(c *gin.Context) {
 		return
 	}
 
-	transactionNo, err := wc.walletService.CreateProfitTransaction(context.Background(), req.Uid, req.Amount, req.Description, req.OrderNo)
+	transactionNo, err := wc.walletService.CreateProfitTransaction(context.Background(), req.Uid, req.Amount, req.Description, "")
 	if err != nil {
 		// 检查是否是AppError类型
 		if appErr, ok := err.(*utils.AppError); ok {
@@ -351,4 +350,43 @@ func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 	}
 
 	utils.Success(c, response)
+}
+
+// 用户登录时延长钱包缓存过期时间
+func (c *WalletController) ExtendWalletCacheOnLogin(ctx *gin.Context) {
+	var req struct {
+		Uid string `json:"uid" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		utils.HandleValidationError(ctx, err)
+		return
+	}
+
+	err := c.walletService.ExtendWalletCacheOnLogin(ctx, req.Uid)
+	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorWithMessage(ctx, appErr.Code, appErr.Message)
+		} else {
+			utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, err.Error())
+		}
+		return
+	}
+
+	utils.SuccessWithMessage(ctx, "钱包缓存过期时间已延长", nil)
+}
+
+// 清理过期钱包缓存（管理员接口）
+func (c *WalletController) CleanupExpiredWalletCache(ctx *gin.Context) {
+	err := c.walletService.CleanupExpiredWalletCache(ctx)
+	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorWithMessage(ctx, appErr.Code, appErr.Message)
+		} else {
+			utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, err.Error())
+		}
+		return
+	}
+
+	utils.SuccessWithMessage(ctx, "过期钱包缓存清理完成", nil)
 }

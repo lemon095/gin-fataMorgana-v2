@@ -150,6 +150,13 @@ func (r *RedisKeyManager) GenerateOrderLockKey(orderID string) string {
 
 // 用户相关Key生成方法
 
+// GenerateUserLoginTimeKey 生成用户登录时间Key
+// 示例: user:login_time:user123
+// 用途: 记录用户最后登录时间，用于钱包缓存过期策略
+func (r *RedisKeyManager) GenerateUserLoginTimeKey(uid string) string {
+	return fmt.Sprintf("%s:login_time:%s", USER_PREFIX, uid)
+}
+
 // GenerateEmailExistsKey 生成邮箱存在检查缓存Key
 // 示例: email:test@example.com:exists
 // 用途: 缓存邮箱是否存在的检查结果，避免重复查询数据库

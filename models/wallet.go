@@ -68,6 +68,11 @@ func (w *Wallet) IsActive() bool {
 	return w.Status == 1
 }
 
+// UpdateLastActive 更新最后活跃时间
+func (w *Wallet) UpdateLastActive() {
+	w.LastActiveAt = time.Now().UTC()
+}
+
 // 错误定义
 var (
 	ErrInsufficientBalance = &WalletError{Message: "余额不足"}

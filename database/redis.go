@@ -83,6 +83,11 @@ func ExistsKey(ctx context.Context, key string) (bool, error) {
 	return result > 0, err
 }
 
+// Keys 获取匹配模式的键
+func Keys(ctx context.Context, pattern string) ([]string, error) {
+	return RedisClient.Keys(ctx, pattern).Result()
+}
+
 // SetExpire 设置过期时间
 func SetExpire(ctx context.Context, key string, expiration time.Duration) error {
 	return RedisClient.Expire(ctx, key, expiration).Err()

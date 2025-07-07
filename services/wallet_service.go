@@ -641,8 +641,8 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 
 // AddProfit 添加利润
 func (s *WalletService) AddProfit(ctx context.Context, uid string, amount float64, description string) error {
-	if amount <= 0 {
-		return utils.NewAppError(utils.CodeInvalidParams, "利润金额必须大于0")
+	if uid == "" || amount <= 0 {
+		return utils.NewAppError(utils.CodeInvalidParams, "参数无效")
 	}
 
 	return s.AtomicBalanceOperation(ctx, uid, func(wallet *models.Wallet) error {
@@ -783,4 +783,19 @@ func (s *WalletService) GetTransactionDetail(req *GetTransactionDetailRequest) (
 	}
 
 	return detail, nil
+}
+
+// 用户登录时延长钱包缓存过期时间
+func (s *WalletService) ExtendWalletCacheOnLogin(ctx context.Context, uid string) error {
+	if uid == "" {
+		return utils.NewAppError(utils.CodeInvalidParams, "用户ID不能为空")
+	}
+
+	// 调用缓存服务延长过期时间
+	return s.cacheService.ExtendWalletCacheOnLogin(ctx, uid)
+}
+
+// 清理过期钱包缓存
+func (s *WalletService) CleanupExpiredWalletCache(ctx context.Context) error {
+	return s.cacheService.CleanupExpiredWalletCache(ctx)
 } 
