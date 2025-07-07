@@ -75,6 +75,13 @@ func main() {
 
 	// 初始化JWT
 	utils.InitJWT(config.GlobalConfig.JWT.Secret, config.GlobalConfig.JWT.AccessTokenExpire, config.GlobalConfig.JWT.RefreshTokenExpire)
+	
+	// 输出JWT配置信息
+	log.Printf("🔐 JWT配置: AccessToken过期时间=%d秒(%.1f小时), RefreshToken过期时间=%d秒(%.1f天)", 
+		config.GlobalConfig.JWT.AccessTokenExpire, 
+		float64(config.GlobalConfig.JWT.AccessTokenExpire)/3600,
+		config.GlobalConfig.JWT.RefreshTokenExpire,
+		float64(config.GlobalConfig.JWT.RefreshTokenExpire)/86400)
 
 	// 初始化雪花算法
 	utils.InitSnowflake(config.GlobalConfig.Snowflake.WorkerID)

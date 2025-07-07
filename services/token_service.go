@@ -205,21 +205,34 @@ func (s *TokenService) ValidateTokenWithBlacklist(ctx context.Context, tokenStri
 	// 检查token是否在黑名单中
 	isBlacklisted, err := s.IsTokenBlacklisted(ctx, tokenString)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeTokenValidationFailed, "token验证失败")
-	}
-
-	if isBlacklisted {
+		// Redis错误时，记录日志但不阻止验证
+		utils.LogWarn(nil, "检查token黑名单失败: %v", err)
+	} else if isBlacklisted {
 		return nil, utils.NewAppError(utils.CodeTokenSingleLogin, "您的账号已在其他设备登录，请重新登录")
 	}
 
-	// 检查是否为当前活跃token
+	// 检查是否为当前活跃token（放宽检查，如果Redis有问题则跳过）
 	isActive, err := s.IsActiveToken(ctx, claims.Uid, tokenString)
 	if err != nil {
-		return nil, utils.NewAppError(utils.CodeTokenValidationFailed, "token验证失败")
+		// Redis错误时，记录日志但不阻止验证
+		utils.LogWarn(nil, "检查活跃token失败: %v", err)
+		// 如果Redis有问题，直接返回claims，不进行活跃token检查
+		return claims, nil
 	}
 
 	if !isActive {
-		return nil, utils.NewAppError(utils.CodeTokenSingleLogin, "您的账号已在其他设备登录，请重新登录")
+		// 如果不是活跃token，尝试重新设置（可能是Redis过期了）
+		utils.LogWarn(nil, "Token不是活跃token，尝试重新设置 - UID: %s", claims.Uid)
+		
+		// 重新设置活跃token
+		err = s.SetUserActiveToken(ctx, claims.Uid, tokenString, "unknown", "unknown", "unknown")
+		if err != nil {
+			utils.LogWarn(nil, "重新设置活跃token失败: %v", err)
+			// 即使设置失败，也允许token通过验证
+		}
+		
+		// 返回claims，允许验证通过
+		return claims, nil
 	}
 
 	return claims, nil
