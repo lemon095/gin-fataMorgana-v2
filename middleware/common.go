@@ -125,7 +125,7 @@ func ApplyPagination(db *gorm.DB, pagination PaginationInfo) *gorm.DB {
 // SuccessResponse 成功响应
 func SuccessResponse(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, ResponseWrapper{
-		Code:    200,
+		Code:    0,
 		Message: "success",
 		Data:    data,
 		TraceID: getTraceID(c),
