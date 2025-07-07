@@ -142,8 +142,7 @@ security-check: ## 安全检查
 # 性能相关
 performance-test: ## 性能测试
 	@echo "执行性能测试..."
-	@chmod +x test_performance.sh
-	./test_performance.sh
+	@echo "性能测试功能已移除，请使用其他工具进行性能测试"
 
 # 清理所有
 clean-all: ## 清理所有（包括Docker）
