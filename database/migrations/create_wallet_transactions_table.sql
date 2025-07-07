@@ -20,5 +20,10 @@ CREATE TABLE IF NOT EXISTS `wallet_transactions` (
   KEY `idx_status` (`status`),
   KEY `idx_related_order_no` (`related_order_no`),
   KEY `idx_operator_uid` (`operator_uid`),
-  KEY `idx_created_at` (`created_at`)
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_uid_created_at` (`uid`, `created_at`),
+  KEY `idx_uid_type_created_at` (`uid`, `type`, `created_at`),
+  KEY `idx_uid_status_created_at` (`uid`, `status`, `created_at`),
+  KEY `idx_type_status_created_at` (`type`, `status`, `created_at`),
+  KEY `idx_amount` (`amount`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='钱包交易流水表 - 记录所有钱包交易流水'; 

@@ -80,6 +80,14 @@ db-seed: ## 数据库种子数据
 	@chmod +x init_admin.sh
 	./init_admin.sh
 
+db-check-index: ## 检测并创建缺失的索引
+	@echo "检测并创建缺失的索引..."
+	$(GO) run cmd/migrate/main.go -check-index
+
+db-show-index: ## 显示当前数据库的所有索引
+	@echo "显示当前数据库索引..."
+	$(GO) run cmd/migrate/main.go -show-index
+
 # 健康检查
 health: ## 健康检查
 	@echo "执行健康检查..."

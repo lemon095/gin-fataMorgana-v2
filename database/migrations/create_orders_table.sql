@@ -28,5 +28,13 @@ CREATE TABLE IF NOT EXISTS `orders` (
   KEY `idx_expire_time` (`expire_time`),
   KEY `idx_auditor_uid` (`auditor_uid`),
   KEY `idx_is_system_order` (`is_system_order`),
-  KEY `idx_created_at` (`created_at`)
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_uid_status_created_at` (`uid`, `status`, `created_at`),
+  KEY `idx_status_updated_at` (`status`, `updated_at`),
+  KEY `idx_status_expire_time` (`status`, `expire_time`),
+  KEY `idx_uid_created_at` (`uid`, `created_at`),
+  KEY `idx_period_number_status` (`period_number`, `status`),
+  KEY `idx_amount` (`amount`),
+  KEY `idx_profit_amount` (`profit_amount`),
+  KEY `idx_updated_at` (`updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表 - 记录用户订单信息，包含系统订单标识'; 

@@ -9,5 +9,10 @@ CREATE TABLE IF NOT EXISTS `wallets` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_uid` (`uid`)
+  UNIQUE KEY `uk_uid` (`uid`),
+  KEY `idx_status` (`status`),
+  KEY `idx_balance` (`balance`),
+  KEY `idx_last_active_at` (`last_active_at`),
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_updated_at` (`updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='钱包表 - 存储用户钱包信息，包括余额等'; 

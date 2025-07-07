@@ -18,5 +18,9 @@ CREATE TABLE IF NOT EXISTS `user_login_logs` (
   KEY `idx_email` (`email`),
   KEY `idx_login_ip` (`login_ip`),
   KEY `idx_login_time` (`login_time`),
-  KEY `idx_status` (`status`)
+  KEY `idx_status` (`status`),
+  KEY `idx_uid_login_time` (`uid`, `login_time`),
+  KEY `idx_uid_status` (`uid`, `status`),
+  KEY `idx_login_ip_login_time` (`login_ip`, `login_time`),
+  KEY `idx_status_login_time` (`status`, `login_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户登录日志表 - 记录用户登录历史，包括登录时间、IP地址、设备信息、登录状态等'; 

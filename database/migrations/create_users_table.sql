@@ -21,5 +21,10 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `idx_users_username` (`username`),
   KEY `idx_users_phone` (`phone`),
   KEY `idx_users_invited_by` (`invited_by`),
-  KEY `idx_users_deleted_at` (`deleted_at`)
+  KEY `idx_users_deleted_at` (`deleted_at`),
+  KEY `idx_status_deleted_at` (`status`, `deleted_at`),
+  KEY `idx_experience` (`experience`),
+  KEY `idx_credit_score` (`credit_score`),
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_username_email` (`username`, `email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表 - 存储用户基本信息、认证信息、银行卡信息、经验值、信用分等'; 

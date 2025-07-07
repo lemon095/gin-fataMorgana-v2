@@ -11,5 +11,7 @@ CREATE TABLE IF NOT EXISTS `amount_config` (
   PRIMARY KEY (`id`),
   KEY `idx_type` (`type`),
   KEY `idx_is_active` (`is_active`),
-  KEY `idx_sort_order` (`sort_order`)
+  KEY `idx_sort_order` (`sort_order`),
+  KEY `idx_type_is_active_sort` (`type`, `is_active`, `sort_order`),
+  KEY `idx_amount` (`amount`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='金额配置表 - 存储充值提现金额配置'; 

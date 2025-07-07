@@ -12,5 +12,7 @@ CREATE TABLE IF NOT EXISTS `member_level` (
   `deleted_at` timestamp NULL DEFAULT NULL COMMENT '软删除时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_level` (`level`),
-  KEY `idx_deleted_at` (`deleted_at`)
+  KEY `idx_deleted_at` (`deleted_at`),
+  KEY `idx_level_deleted_at` (`level`, `deleted_at`),
+  KEY `idx_cashback_ratio` (`cashback_ratio`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户等级配置表 - 存储用户等级配置信息,包括等级、名称、logo、返现比例、单数字额等'; 

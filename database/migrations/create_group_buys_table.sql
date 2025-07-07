@@ -24,7 +24,13 @@ CREATE TABLE IF NOT EXISTS `group_buys` (
   KEY `idx_group_buy_type` (`group_buy_type`),
   KEY `idx_deadline` (`deadline`),
   KEY `idx_status` (`status`),
-  KEY `idx_created_at` (`created_at`)
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_uid_deadline_created_at` (`uid`, `deadline`, `created_at`),
+  KEY `idx_deadline_status` (`deadline`, `status`),
+  KEY `idx_status_deadline` (`status`, `deadline`),
+  KEY `idx_uid_status` (`uid`, `status`),
+  KEY `idx_total_amount` (`total_amount`),
+  KEY `idx_per_person_amount` (`per_person_amount`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='拼单表 - 记录拼单信息，包括参与人数、付款金额、截止时间等';
 
 -- 插入示例数据

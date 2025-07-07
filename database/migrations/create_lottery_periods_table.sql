@@ -14,5 +14,8 @@ CREATE TABLE IF NOT EXISTS `lottery_periods` (
   KEY `idx_status` (`status`),
   KEY `idx_order_start_time` (`order_start_time`),
   KEY `idx_order_end_time` (`order_end_time`),
-  KEY `idx_created_at` (`created_at`)
+  KEY `idx_created_at` (`created_at`),
+  KEY `idx_order_start_time_order_end_time` (`order_start_time`, `order_end_time`),
+  KEY `idx_status_order_start_time` (`status`, `order_start_time`),
+  KEY `idx_total_order_amount` (`total_order_amount`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='游戏期数表'; 

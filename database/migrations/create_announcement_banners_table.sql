@@ -11,5 +11,7 @@ CREATE TABLE IF NOT EXISTS `announcement_banners` (
   `deleted_at` timestamp NULL DEFAULT NULL COMMENT '软删除时间',
   PRIMARY KEY (`id`),
   KEY `idx_announcement_id` (`announcement_id`),
-  KEY `idx_deleted_at` (`deleted_at`)
+  KEY `idx_deleted_at` (`deleted_at`),
+  KEY `idx_announcement_id_deleted_at_sort` (`announcement_id`, `deleted_at`, `sort`),
+  KEY `idx_sort` (`sort`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公告Banner图表'; 

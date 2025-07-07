@@ -18,5 +18,9 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
   UNIQUE KEY `idx_admin_users_username` (`username`),
   UNIQUE KEY `idx_admin_users_my_invite_code` (`my_invite_code`),
   KEY `idx_admin_users_parent_id` (`parent_id`),
-  KEY `idx_admin_users_deleted_at` (`deleted_at`)
+  KEY `idx_admin_users_deleted_at` (`deleted_at`),
+  KEY `idx_role_deleted_at` (`role`, `deleted_at`),
+  KEY `idx_status_deleted_at` (`status`, `deleted_at`),
+  KEY `idx_parent_id_deleted_at` (`parent_id`, `deleted_at`),
+  KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员用户表 - 存储管理员账户信息，支持多级角色管理，包含邀请码功能用于用户注册校验，支持软删除'; 
