@@ -166,6 +166,10 @@ charts/*.tgz
 .local/
 local/
 
+# Test scripts (development tools)
+test_scripts/
+*.sh
+
 # Test coverage reports
 coverage.txt
 coverage.html
