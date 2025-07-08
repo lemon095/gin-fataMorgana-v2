@@ -110,6 +110,7 @@ func OptionalAuthMiddleware() gin.HandlerFunc {
 
 		// 将用户信息存储到上下文中
 		c.Set("user_id", claims.UserID)
+		c.Set("uid", claims.Uid)
 		c.Set("username", claims.Username)
 		c.Set("claims", claims)
 

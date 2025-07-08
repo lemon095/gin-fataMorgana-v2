@@ -517,7 +517,7 @@ func (s *WalletService) ForceReleaseLock(ctx context.Context, uid string) error 
 
 // 提现请求结构体
 type WithdrawRequest struct {
-	Uid         string  `json:"uid" binding:"required"`
+	Uid         string  `json:"uid"` // 移除 binding:"required"，uid 从当前登录用户获取
 	Amount      float64 `json:"amount" binding:"required,gt=0"`
 	Description string  `json:"description"`
 }

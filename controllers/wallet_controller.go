@@ -32,25 +32,16 @@ func (wc *WalletController) GetUserTransactions(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID, err := middleware.GetUserID(c)
-	if err != nil {
+	// 直接获取当前用户UID
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
 		middleware.ErrorResponse(c, utils.CodeAuth, "用户未认证")
-		return
-	}
-
-	// 根据user_id查询uid，确保获取正确的uid
-	userRepo := database.NewUserRepository()
-	var user models.User
-	err = userRepo.FindByID(context.Background(), uint(userID), &user)
-	if err != nil {
-		middleware.ErrorResponse(c, utils.CodeDatabaseError, "获取用户信息失败")
 		return
 	}
 
 	// 构建服务请求
 	serviceReq := &services.GetUserTransactionsRequest{
-		Uid:      user.Uid,
+		Uid:      uid,
 		Page:     req.Page,
 		PageSize: req.PageSize,
 		Type:     req.Type,
@@ -79,23 +70,14 @@ func (wc *WalletController) GetWallet(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID, err := middleware.GetUserID(c)
-	if err != nil {
+	// 直接获取当前用户UID
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
 		middleware.ErrorResponse(c, utils.CodeAuth, "用户未认证")
 		return
 	}
 
-	// 根据user_id查询uid，确保获取正确的uid
-	userRepo := database.NewUserRepository()
-	var user models.User
-	err = userRepo.FindByID(context.Background(), uint(userID), &user)
-	if err != nil {
-		middleware.ErrorResponse(c, utils.CodeDatabaseError, "获取用户信息失败")
-		return
-	}
-
-	wallet, err := wc.walletService.GetWallet(user.Uid)
+	wallet, err := wc.walletService.GetWallet(uid)
 	if err != nil {
 		if appErr, ok := err.(*utils.AppError); ok {
 			middleware.ErrorResponse(c, appErr.Code, appErr.Message)
@@ -232,23 +214,17 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID := middleware.GetCurrentUser(c)
-	if userID == 0 {
+	// 直接获取当前用户UID
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
 		utils.Unauthorized(c)
 		return
 	}
 
-	// 根据user_id查询uid，确保只能操作自己的钱包
-	userRepo := database.NewUserRepository()
-	var user models.User
-	err := userRepo.FindByID(context.Background(), userID, &user)
-	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
-		return
-	}
+	// 设置当前用户的 uid
+	req.Uid = uid
 
-	response, err := wc.walletService.RequestWithdraw(&req, user.Uid)
+	response, err := wc.walletService.RequestWithdraw(&req, uid)
 	if err != nil {
 		// 检查是否是AppError类型
 		if appErr, ok := err.(*utils.AppError); ok {
@@ -271,23 +247,14 @@ func (wc *WalletController) GetWithdrawSummary(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID := middleware.GetCurrentUser(c)
-	if userID == 0 {
+	// 直接获取当前用户UID
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
 		utils.Unauthorized(c)
 		return
 	}
 
-	// 根据user_id查询uid，确保获取正确的uid
-	userRepo := database.NewUserRepository()
-	var user models.User
-	err := userRepo.FindByID(context.Background(), userID, &user)
-	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
-		return
-	}
-
-	summary, err := wc.walletService.GetWithdrawSummary(user.Uid)
+	summary, err := wc.walletService.GetWithdrawSummary(uid)
 	if err != nil {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		return
@@ -307,19 +274,10 @@ func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 		return
 	}
 
-	// 获取当前用户ID
-	userID := middleware.GetCurrentUser(c)
-	if userID == 0 {
+	// 直接获取当前用户UID
+	uid := middleware.GetCurrentUID(c)
+	if uid == "" {
 		utils.Unauthorized(c)
-		return
-	}
-
-	// 根据user_id查询uid，确保只能查看自己的交易
-	userRepo := database.NewUserRepository()
-	var user models.User
-	err := userRepo.FindByID(context.Background(), userID, &user)
-	if err != nil {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, "获取用户信息失败")
 		return
 	}
 
@@ -332,7 +290,7 @@ func (wc *WalletController) GetTransactionDetail(c *gin.Context) {
 	}
 
 	// 验证交易是否属于当前用户
-	if transaction.Uid != user.Uid {
+	if transaction.Uid != uid {
 		utils.ErrorWithMessage(c, utils.CodeForbidden, "只能查看自己的交易详情")
 		return
 	}
