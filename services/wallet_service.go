@@ -704,42 +704,66 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, userUid string) (*
 		return nil, utils.NewAppError(utils.CodeForbidden, "只能操作自己的钱包")
 	}
 
-	// 检查余额是否足够
-	wallet, err := s.GetWallet(req.Uid)
+	// 使用原子操作立即扣减余额
+	var balanceAfter float64
+	err := s.AtomicBalanceOperation(ctx, req.Uid, func(wallet *models.Wallet) error {
+		// 检查余额是否足够
+		if wallet.Balance < req.Amount {
+			return utils.NewAppError(utils.CodeBalanceInsufficient, 
+				fmt.Sprintf("余额不足，当前余额: %.2f，提现金额: %.2f", wallet.Balance, req.Amount))
+		}
+
+		// 检查钱包状态
+		if !wallet.IsActive() {
+			return utils.NewAppError(utils.CodeWalletFrozenWithdraw, "钱包已被冻结，无法提现")
+		}
+
+		// 立即扣减余额
+		if err := wallet.Withdraw(req.Amount); err != nil {
+			return err
+		}
+
+		balanceAfter = wallet.Balance
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	if wallet.Balance < req.Amount {
-		return nil, utils.NewAppError(utils.CodeBalanceInsufficient, 
-			fmt.Sprintf("余额不足，当前余额: %.2f，提现金额: %.2f", wallet.Balance, req.Amount))
-	}
+	// 获取扣减前的余额（用于流水记录）
+	balanceBefore := balanceAfter + req.Amount
 
 	// 生成交易号
 	transactionNo := utils.GenerateTransactionNo("WITHDRAW")
 
-	// 创建提现交易记录
+	// 创建提现交易记录（状态为 pending）
 	transaction := &models.WalletTransaction{
 		TransactionNo: transactionNo,
 		Uid:           req.Uid,
 		Type:          models.TransactionTypeWithdraw,
 		Amount:        req.Amount,
-		BalanceBefore: wallet.Balance,
-		BalanceAfter:  wallet.Balance, // 提现申请时余额不变，审核通过后才会扣减
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceAfter, // 扣减后的余额
 		Description:   req.Description,
-		Status:        models.TransactionStatusPending,
+		Status:        models.TransactionStatusPending, // 状态为待处理
 		CreatedAt:     time.Now().UTC(),
 		UpdatedAt:     time.Now().UTC(),
 	}
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
+		// 如果创建流水失败，需要回滚扣减的余额
+		if rollbackErr := s.AddBalance(ctx, req.Uid, req.Amount, "提现申请失败回滚"); rollbackErr != nil {
+			// 回滚失败，记录严重错误
+			utils.LogError(nil, "提现申请失败且余额回滚失败: %v, 回滚错误: %v", err, rollbackErr)
+		}
 		return nil, utils.NewAppError(utils.CodeTransactionCreateFailed, "创建提现申请失败")
 	}
 
 	response := &models.WithdrawResponse{
 		TransactionNo: transactionNo,
 		Amount:        req.Amount,
-		Balance:       wallet.Balance,
+		Balance:       balanceAfter, // 返回扣减后的余额
 		Status:        models.TransactionStatusPending,
 	}
 
