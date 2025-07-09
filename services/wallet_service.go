@@ -704,9 +704,32 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, userUid string) (*
 		return nil, utils.NewAppError(utils.CodeForbidden, "只能操作自己的钱包")
 	}
 
+	// 检查用户是否已绑定银行卡
+	userRepo := database.NewUserRepository()
+	user, err := userRepo.FindByUid(ctx, req.Uid)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeUserNotFound, "用户不存在")
+	}
+
+	// 检查银行卡信息是否为空或为默认空值
+	if user.BankCardInfo == "" || user.BankCardInfo == "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}" {
+		return nil, utils.NewAppError(utils.CodeBankCardNotBound, "请先绑定银行卡后再进行提现操作")
+	}
+
+	// 解析银行卡信息，验证是否包含有效的银行卡号
+	var bankCardInfo models.BankCardInfo
+	if err := utils.JSONToStruct(user.BankCardInfo, &bankCardInfo); err != nil {
+		return nil, utils.NewAppError(utils.CodeBankCardFormatError, "银行卡信息格式错误")
+	}
+
+	// 检查银行卡号是否为空
+	if bankCardInfo.CardNumber == "" {
+		return nil, utils.NewAppError(utils.CodeBankCardNotBound, "请先绑定银行卡后再进行提现操作")
+	}
+
 	// 使用原子操作立即扣减余额
 	var balanceAfter float64
-	err := s.AtomicBalanceOperation(ctx, req.Uid, func(wallet *models.Wallet) error {
+	err = s.AtomicBalanceOperation(ctx, req.Uid, func(wallet *models.Wallet) error {
 		// 检查余额是否足够
 		if wallet.Balance < req.Amount {
 			return utils.NewAppError(utils.CodeBalanceInsufficient, 

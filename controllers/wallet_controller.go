@@ -228,6 +228,11 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 	if err != nil {
 		// 检查是否是AppError类型
 		if appErr, ok := err.(*utils.AppError); ok {
+			// 特殊处理银行卡绑定错误
+			if appErr.Code == utils.CodeBankCardNotBound {
+				utils.ErrorWithMessage(c, utils.CodeBankCardNotBound, "请先绑定银行卡后再进行提现操作")
+				return
+			}
 			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
 		} else {
 		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
