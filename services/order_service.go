@@ -15,7 +15,6 @@ import (
 type OrderService struct {
 	orderRepo       *database.OrderRepository
 	walletRepo      *database.WalletRepository
-	memberLevelRepo *database.MemberLevelRepository
 	// 使用并发安全的钱包服务
 	walletService *WalletService
 }
@@ -25,7 +24,6 @@ func NewOrderService() *OrderService {
 	return &OrderService{
 		orderRepo:       database.NewOrderRepository(),
 		walletRepo:      database.NewWalletRepository(),
-		memberLevelRepo: database.NewMemberLevelRepository(database.DB),
 		walletService:   NewWalletService(),
 	}
 }
@@ -108,15 +106,8 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	// 计算总价 = 单价 × 类型数量
 	totalAmount := req.Amount * float64(typeCount)
 
-	// 获取用户信息以获取经验值
-	userRepo := database.NewUserRepository()
-	user, err := userRepo.FindByUid(ctx, req.Uid)
-	if err != nil {
-		return nil, utils.NewAppError(utils.CodeUserInfoGetFailed, "获取用户信息失败")
-	}
-
-	// 根据用户经验值获取等级配置并计算利润金额
-	profitAmount := s.calculateProfitAmount(ctx, user.Experience, totalAmount)
+	// 默认利润金额为0
+	profitAmount := 0.0
 
 	// 创建订单对象
 	order := &models.Order{
@@ -148,8 +139,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 	order.PeriodNumber = req.PeriodNumber
 
 	// 使用并发安全的钱包服务扣减余额
-	err = s.walletService.WithdrawBalance(ctx, req.Uid, totalAmount, fmt.Sprintf("创建订单 %s", req.PeriodNumber))
-	if err != nil {
+	if err := s.walletService.WithdrawBalance(ctx, req.Uid, totalAmount, fmt.Sprintf("创建订单 %s", req.PeriodNumber)); err != nil {
 		return nil, err
 	}
 
@@ -415,19 +405,7 @@ func (s *OrderService) GetOrderStats(uid string) (*GetOrderStatsResponse, error)
 	}, nil
 }
 
-// calculateProfitAmount 根据用户经验值和订单金额计算利润金额
-func (s *OrderService) calculateProfitAmount(ctx context.Context, experience int, amount float64) float64 {
-	// 根据经验值获取等级配置
-	level, err := s.memberLevelRepo.GetByExperience(ctx, experience)
-	if err != nil {
-		// 如果获取等级配置失败，返回0利润
-		return 0.0
-	}
 
-	// 计算利润金额：订单金额 × (返现比例 / 100)
-	profitAmount := amount * (level.CashbackRatio / 100.0)
-	return profitAmount
-}
 
 // GetPeriodList 获取期数列表
 func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {

@@ -100,7 +100,7 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		Uid:          userID,
 		Username:     username,
 		Password:     req.Password,
-		Status:       2, // 默认待审核
+		Status:       1, // 默认待审核
 		Experience:   1, // 新注册用户默认等级为1
 		InvitedBy:    req.InviteCode,
 		BankCardInfo: "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}", // 无条件赋值

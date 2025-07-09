@@ -15,7 +15,6 @@ import (
 type GroupBuyService struct {
 	groupBuyRepo    *database.GroupBuyRepository
 	walletRepo      *database.WalletRepository
-	memberLevelRepo *database.MemberLevelRepository
 	cacheService    *WalletCacheService
 	walletService   *WalletService
 }
@@ -25,7 +24,6 @@ func NewGroupBuyService() *GroupBuyService {
 	return &GroupBuyService{
 		groupBuyRepo:    database.NewGroupBuyRepository(),
 		walletRepo:      database.NewWalletRepository(),
-		memberLevelRepo: database.NewMemberLevelRepository(database.DB),
 		cacheService:    NewWalletCacheService(),
 		walletService:   NewWalletService(),
 	}
@@ -205,15 +203,8 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		return nil, err
 	}
 
-	// 7. 获取用户信息以获取经验值
-	userRepo := database.NewUserRepository()
-	user, err := userRepo.FindByUid(ctx, uid)
-	if err != nil {
-		return nil, utils.NewAppError(utils.CodeDatabaseError, "获取用户信息失败")
-	}
-
-	// 8. 根据用户经验值获取等级配置并计算利润金额
-	profitAmount := s.calculateProfitAmount(ctx, user.Experience, groupBuy.PerPersonAmount)
+	// 7. 根据拼单的利润比例计算利润金额
+	profitAmount := s.calculateProfitAmountByGroupBuy(groupBuy.PerPersonAmount, groupBuy.ProfitMargin)
 
 	// 9. 生成订单编号
 	orderNo := utils.GenerateOrderNo()
@@ -329,22 +320,13 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	return response, nil
 }
 
-// calculateProfitAmount 根据用户经验值和订单金额计算利润金额
-func (s *GroupBuyService) calculateProfitAmount(ctx context.Context, experience int, amount float64) float64 {
-	// 先查找当前经验值对应的等级配置
-	level, err := s.memberLevelRepo.GetByExperience(ctx, experience)
-	if err != nil {
-		// 如果查不到，查找最大等级配置
-		maxLevel, maxErr := s.memberLevelRepo.GetMaxLevel(ctx)
-		if maxErr != nil || maxLevel == nil {
-			// 等级表为空或出错，利润为0
-			return 0.0
-		}
-		// 如果查不到等级配置，按最大等级算
-		return amount * (maxLevel.CashbackRatio / 100.0)
-	}
-	return amount * (level.CashbackRatio / 100.0)
+// calculateProfitAmountByGroupBuy 根据拼单的利润比例计算利润金额
+func (s *GroupBuyService) calculateProfitAmountByGroupBuy(amount, profitMargin float64) float64 {
+	// 计算利润金额：订单金额 × 利润比例
+	return amount * profitMargin
 }
+
+
 
 // generateTransactionNo 生成交易流水号
 func (s *GroupBuyService) generateTransactionNo() string {

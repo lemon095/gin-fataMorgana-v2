@@ -5,95 +5,225 @@ import (
 	"encoding/json"
 	"fmt"
 	"gin-fataMorgana/database"
-	"math"
 
 	"gin-fataMorgana/utils"
 
 	"github.com/redis/go-redis/v9"
 )
 
-// UserLevelInfo Redis中存储的用户等级信息结构
+// UserLevelRule 等级规则
+type UserLevelRule struct {
+	Level           int    `json:"level"`
+	Name            string `json:"name"`
+	Logo            string `json:"logo"`
+	Requirement     int    `json:"requirement"`
+	RequirementType string `json:"requirement_type"`
+	Remark          string `json:"remark"`
+}
+
+// UserLevelConfig 用户等级配置
+type UserLevelConfig struct {
+	Uid        string         `json:"uid"`
+	LevelRules []UserLevelRule `json:"level_rules"`
+	CreatedAt  string         `json:"created_at"`
+	UpdatedAt  string         `json:"updated_at"`
+	CreatedBy  string         `json:"created_by"`
+	UpdatedBy  string         `json:"updated_by"`
+}
+
+// UserLevelInfo 用户等级信息结构
 type UserLevelInfo struct {
 	CurrentLevel         int     `json:"current_level"`
 	CurrentLevelName     string  `json:"current_level_name"`
 	NextLevel            int     `json:"next_level"`
 	NextLevelName        string  `json:"next_level_name"`
 	Progress             float64 `json:"progress"`
-	OrderCount           int     `json:"order_count"`
+	Balance              float64 `json:"balance"`
 	NextLevelRequirement int     `json:"next_level_requirement"`
 }
 
 // UserLevelService 用户等级服务
 type UserLevelService struct {
 	redisClient *redis.Client
+	walletService *WalletService
 }
 
 // NewUserLevelService 创建用户等级服务实例
 func NewUserLevelService() *UserLevelService {
 	return &UserLevelService{
 		redisClient: database.RedisClient,
+		walletService: NewWalletService(),
 	}
 }
 
-// GetUserLevelInfo 从Redis获取用户等级信息
+// GetUserLevelInfo 实时计算用户等级信息（不缓存）
 func (s *UserLevelService) GetUserLevelInfo(ctx context.Context, uid string) (*UserLevelInfo, error) {
-	// 构建Redis key
-	key := fmt.Sprintf("user:level:%s", uid)
+	// 1. 获取用户等级配置
+	levelConfig, err := s.getUserLevelConfig(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
 
-	// 从Redis获取数据
+	// 2. 获取用户钱包余额
+	wallet, err := s.walletService.GetWallet(uid)
+	if err != nil {
+		return nil, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户钱包失败")
+	}
+
+	balance := wallet.Balance
+
+	// 3. 根据余额实时计算当前等级和进度
+	levelInfo := s.calculateUserLevel(levelConfig, balance)
+
+	return levelInfo, nil
+}
+
+// getUserLevelConfig 获取用户等级配置
+func (s *UserLevelService) getUserLevelConfig(ctx context.Context, uid string) (*UserLevelConfig, error) {
+	// 构建Redis key
+	key := fmt.Sprintf("user:level:config:%s", uid)
+
+	// 从Redis获取配置数据
 	data, err := s.redisClient.Get(ctx, key).Result()
 	if err != nil {
-		// 如果key不存在，返回默认值
+		// 如果key不存在，返回默认配置
 		if err.Error() == "redis: nil" {
-			return &UserLevelInfo{
-				CurrentLevel:         1,
-				CurrentLevelName:     "等级1",
-				NextLevel:            2,
-				NextLevelName:        "等级2",
-				Progress:             0,
-				OrderCount:           0,
-				NextLevelRequirement: 1,
-			}, nil
+			return s.getDefaultLevelConfig(uid), nil
 		}
-		return nil, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户等级信息失败")
+		return nil, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户等级配置失败")
 	}
 
 	// 解析JSON数据
-	var levelInfo UserLevelInfo
-	if err := json.Unmarshal([]byte(data), &levelInfo); err != nil {
-		return nil, utils.NewAppError(utils.CodeUserLevelParseFailed, "解析用户等级信息失败")
+	var levelConfig UserLevelConfig
+	if err := json.Unmarshal([]byte(data), &levelConfig); err != nil {
+		return nil, utils.NewAppError(utils.CodeUserLevelParseFailed, "解析用户等级配置失败")
 	}
 
-	return &levelInfo, nil
+	return &levelConfig, nil
 }
 
-// GetUserLevelRate 获取用户等级进度（整数）
+// getDefaultLevelConfig 获取默认等级配置
+func (s *UserLevelService) getDefaultLevelConfig(uid string) *UserLevelConfig {
+	return &UserLevelConfig{
+		Uid: uid,
+		LevelRules: []UserLevelRule{
+			{Level: 1, Name: "青铜会员", Logo: "", Requirement: 60000, RequirementType: "balance", Remark: "余额达到6万升级"},
+			{Level: 2, Name: "白银会员", Logo: "", Requirement: 120000, RequirementType: "balance", Remark: "余额达到12万升级"},
+			{Level: 3, Name: "黄金会员", Logo: "", Requirement: 300000, RequirementType: "balance", Remark: "余额达到30万升级"},
+			{Level: 4, Name: "铂金会员", Logo: "", Requirement: 600000, RequirementType: "balance", Remark: "余额达到60万升级"},
+			{Level: 5, Name: "钻石会员", Logo: "", Requirement: 1200000, RequirementType: "balance", Remark: "余额达到120万升级"},
+		},
+		CreatedAt: "2024-01-01T00:00:00Z",
+		UpdatedAt: "2024-01-01T00:00:00Z",
+		CreatedBy: "system",
+		UpdatedBy: "system",
+	}
+}
+
+// calculateUserLevel 根据余额计算用户等级
+func (s *UserLevelService) calculateUserLevel(config *UserLevelConfig, balance float64) *UserLevelInfo {
+	// 按等级排序规则
+	rules := config.LevelRules
+	if len(rules) == 0 {
+		return &UserLevelInfo{
+			CurrentLevel:         1,
+			CurrentLevelName:     "默认等级",
+			NextLevel:            1,
+			NextLevelName:        "默认等级",
+			Progress:             0,
+			Balance:              balance,
+			NextLevelRequirement: 0,
+		}
+	}
+
+	// 找到当前等级
+	currentLevel := 1
+	currentLevelName := "默认等级"
+	nextLevel := 1
+	nextLevelName := "默认等级"
+	nextLevelRequirement := 0
+	progress := 0.0
+
+	// 遍历等级规则，找到当前等级和下一等级
+	for i, rule := range rules {
+		if balance >= float64(rule.Requirement) {
+			currentLevel = rule.Level
+			currentLevelName = rule.Name
+		} else {
+			// 找到第一个不满足的等级，这就是下一等级
+			if i < len(rules) {
+				nextLevel = rule.Level
+				nextLevelName = rule.Name
+				nextLevelRequirement = rule.Requirement
+			}
+			break
+		}
+	}
+
+	// 计算进度百分比
+	if nextLevel > currentLevel {
+		// 找到当前等级和下一等级的要求
+		var currentRequirement, nextRequirement int
+		for _, rule := range rules {
+			if rule.Level == currentLevel {
+				currentRequirement = rule.Requirement
+			}
+			if rule.Level == nextLevel {
+				nextRequirement = rule.Requirement
+			}
+		}
+
+		if nextRequirement > currentRequirement {
+			progress = float64(balance-float64(currentRequirement)) / float64(nextRequirement-currentRequirement) * 100
+			if progress > 100 {
+				progress = 100
+			}
+		}
+	} else {
+		// 已经是最高等级
+		progress = 100
+	}
+
+	return &UserLevelInfo{
+		CurrentLevel:         currentLevel,
+		CurrentLevelName:     currentLevelName,
+		NextLevel:            nextLevel,
+		NextLevelName:        nextLevelName,
+		Progress:             progress,
+		Balance:              balance,
+		NextLevelRequirement: nextLevelRequirement,
+	}
+}
+
+// GetUserLevelRate 获取用户当前等级（整数）
 func (s *UserLevelService) GetUserLevelRate(ctx context.Context, uid string) (int, error) {
 	levelInfo, err := s.GetUserLevelInfo(ctx, uid)
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
 
-	// 将进度转换为整数（向下取整）
-	return int(math.Floor(levelInfo.Progress)), nil
+	// 返回当前等级
+	return levelInfo.CurrentLevel, nil
 }
 
-// SetUserLevelInfo 设置用户等级信息到Redis
-func (s *UserLevelService) SetUserLevelInfo(ctx context.Context, uid string, levelInfo *UserLevelInfo) error {
+// SetUserLevelConfig 设置用户等级配置到Redis
+func (s *UserLevelService) SetUserLevelConfig(ctx context.Context, uid string, config *UserLevelConfig) error {
 	// 构建Redis key
-	key := fmt.Sprintf("user:level:%s", uid)
+	key := fmt.Sprintf("user:level:config:%s", uid)
 
 	// 序列化为JSON
-	data, err := json.Marshal(levelInfo)
+	data, err := json.Marshal(config)
 	if err != nil {
-		return utils.NewAppError(utils.CodeUserLevelSerializeFailed, "序列化用户等级信息失败")
+		return utils.NewAppError(utils.CodeUserLevelSerializeFailed, "序列化用户等级配置失败")
 	}
 
 	// 存储到Redis（设置过期时间为24小时）
 	err = s.redisClient.Set(ctx, key, data, 24*60*60).Err()
 	if err != nil {
-		return utils.NewAppError(utils.CodeUserLevelStoreFailed, "存储用户等级信息失败")
+		return utils.NewAppError(utils.CodeUserLevelStoreFailed, "存储用户等级配置失败")
 	}
 
 	return nil
 }
+
+

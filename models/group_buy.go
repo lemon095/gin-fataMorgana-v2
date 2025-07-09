@@ -31,6 +31,7 @@ type GroupBuy struct {
 	TotalAmount         float64   `json:"total_amount" gorm:"type:decimal(15,2);not null;comment:拼单总金额"`
 	PaidAmount          float64   `json:"paid_amount" gorm:"type:decimal(15,2);not null;default:0;comment:已付款金额"`
 	PerPersonAmount     float64   `json:"per_person_amount" gorm:"type:decimal(15,2);not null;comment:每人需要付款金额"`
+	ProfitMargin        float64   `json:"profit_margin" gorm:"type:decimal(5,4);not null;default:0;comment:利润比例（小数）"`
 	Deadline            time.Time `json:"deadline" gorm:"not null;index;comment:拼单截止时间"`
 	Status              string    `json:"status" gorm:"not null;size:20;default:'not_started';index;comment:拼单状态"`
 	Description         string    `json:"description" gorm:"type:text;comment:拼单描述"`
@@ -58,6 +59,7 @@ type GetGroupBuyDetailResponse struct {
 	TargetParticipants  int       `json:"target_participants"`  // 最大参与人数
 	PaidAmount          float64   `json:"paid_amount"`          // 已付款金额
 	PerPersonAmount     float64   `json:"per_person_amount"`    // 每人需要付款金额
+	ProfitMargin        float64   `json:"profit_margin"`        // 利润比例（小数）
 	RemainingAmount     float64   `json:"remaining_amount"`     // 还需要付款的金额
 	Deadline            time.Time `json:"deadline"`             // 截止时间
 }
@@ -86,6 +88,7 @@ func (g *GroupBuy) ToDetailResponse() GetGroupBuyDetailResponse {
 		TargetParticipants:  g.TargetParticipants,
 		PaidAmount:          g.PaidAmount,
 		PerPersonAmount:     g.PerPersonAmount,
+		ProfitMargin:        g.ProfitMargin,
 		RemainingAmount:     remainingAmount,
 		Deadline:            g.Deadline,
 	}

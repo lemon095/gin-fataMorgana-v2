@@ -17,7 +17,6 @@ import (
 type FakeOrderService struct {
 	orderRepo       *database.OrderRepository
 	groupBuyRepo    *database.GroupBuyRepository
-	memberLevelRepo *database.MemberLevelRepository
 	config          *FakeOrderConfig
 	periodCache     map[string]string // 缓存时间段对应的期号
 }
@@ -55,7 +54,6 @@ func NewFakeOrderService(config *FakeOrderConfig) *FakeOrderService {
 	return &FakeOrderService{
 		orderRepo:       database.NewOrderRepository(),
 		groupBuyRepo:    database.NewGroupBuyRepository(),
-		memberLevelRepo: database.NewMemberLevelRepository(database.DB),
 		config:          config,
 		periodCache:     make(map[string]string),
 	}
@@ -194,8 +192,8 @@ func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 	// 生成总金额（10万到1000万之间）
 	totalAmount := float64(rand.Intn(9900000)+100000) // 100000-10000000
 
-	// 随机选择用户等级计算利润
-	profitAmount := s.calculateProfitAmount(totalAmount)
+	// 假购买订单不计算利润金额
+	profitAmount := 0.0
 
 	// 随机选择状态
 	status := s.getRandomPurchaseStatus()
@@ -277,6 +275,9 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 	// 计算人均金额：总金额 ÷ 目标人数
 	perPersonAmount := totalAmount / float64(targetParticipants)
 
+	// 随机生成利润比例（110%-160%）
+	profitMargin := float64(rand.Intn(51)+110) / 100.0 // 1.10 - 1.60
+
 	// 随机选择状态
 	status := s.getRandomGroupBuyStatus()
 	
@@ -293,6 +294,7 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 		TotalAmount:       totalAmount,
 		PaidAmount:        perPersonAmount * float64(currentParticipants),
 		PerPersonAmount:   perPersonAmount,
+		ProfitMargin:      profitMargin, // 添加利润比例
 		Status:            status,
 		CreatedAt:         createdAt,
 		UpdatedAt:         createdAt,
@@ -330,24 +332,7 @@ func (s *FakeOrderService) getPurchaseConfig() *models.PurchaseConfig {
 	}
 }
 
-// calculateProfitAmount 计算利润金额
-func (s *FakeOrderService) calculateProfitAmount(amount float64) float64 {
-	ctx := context.Background()
-	
-	// 随机选择用户等级（1-10级）
-	randomLevel := rand.Intn(10) + 1
-	
-	// 根据等级获取返现比例
-	level, err := s.memberLevelRepo.GetByLevel(ctx, randomLevel)
-	if err != nil {
-		// 如果获取失败，使用默认比例5%
-		return amount * 0.05
-	}
-	
-	// 计算利润金额：订单金额 × (返现比例 / 100)
-	profitAmount := amount * (level.CashbackRatio / 100.0)
-	return profitAmount
-}
+
 
 // getRandomPurchaseStatus 获取随机购买单状态
 func (s *FakeOrderService) getRandomPurchaseStatus() string {
