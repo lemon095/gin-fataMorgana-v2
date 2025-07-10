@@ -325,7 +325,7 @@ func (s *UserService) GetUserByID(userID uint) (*models.UserResponse, error) {
 		return nil, utils.NewAppError(utils.CodeUserDeleted, "用户已被删除")
 	}
 
-	// 从Redis获取用户等级进度
+	// 从Redis获取用户等级进度和动态计算经验值
 	userLevelService := NewUserLevelService()
 	rate, err := userLevelService.GetUserLevelRate(ctx, user.Uid)
 	if err != nil {
@@ -333,8 +333,16 @@ func (s *UserService) GetUserByID(userID uint) (*models.UserResponse, error) {
 		rate = 0
 	}
 
+	// 动态计算用户等级（experience）
+	level, err := userLevelService.GetUserLevel(ctx, user.Uid)
+	if err != nil {
+		// 如果获取失败，使用默认值1
+		level = 1
+	}
+
 	response := user.ToResponse()
 	response.Rate = rate // 设置从Redis获取的等级进度
+	response.Experience = level // 动态计算的经验值（等级）
 
 	return &response, nil
 }

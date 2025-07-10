@@ -195,15 +195,86 @@ func (s *UserLevelService) calculateUserLevel(config *UserLevelConfig, balance f
 	}
 }
 
-// GetUserLevelRate 获取用户当前等级（整数）
-func (s *UserLevelService) GetUserLevelRate(ctx context.Context, uid string) (int, error) {
-	levelInfo, err := s.GetUserLevelInfo(ctx, uid)
+// GetUserLevel 获取用户当前等级（整数）
+func (s *UserLevelService) GetUserLevel(ctx context.Context, uid string) (int, error) {
+	// 1. 获取用户等级配置
+	levelConfig, err := s.getUserLevelConfig(ctx, uid)
 	if err != nil {
 		return 1, err
 	}
 
-	// 返回当前等级
-	return levelInfo.CurrentLevel, nil
+	// 2. 如果没有配置 LevelRules，返回默认等级1
+	if len(levelConfig.LevelRules) == 0 {
+		return 1, nil
+	}
+
+	// 3. 获取用户钱包余额
+	wallet, err := s.walletService.GetWallet(uid)
+	if err != nil {
+		return 1, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户钱包失败")
+	}
+
+	balance := wallet.Balance
+
+	// 4. 找到用户当前等级
+	currentLevel := 1 // 默认等级为1
+
+	// 遍历等级规则，找到用户当前等级
+	for _, rule := range levelConfig.LevelRules {
+		if balance >= float64(rule.Requirement) {
+			currentLevel = rule.Level
+		} else {
+			// 用户余额不满足这个等级要求，停止遍历
+			break
+		}
+	}
+
+	return currentLevel, nil
+}
+
+// GetUserLevelRate 获取用户下一个等级对应的 Requirement 值
+func (s *UserLevelService) GetUserLevelRate(ctx context.Context, uid string) (int, error) {
+	// 1. 获取用户等级配置
+	levelConfig, err := s.getUserLevelConfig(ctx, uid)
+	if err != nil {
+		return 0, err
+	}
+
+	// 2. 如果没有配置 LevelRules，返回 0
+	if len(levelConfig.LevelRules) == 0 {
+		return 0, nil
+	}
+
+	// 3. 获取用户钱包余额
+	wallet, err := s.walletService.GetWallet(uid)
+	if err != nil {
+		return 0, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户钱包失败")
+	}
+
+	balance := wallet.Balance
+
+	// 4. 找到用户下一个等级对应的 Requirement
+	nextRequirement := levelConfig.LevelRules[0].Requirement // 默认使用 level1 的 Requirement
+
+	// 遍历等级规则，找到用户下一个等级对应的 Requirement
+	for i, rule := range levelConfig.LevelRules {
+		if balance >= float64(rule.Requirement) {
+			// 用户余额满足这个等级要求，检查是否有下一级
+			if i+1 < len(levelConfig.LevelRules) {
+				// 有下一级，使用下一级的 Requirement
+				nextRequirement = levelConfig.LevelRules[i+1].Requirement
+			} else {
+				// 没有下一级，使用当前等级的 Requirement（最高等级）
+				nextRequirement = rule.Requirement
+			}
+		} else {
+			// 用户余额不满足这个等级要求，这个等级就是下一个等级
+			nextRequirement = rule.Requirement
+			break
+		}
+	}
+
+	return nextRequirement, nil
 }
 
 // SetUserLevelConfig 设置用户等级配置到Redis
