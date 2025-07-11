@@ -115,7 +115,34 @@ func (oc *OrderController) GetMyOrderList(c *gin.Context) {
 		return
 	}
 
-	utils.Success(c, response)
+	// 创建新的响应结构，包含 order_type 字段
+	type OrderWithType struct {
+		models.OrderResponse
+		OrderType string `json:"order_type"`
+	}
+
+	var ordersWithType []OrderWithType
+	for _, order := range response.Orders {
+		// 根据 period_number 判断订单类型
+		orderType := "purchase" // 默认为购买订单
+		if !utils.IsAllDigits(order.Number) {
+			orderType = "group_buy" // 如果不是全数字，则为拼单
+		}
+
+		orderWithType := OrderWithType{
+			OrderResponse: order,
+			OrderType:     orderType,
+		}
+		ordersWithType = append(ordersWithType, orderWithType)
+	}
+
+	// 创建新的响应
+	newResponse := map[string]interface{}{
+		"orders":     ordersWithType,
+		"pagination": response.Pagination,
+	}
+
+	utils.Success(c, newResponse)
 }
 
 // CreateOrder 创建订单

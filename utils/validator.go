@@ -56,108 +56,108 @@ var fieldNameMap = map[string]string{
 
 // 验证标签错误信息映射
 var tagErrorMap = map[string]string{
-	"required":    "不能为空",
-	"email":       "格式不正确",
-	"min":         "长度不能少于%s位",
-	"max":         "长度不能超过%s位",
-	"len":         "长度必须为%s位",
-	"oneof":       "必须是以下值之一：%s",
-	"numeric":     "必须是数字",
-	"alpha":       "只能包含字母",
-	"alphanum":    "只能包含字母和数字",
-	"url":         "必须是有效的URL",
-	"uuid":        "必须是有效的UUID",
-	"date":        "日期格式不正确",
-	"time":        "时间格式不正确",
-	"gt":          "必须大于%s",
-	"gte":         "必须大于等于%s",
-	"lt":          "必须小于%s",
-	"lte":         "必须小于等于%s",
-	"eq":          "必须等于%s",
-	"ne":          "不能等于%s",
-	"unique":      "值已存在",
-	"exists":      "值不存在",
-	"regexp":      "格式不正确",
-	"json":        "JSON格式不正确",
-	"base64":      "Base64格式不正确",
-	"hexadecimal": "十六进制格式不正确",
-	"hexcolor":    "颜色格式不正确",
-	"rgb":         "RGB格式不正确",
-	"rgba":        "RGBA格式不正确",
-	"hsl":         "HSL格式不正确",
-	"hsla":        "HSLA格式不正确",
-	"e164":        "电话号码格式不正确",
-	"isbn":        "ISBN格式不正确",
-	"isbn10":      "ISBN-10格式不正确",
-	"isbn13":      "ISBN-13格式不正确",
-	"uuid3":       "UUID v3格式不正确",
-	"uuid4":       "UUID v4格式不正确",
-	"uuid5":       "UUID v5格式不正确",
-	"ulid":        "ULID格式不正确",
-	"cron":        "Cron表达式格式不正确",
-	"mongodb":     "MongoDB ObjectID格式不正确",
-	"datetime":    "日期时间格式不正确",
-	"image":       "必须是有效的图片文件",
-	"file":        "必须是有效的文件",
-	"dir":         "必须是有效的目录",
-	"path":        "必须是有效的路径",
-	"hostname":    "主机名格式不正确",
-	"hostname_rfc1123": "主机名格式不正确",
-	"fqdn":        "完全限定域名格式不正确",
-	"tcp_addr":    "TCP地址格式不正确",
-	"tcp4_addr":   "TCP4地址格式不正确",
-	"tcp6_addr":   "TCP6地址格式不正确",
-	"udp_addr":    "UDP地址格式不正确",
-	"udp4_addr":   "UDP4地址格式不正确",
-	"udp6_addr":   "UDP6地址格式不正确",
-	"ip_addr":     "IP地址格式不正确",
-	"ip4_addr":    "IPv4地址格式不正确",
-	"ip6_addr":    "IPv6地址格式不正确",
-	"unix_addr":   "Unix地址格式不正确",
-	"mac":         "MAC地址格式不正确",
-	"hostname_port": "主机名端口格式不正确",
-	"ip_port":     "IP端口格式不正确",
-	"ip4_port":    "IPv4端口格式不正确",
-	"ip6_port":    "IPv6端口格式不正确",
-	"tcp_port":    "TCP端口格式不正确",
-	"udp_port":    "UDP端口格式不正确",
-	"cidr":        "CIDR格式不正确",
-	"cidrv4":      "CIDR v4格式不正确",
-	"cidrv6":      "CIDR v6格式不正确",
-	"multicast_ip": "多播IP格式不正确",
-	"multicast_ip4": "多播IPv4格式不正确",
-	"multicast_ip6": "多播IPv6格式不正确",
-	"private_ip":  "私有IP格式不正确",
-	"private_ip4": "私有IPv4格式不正确",
-	"private_ip6": "私有IPv6格式不正确",
-	"public_ip":   "公网IP格式不正确",
-	"public_ip4":  "公网IPv4格式不正确",
-	"public_ip6":  "公网IPv6格式不正确",
-	"loopback_ip": "回环IP格式不正确",
-	"loopback_ip4": "回环IPv4格式不正确",
-	"loopback_ip6": "回环IPv6格式不正确",
-	"link_local_ip": "链路本地IP格式不正确",
-	"link_local_ip4": "链路本地IPv4格式不正确",
-	"link_local_ip6": "链路本地IPv6格式不正确",
-	"global_unicast_ip": "全局单播IP格式不正确",
+	"required":           "不能为空",
+	"email":              "格式不正确",
+	"min":                "长度不能少于%s位",
+	"max":                "长度不能超过%s位",
+	"len":                "长度必须为%s位",
+	"oneof":              "必须是以下值之一：%s",
+	"numeric":            "必须是数字",
+	"alpha":              "只能包含字母",
+	"alphanum":           "只能包含字母和数字",
+	"url":                "必须是有效的URL",
+	"uuid":               "必须是有效的UUID",
+	"date":               "日期格式不正确",
+	"time":               "时间格式不正确",
+	"gt":                 "必须大于%s",
+	"gte":                "必须大于等于%s",
+	"lt":                 "必须小于%s",
+	"lte":                "必须小于等于%s",
+	"eq":                 "必须等于%s",
+	"ne":                 "不能等于%s",
+	"unique":             "值已存在",
+	"exists":             "值不存在",
+	"regexp":             "格式不正确",
+	"json":               "JSON格式不正确",
+	"base64":             "Base64格式不正确",
+	"hexadecimal":        "十六进制格式不正确",
+	"hexcolor":           "颜色格式不正确",
+	"rgb":                "RGB格式不正确",
+	"rgba":               "RGBA格式不正确",
+	"hsl":                "HSL格式不正确",
+	"hsla":               "HSLA格式不正确",
+	"e164":               "电话号码格式不正确",
+	"isbn":               "ISBN格式不正确",
+	"isbn10":             "ISBN-10格式不正确",
+	"isbn13":             "ISBN-13格式不正确",
+	"uuid3":              "UUID v3格式不正确",
+	"uuid4":              "UUID v4格式不正确",
+	"uuid5":              "UUID v5格式不正确",
+	"ulid":               "ULID格式不正确",
+	"cron":               "Cron表达式格式不正确",
+	"mongodb":            "MongoDB ObjectID格式不正确",
+	"datetime":           "日期时间格式不正确",
+	"image":              "必须是有效的图片文件",
+	"file":               "必须是有效的文件",
+	"dir":                "必须是有效的目录",
+	"path":               "必须是有效的路径",
+	"hostname":           "主机名格式不正确",
+	"hostname_rfc1123":   "主机名格式不正确",
+	"fqdn":               "完全限定域名格式不正确",
+	"tcp_addr":           "TCP地址格式不正确",
+	"tcp4_addr":          "TCP4地址格式不正确",
+	"tcp6_addr":          "TCP6地址格式不正确",
+	"udp_addr":           "UDP地址格式不正确",
+	"udp4_addr":          "UDP4地址格式不正确",
+	"udp6_addr":          "UDP6地址格式不正确",
+	"ip_addr":            "IP地址格式不正确",
+	"ip4_addr":           "IPv4地址格式不正确",
+	"ip6_addr":           "IPv6地址格式不正确",
+	"unix_addr":          "Unix地址格式不正确",
+	"mac":                "MAC地址格式不正确",
+	"hostname_port":      "主机名端口格式不正确",
+	"ip_port":            "IP端口格式不正确",
+	"ip4_port":           "IPv4端口格式不正确",
+	"ip6_port":           "IPv6端口格式不正确",
+	"tcp_port":           "TCP端口格式不正确",
+	"udp_port":           "UDP端口格式不正确",
+	"cidr":               "CIDR格式不正确",
+	"cidrv4":             "CIDR v4格式不正确",
+	"cidrv6":             "CIDR v6格式不正确",
+	"multicast_ip":       "多播IP格式不正确",
+	"multicast_ip4":      "多播IPv4格式不正确",
+	"multicast_ip6":      "多播IPv6格式不正确",
+	"private_ip":         "私有IP格式不正确",
+	"private_ip4":        "私有IPv4格式不正确",
+	"private_ip6":        "私有IPv6格式不正确",
+	"public_ip":          "公网IP格式不正确",
+	"public_ip4":         "公网IPv4格式不正确",
+	"public_ip6":         "公网IPv6格式不正确",
+	"loopback_ip":        "回环IP格式不正确",
+	"loopback_ip4":       "回环IPv4格式不正确",
+	"loopback_ip6":       "回环IPv6格式不正确",
+	"link_local_ip":      "链路本地IP格式不正确",
+	"link_local_ip4":     "链路本地IPv4格式不正确",
+	"link_local_ip6":     "链路本地IPv6格式不正确",
+	"global_unicast_ip":  "全局单播IP格式不正确",
 	"global_unicast_ip4": "全局单播IPv4格式不正确",
 	"global_unicast_ip6": "全局单播IPv6格式不正确",
-	"unspecified_ip": "未指定IP格式不正确",
-	"unspecified_ip4": "未指定IPv4格式不正确",
-	"unspecified_ip6": "未指定IPv6格式不正确",
+	"unspecified_ip":     "未指定IP格式不正确",
+	"unspecified_ip4":    "未指定IPv4格式不正确",
+	"unspecified_ip6":    "未指定IPv6格式不正确",
 }
 
 // FormatValidationErrors 格式化验证错误
 func FormatValidationErrors(err error) []ValidationError {
 	var errors []ValidationError
-	
+
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		for _, e := range validationErrors {
 			field := getFieldName(e.Field())
 			tag := e.Tag()
 			value := fmt.Sprintf("%v", e.Value())
 			message := getErrorMessage(field, tag, e.Param())
-			
+
 			errors = append(errors, ValidationError{
 				Field:   field,
 				Tag:     tag,
@@ -166,7 +166,7 @@ func FormatValidationErrors(err error) []ValidationError {
 			})
 		}
 	}
-	
+
 	return errors
 }
 
@@ -256,15 +256,15 @@ func HandleValidationError(c *gin.Context, err error) {
 // ValidateStruct 验证结构体并返回友好错误
 func ValidateStruct(obj interface{}) error {
 	validate := validator.New()
-	
+
 	// 注册自定义验证器（如果需要）
 	// validate.RegisterValidation("custom", customValidator)
-	
+
 	err := validate.Struct(obj)
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -274,6 +274,19 @@ func ValidateAndHandleError(c *gin.Context, obj interface{}) bool {
 	if err != nil {
 		HandleValidationError(c, err)
 		return false
+	}
+	return true
+}
+
+// IsAllDigits 检查字符串是否全为数字
+func IsAllDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, char := range s {
+		if char < '0' || char > '9' {
+			return false
+		}
 	}
 	return true
 }
