@@ -13,19 +13,19 @@ import (
 
 // GroupBuyService 拼单服务
 type GroupBuyService struct {
-	groupBuyRepo    *database.GroupBuyRepository
-	walletRepo      *database.WalletRepository
-	cacheService    *WalletCacheService
-	walletService   *WalletService
+	groupBuyRepo  *database.GroupBuyRepository
+	walletRepo    *database.WalletRepository
+	cacheService  *WalletCacheService
+	walletService *WalletService
 }
 
 // NewGroupBuyService 创建拼单服务实例
 func NewGroupBuyService() *GroupBuyService {
 	return &GroupBuyService{
-		groupBuyRepo:    database.NewGroupBuyRepository(),
-		walletRepo:      database.NewWalletRepository(),
-		cacheService:    NewWalletCacheService(),
-		walletService:   NewWalletService(),
+		groupBuyRepo:  database.NewGroupBuyRepository(),
+		walletRepo:    database.NewWalletRepository(),
+		cacheService:  NewWalletCacheService(),
+		walletService: NewWalletService(),
 	}
 }
 
@@ -105,9 +105,10 @@ func (s *GroupBuyService) checkGroupBuyQualification(ctx context.Context, uid st
 	}
 
 	// 5. 检查钱包状态
-	if !wallet.IsActive() {
+	if wallet.IsFrozen() {
 		return false, nil
 	}
+	// 状态2（无法提现）不影响拼单资格
 
 	// 6. 检查用户经验值是否达到最低要求（假设最低经验值为1）
 	if user.Experience < 1 {
@@ -142,7 +143,7 @@ func (s *GroupBuyService) ensureUserWallet(ctx context.Context, uid string) erro
 	}
 
 	// 2. 如果钱包存在但状态不正常，激活钱包
-	if !wallet.IsActive() {
+	if wallet.IsFrozen() {
 		wallet.Status = 1
 		wallet.UpdatedAt = time.Now().UTC()
 		err = s.walletRepo.UpdateWallet(ctx, wallet)
@@ -150,6 +151,7 @@ func (s *GroupBuyService) ensureUserWallet(ctx context.Context, uid string) erro
 			return err
 		}
 	}
+	// 状态2（无法提现）不需要激活，保持原状态
 
 	return nil
 }
@@ -187,9 +189,10 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	}
 
 	// 检查钱包状态
-	if !wallet.IsActive() {
+	if wallet.IsFrozen() {
 		return nil, utils.NewAppError(utils.CodeOperationFailed, "钱包已被冻结，无法参与拼单")
 	}
+	// 状态2（无法提现）不影响拼单参与
 
 	// 检查余额是否足够
 	if wallet.Balance < groupBuy.PerPersonAmount {
@@ -214,16 +217,16 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	shareCount := 0
 	followCount := 0
 	favoriteCount := 0
-	
+
 	// 随机选择类型数量（1-4个）
 	typeCount := rand.Intn(4) + 1
-	
+
 	// 创建类型数组并随机打乱
 	types := []string{"like", "share", "follow", "favorite"}
 	rand.Shuffle(len(types), func(i, j int) {
 		types[i], types[j] = types[j], types[i]
 	})
-	
+
 	// 选择前typeCount个类型，数量设为1
 	for i := 0; i < typeCount; i++ {
 		switch types[i] {
@@ -255,7 +258,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		FavoriteStatus: "pending",
 		Status:         "pending",
 		ExpireTime:     time.Now().UTC().Add(24 * time.Hour), // 设置24小时后过期
-		IsSystemOrder:  false, // 拼单订单也是用户订单，不是系统订单
+		IsSystemOrder:  false,                                // 拼单订单也是用户订单，不是系统订单
 		CreatedAt:      time.Now().UTC(),
 		UpdatedAt:      time.Now().UTC(),
 	}
@@ -325,8 +328,6 @@ func (s *GroupBuyService) calculateProfitAmountByGroupBuy(amount, profitMargin f
 	// 计算利润金额：订单金额 × 利润比例
 	return amount * profitMargin
 }
-
-
 
 // generateTransactionNo 生成交易流水号
 func (s *GroupBuyService) generateTransactionNo() string {

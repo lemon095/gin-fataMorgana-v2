@@ -6,12 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 钱包状态常量
+const (
+	WalletStatusNormal     = 1 // 正常
+	WalletStatusFrozen     = 0 // 冻结
+	WalletStatusNoWithdraw = 2 // 无法提现
+)
+
 // Wallet 钱包模型
 type Wallet struct {
 	ID           uint      `gorm:"primarykey" json:"id"`
 	Uid          string    `gorm:"uniqueIndex;not null;size:8;comment:用户唯一ID" json:"uid"`                // 用户ID
 	Balance      float64   `gorm:"type:decimal(15,2);default:0.00;not null;comment:钱包余额" json:"balance"` // 总余额
-	Status       int       `gorm:"default:1;comment:钱包状态 1:正常 0:冻结" json:"status"`                       // 状态：1-正常，0-冻结
+	Status       int       `gorm:"default:1;comment:钱包状态 1:正常 0:冻结 2:无法提现" json:"status"`                // 状态：1-正常，0-冻结，2-无法提现
 	Currency     string    `gorm:"default:'PHP';size:3;comment:货币类型" json:"currency"`                    // 货币类型
 	LastActiveAt time.Time `gorm:"autoUpdateTime;comment:最后活跃时间" json:"last_active_at"`                  // 最后活跃时间
 	CreatedAt    time.Time `gorm:"autoCreateTime;comment:创建时间" json:"created_at"`
@@ -65,7 +72,37 @@ func (w *Wallet) Withdraw(amount float64) error {
 
 // IsActive 检查钱包是否激活
 func (w *Wallet) IsActive() bool {
-	return w.Status == 1
+	return w.Status == WalletStatusNormal
+}
+
+// IsFrozen 检查钱包是否冻结
+func (w *Wallet) IsFrozen() bool {
+	return w.Status == WalletStatusFrozen
+}
+
+// IsNoWithdraw 检查钱包是否无法提现
+func (w *Wallet) IsNoWithdraw() bool {
+	return w.Status == WalletStatusNoWithdraw
+}
+
+// CanWithdraw 检查钱包是否可以提现
+func (w *Wallet) CanWithdraw() bool {
+	return w.Status != WalletStatusNoWithdraw && w.Status != WalletStatusFrozen
+}
+
+// CanOperate 检查钱包是否可以操作（充值、消费等）
+func (w *Wallet) CanOperate() bool {
+	return w.Status != WalletStatusFrozen
+}
+
+// GetStatusName 获取状态名称
+func (w *Wallet) GetStatusName() string {
+	statusNames := map[int]string{
+		WalletStatusNormal:     "正常",
+		WalletStatusFrozen:     "冻结",
+		WalletStatusNoWithdraw: "无法提现",
+	}
+	return statusNames[w.Status]
 }
 
 // UpdateLastActive 更新最后活跃时间
