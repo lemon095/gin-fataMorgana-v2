@@ -60,7 +60,7 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	}
 	if isPhone(req.Account) {
 		phoneExists, err := s.userRepo.CheckPhoneExists(ctx, req.Account)
-	if err != nil {
+		if err != nil {
 			return nil, utils.NewAppError(utils.CodeUserQueryFailed, "查询用户失败")
 		}
 		if phoneExists {
@@ -341,7 +341,7 @@ func (s *UserService) GetUserByID(userID uint) (*models.UserResponse, error) {
 	}
 
 	response := user.ToResponse()
-	response.Rate = rate // 设置从Redis获取的等级进度
+	response.Rate = rate        // 设置从Redis获取的等级进度
 	response.Experience = level // 动态计算的经验值（等级）
 
 	return &response, nil
@@ -382,18 +382,18 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 		log.Printf("未知的用户类型: %T", user)
 		return
 	}
-	
+
 	// 记录失败登录
 	logEntry := &models.UserLoginLog{
 		Uid:        uid,
-			LoginIP:    loginIP,
-			UserAgent:  userAgent,
+		LoginIP:    loginIP,
+		UserAgent:  userAgent,
 		Status:     0, // 0表示失败
-			FailReason: reason,
+		FailReason: reason,
 		LoginTime:  time.Now().UTC(),
 		CreatedAt:  time.Now().UTC(),
 	}
-	
+
 	if err := s.loginLogRepo.Create(ctx, logEntry); err != nil {
 		log.Printf("记录失败登录失败: %v", err)
 	}

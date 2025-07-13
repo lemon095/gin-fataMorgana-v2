@@ -12,9 +12,9 @@ import (
 func main() {
 	// 解析命令行参数
 	var (
-		help        = flag.Bool("help", false, "显示帮助信息")
-		checkIndex  = flag.Bool("check-index", false, "检测并创建缺失的索引")
-		showIndex   = flag.Bool("show-index", false, "显示当前数据库的所有索引")
+		help       = flag.Bool("help", false, "显示帮助信息")
+		checkIndex = flag.Bool("check-index", false, "检测并创建缺失的索引")
+		showIndex  = flag.Bool("show-index", false, "显示当前数据库的所有索引")
 	)
 	flag.Parse()
 
@@ -56,7 +56,7 @@ func main() {
 
 	// 默认执行完整迁移
 	log.Println("🚀 开始数据库迁移...")
-	
+
 	// 执行迁移
 	if err := database.AutoMigrate(); err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
