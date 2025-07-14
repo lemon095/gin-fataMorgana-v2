@@ -75,10 +75,10 @@ func main() {
 
 	// 初始化JWT
 	utils.InitJWT(config.GlobalConfig.JWT.Secret, config.GlobalConfig.JWT.AccessTokenExpire, config.GlobalConfig.JWT.RefreshTokenExpire)
-	
+
 	// 输出JWT配置信息
-	log.Printf("🔐 JWT配置: AccessToken过期时间=%d秒(%.1f小时), RefreshToken过期时间=%d秒(%.1f天)", 
-		config.GlobalConfig.JWT.AccessTokenExpire, 
+	log.Printf("🔐 JWT配置: AccessToken过期时间=%d秒(%.1f小时), RefreshToken过期时间=%d秒(%.1f天)",
+		config.GlobalConfig.JWT.AccessTokenExpire,
 		float64(config.GlobalConfig.JWT.AccessTokenExpire)/3600,
 		config.GlobalConfig.JWT.RefreshTokenExpire,
 		float64(config.GlobalConfig.JWT.RefreshTokenExpire)/86400)
@@ -128,29 +128,29 @@ func main() {
 		log.Println("⚠️  配置文件显示假数据已禁用，强制启用...")
 		config.GlobalConfig.FakeData.Enabled = true
 	}
-	
+
 	if config.GlobalConfig.FakeData.Enabled {
 		log.Println("🚀 启动定时任务服务...")
-		log.Printf("📋 假数据配置: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d", 
-			config.GlobalConfig.FakeData.Enabled, 
+		log.Printf("📋 假数据配置: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d",
+			config.GlobalConfig.FakeData.Enabled,
 			config.GlobalConfig.FakeData.CronExpression,
 			config.GlobalConfig.FakeData.MinOrders,
 			config.GlobalConfig.FakeData.MaxOrders)
-		
+
 		// 创建定时任务配置
 		cronConfig := &services.CronConfig{
-			Enabled:           config.GlobalConfig.FakeData.Enabled,
-			OrderCronExpr:     config.GlobalConfig.FakeData.CronExpression,
-			CleanupCronExpr:   config.GlobalConfig.FakeData.CleanupCron,
+			Enabled:             config.GlobalConfig.FakeData.Enabled,
+			OrderCronExpr:       config.GlobalConfig.FakeData.CronExpression,
+			CleanupCronExpr:     config.GlobalConfig.FakeData.CleanupCron,
 			LeaderboardCronExpr: config.GlobalConfig.FakeData.LeaderboardCron,
-			MinOrders:         config.GlobalConfig.FakeData.MinOrders,
-			MaxOrders:         config.GlobalConfig.FakeData.MaxOrders,
-			PurchaseRatio:     config.GlobalConfig.FakeData.PurchaseRatio,
-			TaskMinCount:      config.GlobalConfig.FakeData.TaskMinCount,
-			TaskMaxCount:      config.GlobalConfig.FakeData.TaskMaxCount,
-			RetentionDays:     config.GlobalConfig.FakeData.RetentionDays,
+			MinOrders:           config.GlobalConfig.FakeData.MinOrders,
+			MaxOrders:           config.GlobalConfig.FakeData.MaxOrders,
+			PurchaseRatio:       config.GlobalConfig.FakeData.PurchaseRatio,
+			TaskMinCount:        config.GlobalConfig.FakeData.TaskMinCount,
+			TaskMaxCount:        config.GlobalConfig.FakeData.TaskMaxCount,
+			RetentionDays:       config.GlobalConfig.FakeData.RetentionDays,
 		}
-		
+
 		// 创建并启动定时任务服务
 		log.Println("⚙️  创建定时任务服务实例...")
 		cronService = services.NewCronService(cronConfig)
@@ -159,10 +159,10 @@ func main() {
 		} else {
 			log.Println("✅ 定时任务服务启动成功")
 		}
-		
+
 		// 注入定时任务服务到控制器
 		cronController.SetCronService(cronService)
-		
+
 		// 优雅关闭时停止定时任务
 		defer func() {
 			if cronService != nil {
@@ -192,7 +192,7 @@ func main() {
 			if r := recover(); r != nil {
 				log.Printf("HTTP请求发生panic: %v, URL: %s, Method: %s", r, c.Request.URL.Path, c.Request.Method)
 				debug.PrintStack()
-				
+
 				// 返回500错误
 				c.JSON(500, gin.H{
 					"code":    500,
@@ -279,7 +279,7 @@ func main() {
 
 	// API路由组
 	api := r.Group("/api")
-	
+
 	// API版本控制
 	v1 := api.Group("/v1")
 
@@ -289,12 +289,12 @@ func main() {
 	v1.GET("/health/redis", healthController.RedisHealth)
 
 	// 认证相关接口
-	v1.POST("/auth/register", authController.Register) // 注册接口（已移除频率限制）
-	v1.POST("/auth/login", authController.Login)               // 登录接口（已移除频率限制）
-	v1.POST("/auth/logout", middleware.AuthMiddleware(), authController.Logout)                    // 用户登出 - 撤销当前token
+	v1.POST("/auth/register", authController.Register)                                               // 注册接口（已移除频率限制）
+	v1.POST("/auth/login", authController.Login)                                                     // 登录接口（已移除频率限制）
+	v1.POST("/auth/logout", middleware.AuthMiddleware(), authController.Logout)                      // 用户登出 - 撤销当前token
 	v1.POST("/auth/profile", middleware.AuthMiddleware(), authController.GetProfile)                 // 获取用户信息 - 获取当前用户完整资料
 	v1.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
-	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)       // 绑定银行卡
+	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)        // 绑定银行卡
 	v1.POST("/auth/get-bank-card-info", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
 
 	// 会话管理路由
@@ -309,26 +309,26 @@ func main() {
 	// 钱包相关路由
 	wallet := v1.Group("/wallet")
 	{
-		wallet.Use(middleware.AuthMiddleware())                                                             // 需要认证
-		wallet.POST("/info", walletController.GetWallet)                                                    // 获取钱包信息 - 查询用户余额和钱包状态
-		wallet.POST("/transactions", walletController.GetUserTransactions)                                  // 获取资金记录 - 查询用户交易流水历史
-		wallet.POST("/transaction-detail", walletController.GetTransactionDetail)                           // 获取交易详情 - 根据流水号查询具体交易信息
-		wallet.POST("/withdraw", walletController.RequestWithdraw) // 申请提现 - 用户申请从钱包提现到银行卡（已移除频率限制）
-		wallet.POST("/withdraw-summary", walletController.GetWithdrawSummary)                               // 获取提现汇总 - 查询用户提现统计信息
-		wallet.POST("/recharge", walletController.Recharge)                                                 // 充值申请 - 用户申请从银行卡充值到钱包
+		wallet.Use(middleware.AuthMiddleware())                                   // 需要认证
+		wallet.POST("/info", walletController.GetWallet)                          // 获取钱包信息 - 查询用户余额和钱包状态
+		wallet.POST("/transactions", walletController.GetUserTransactions)        // 获取资金记录 - 查询用户交易流水历史
+		wallet.POST("/transaction-detail", walletController.GetTransactionDetail) // 获取交易详情 - 根据流水号查询具体交易信息
+		wallet.POST("/withdraw", walletController.RequestWithdraw)                // 申请提现 - 用户申请从钱包提现到银行卡（已移除频率限制）
+		wallet.POST("/withdraw-summary", walletController.GetWithdrawSummary)     // 获取提现汇总 - 查询用户提现统计信息
+		wallet.POST("/recharge", walletController.Recharge)                       // 充值申请 - 用户申请从银行卡充值到钱包
 	}
 
 	// 订单相关路由
 	order := v1.Group("/order")
 	{
-		order.Use(middleware.AuthMiddleware())                // 需要认证
-		order.POST("/create", orderController.CreateOrder)    // 创建订单 - 用户创建新任务订单
-		order.POST("/all-list", orderController.GetOrderList)     // 获取订单列表 - 查询用户订单历史（支持状态筛选）
+		order.Use(middleware.AuthMiddleware())                   // 需要认证
+		order.POST("/create", orderController.CreateOrder)       // 创建订单 - 用户创建新任务订单
+		order.POST("/all-list", orderController.GetOrderList)    // 获取订单列表 - 查询用户订单历史（支持状态筛选）
 		order.POST("/my-orders", orderController.GetMyOrderList) // 获取我的订单列表 - 只获取当前用户的订单
-		order.POST("/list", orderController.GetAllOrderList) // 获取所有订单列表 - 只需登录即可
-		order.POST("/detail", orderController.GetOrderDetail) // 获取订单详情 - 查询具体订单的详细信息
-		order.POST("/stats", orderController.GetOrderStats)   // 获取订单统计 - 查询用户订单统计数据
-		order.POST("/period", orderController.GetPeriodList)  // 获取期数列表 - 获取当前活跃期数和价格配置
+		order.POST("/list", orderController.GetAllOrderList)     // 获取所有订单列表 - 只需登录即可
+		order.POST("/detail", orderController.GetOrderDetail)    // 获取订单详情 - 查询具体订单的详细信息
+		order.POST("/stats", orderController.GetOrderStats)      // 获取订单统计 - 查询用户订单统计数据
+		order.POST("/period", orderController.GetPeriodList)     // 获取期数列表 - 获取当前活跃期数和价格配置
 	}
 
 	// 管理员路由
@@ -347,7 +347,7 @@ func main() {
 	// 排行榜路由
 	leaderboard := v1.Group("/leaderboard")
 	{
-		leaderboard.Use(middleware.AuthMiddleware()) // 需要认证
+		leaderboard.Use(middleware.AuthMiddleware())                       // 需要认证
 		leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜 - 查询周度任务完成排行榜
 	}
 
@@ -368,7 +368,7 @@ func main() {
 	// 拼单路由
 	groupBuy := v1.Group("/groupBuy")
 	{
-		groupBuy.Use(middleware.AuthMiddleware())                                    // 需要认证
+		groupBuy.Use(middleware.AuthMiddleware())                                   // 需要认证
 		groupBuy.POST("/active-detail", groupBuyController.GetActiveGroupBuyDetail) // 获取活跃拼单详情 - 获取当前可参与的拼单信息
 		groupBuy.POST("/join", groupBuyController.JoinGroupBuy)                     // 参与拼单 - 用户参与拼单活动
 	}
@@ -379,11 +379,11 @@ func main() {
 	// 定时任务管理路由
 	cron := v1.Group("/cron")
 	{
-		cron.Use(middleware.AuthMiddleware()) // 需要认证
-		cron.POST("/manual-generate", cronController.ManualGenerateOrders) // 手动生成订单
-		cron.POST("/manual-cleanup", cronController.ManualCleanup)         // 手动清理数据
+		cron.Use(middleware.AuthMiddleware())                                               // 需要认证
+		cron.POST("/manual-generate", cronController.ManualGenerateOrders)                  // 手动生成订单
+		cron.POST("/manual-cleanup", cronController.ManualCleanup)                          // 手动清理数据
 		cron.POST("/update-leaderboard-cache", cronController.ManualUpdateLeaderboardCache) // 手动更新热榜缓存
-		cron.GET("/status", cronController.GetCronStatus)                  // 获取定时任务状态
+		cron.GET("/status", cronController.GetCronStatus)                                   // 获取定时任务状态
 	}
 
 	// 启动服务器
@@ -405,7 +405,7 @@ func main() {
 				log.Printf("HTTP服务器goroutine发生panic: %v", r)
 			}
 		}()
-		
+
 		log.Printf("服务器启动在 0.0.0.0:%s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("服务器启动失败: %v", err)

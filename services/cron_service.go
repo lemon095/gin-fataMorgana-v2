@@ -11,28 +11,28 @@ import (
 
 // CronService 定时任务服务
 type CronService struct {
-	cron              *cron.Cron
-	fakeOrderService  *FakeOrderService
-	dataCleanupService *DataCleanupService
+	cron                    *cron.Cron
+	fakeOrderService        *FakeOrderService
+	dataCleanupService      *DataCleanupService
 	leaderboardCacheService *LeaderboardCacheService
-	config            *CronConfig
-	orderEntryID      cron.EntryID
-	cleanupEntryID    cron.EntryID
-	leaderboardEntryID cron.EntryID
+	config                  *CronConfig
+	orderEntryID            cron.EntryID
+	cleanupEntryID          cron.EntryID
+	leaderboardEntryID      cron.EntryID
 }
 
 // CronConfig 定时任务配置
 type CronConfig struct {
-	Enabled           bool   `yaml:"enabled"`
-	OrderCronExpr     string `yaml:"order_cron_expr"`     // 订单生成定时表达式
-	CleanupCronExpr   string `yaml:"cleanup_cron_expr"`   // 数据清理定时表达式
-	LeaderboardCronExpr string `yaml:"leaderboard_cron_expr"` // 热榜缓存更新定时表达式
-	MinOrders         int    `yaml:"min_orders"`
-	MaxOrders         int    `yaml:"max_orders"`
-	PurchaseRatio     float64 `yaml:"purchase_ratio"`
-	TaskMinCount      int    `yaml:"task_min_count"`
-	TaskMaxCount      int    `yaml:"task_max_count"`
-	RetentionDays     int    `yaml:"retention_days"`
+	Enabled             bool    `yaml:"enabled"`
+	OrderCronExpr       string  `yaml:"order_cron_expr"`       // 订单生成定时表达式
+	CleanupCronExpr     string  `yaml:"cleanup_cron_expr"`     // 数据清理定时表达式
+	LeaderboardCronExpr string  `yaml:"leaderboard_cron_expr"` // 热榜缓存更新定时表达式
+	MinOrders           int     `yaml:"min_orders"`
+	MaxOrders           int     `yaml:"max_orders"`
+	PurchaseRatio       float64 `yaml:"purchase_ratio"`
+	TaskMinCount        int     `yaml:"task_min_count"`
+	TaskMaxCount        int     `yaml:"task_max_count"`
+	RetentionDays       int     `yaml:"retention_days"`
 }
 
 // NewCronService 创建新的定时任务服务
@@ -57,11 +57,11 @@ func NewCronService(config *CronConfig) *CronService {
 	}
 
 	return &CronService{
-		cron:              cron.New(cron.WithSeconds()),
-		fakeOrderService:  NewFakeOrderService(fakeOrderConfig),
-		dataCleanupService: NewDataCleanupService(cleanupConfig),
+		cron:                    cron.New(cron.WithSeconds()),
+		fakeOrderService:        NewFakeOrderService(fakeOrderConfig),
+		dataCleanupService:      NewDataCleanupService(cleanupConfig),
 		leaderboardCacheService: NewLeaderboardCacheService(),
-		config:            config,
+		config:                  config,
 	}
 }
 
@@ -73,13 +73,11 @@ func (s *CronService) Start() error {
 	}
 
 	log.Println("🚀 启动定时任务服务...")
-	log.Printf("📋 服务配置: 启用=%v, 订单表达式=%s, 清理表达式=%s, 热榜表达式=%s", 
-		s.config.Enabled, s.config.OrderCronExpr, s.config.CleanupCronExpr, s.config.LeaderboardCronExpr)
 
 	// 启动订单生成定时任务
 	log.Println("⏰ 启动订单生成定时任务...")
 	if err := s.StartFakeOrderCron(); err != nil {
-		log.Printf("❌ 启动订单生成定时任务失败: %v", err)
+
 		return err
 	}
 
@@ -131,7 +129,7 @@ func (s *CronService) StartFakeOrderCron() error {
 	}
 
 	log.Printf("⏰ 验证cron表达式: %s", s.config.OrderCronExpr)
-	
+
 	entryID, err := s.cron.AddFunc(s.config.OrderCronExpr, s.generateFakeOrders)
 	if err != nil {
 		log.Printf("❌ cron表达式验证失败: %v", err)
@@ -159,7 +157,7 @@ func (s *CronService) StartCleanupCron() error {
 	}
 
 	log.Printf("🧹 验证清理cron表达式: %s", s.config.CleanupCronExpr)
-	
+
 	entryID, err := s.cron.AddFunc(s.config.CleanupCronExpr, s.cleanupOldData)
 	if err != nil {
 		log.Printf("❌ 清理cron表达式验证失败: %v", err)
@@ -187,7 +185,7 @@ func (s *CronService) StartLeaderboardCacheCron() error {
 	}
 
 	log.Printf("🏆 验证热榜缓存cron表达式: %s", s.config.LeaderboardCronExpr)
-	
+
 	entryID, err := s.cron.AddFunc(s.config.LeaderboardCronExpr, s.updateLeaderboardCache)
 	if err != nil {
 		log.Printf("❌ 热榜缓存cron表达式验证失败: %v", err)
@@ -218,9 +216,9 @@ func (s *CronService) generateFakeOrders() {
 
 	log.Println("=== 开始执行假订单生成定时任务 ===")
 	log.Printf("当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
-	log.Printf("定时任务配置: 最小订单数=%d, 最大订单数=%d, 购买单比例=%.2f", 
+	log.Printf("定时任务配置: 最小订单数=%d, 最大订单数=%d, 购买单比例=%.2f",
 		s.config.MinOrders, s.config.MaxOrders, s.config.PurchaseRatio)
-	
+
 	startTime := time.Now()
 
 	// 生成随机订单数量
@@ -230,7 +228,7 @@ func (s *CronService) generateFakeOrders() {
 	} else {
 		count = s.config.MinOrders
 	}
-	
+
 	log.Printf("本次将生成 %d 条假订单", count)
 
 	// 生成假订单
@@ -281,7 +279,7 @@ func (s *CronService) updateLeaderboardCache() {
 
 	log.Println("=== 开始执行热榜缓存更新定时任务 ===")
 	log.Printf("当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
-	
+
 	startTime := time.Now()
 
 	// 更新热榜缓存
@@ -328,4 +326,4 @@ func (s *CronService) ManualCleanup() (*CleanupStats, error) {
 func (s *CronService) ManualUpdateLeaderboardCache() error {
 	log.Println("手动更新热榜缓存")
 	return s.leaderboardCacheService.UpdateLeaderboardCache()
-} 
+}

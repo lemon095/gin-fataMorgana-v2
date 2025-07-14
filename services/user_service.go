@@ -77,14 +77,14 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		adminUserRepo := database.NewAdminUserRepository()
 		adminUser, err := adminUserRepo.GetActiveInviteCode(ctx, req.InviteCode)
 		if err != nil {
-			log.Printf("邀请码验证失败，邀请码: %s, 错误: %v", req.InviteCode, err)
+
 			return nil, utils.NewAppError(utils.CodeInviteCodeAdminDisabled, "邀请码无效或管理员账户已被禁用")
 		}
 
 		// 可以在这里添加额外的邀请码验证逻辑
 		// 例如：检查管理员是否有权限邀请用户
 		if !adminUser.IsActive() {
-			log.Printf("邀请码对应的管理员账户已被禁用，邀请码: %s", req.InviteCode)
+
 			return nil, utils.NewAppError(utils.CodeInviteCodeAdminDisabled2, "邀请码对应的管理员账户已被禁用")
 		}
 	}
@@ -118,17 +118,15 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 
 	// 加密密码
 	if err := user.HashPassword(); err != nil {
-		log.Printf("加密用户密码失败，邮箱: %s, 错误: %v", req.Account, err)
+
 		return nil, utils.NewAppError(utils.CodePasswordEncryptFailed, "加密密码失败")
 	}
 
 	// 保存用户到数据库
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		log.Printf("创建用户失败，邮箱: %s, 错误: %v", req.Account, err)
+
 		return nil, utils.NewAppError(utils.CodeUserCreateFailed, "创建用户失败")
 	}
-
-	log.Printf("用户注册成功，UID: %s, 邮箱: %s", userID, req.Account)
 
 	response := user.ToResponse()
 	return &response, nil

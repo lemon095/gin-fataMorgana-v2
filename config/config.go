@@ -19,6 +19,7 @@ type Config struct {
 	JWT       JWTConfig       `mapstructure:"jwt"`
 	Snowflake SnowflakeConfig `mapstructure:"snowflake"`
 	FakeData  FakeDataConfig  `mapstructure:"fake_data"`
+	Log       LogConfig       `mapstructure:"log"`
 }
 
 // ServerConfig 服务器配置
@@ -82,6 +83,11 @@ type FakeDataConfig struct {
 	RetentionDays   int     `mapstructure:"retention_days"`
 }
 
+// LogConfig 日志配置
+type LogConfig struct {
+	Level string `mapstructure:"level"` // debug, info, warn, error
+}
+
 // GlobalConfig 全局配置实例
 var GlobalConfig *Config
 
@@ -131,8 +137,8 @@ func LoadConfig() error {
 	log.Printf("🌍 环境变量覆盖完成")
 
 	// 打印假数据配置状态
-	log.Printf("📋 假数据配置状态: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d", 
-		GlobalConfig.FakeData.Enabled, 
+	log.Printf("📋 假数据配置状态: 启用=%v, 表达式=%s, 最小订单=%d, 最大订单=%d",
+		GlobalConfig.FakeData.Enabled,
 		GlobalConfig.FakeData.CronExpression,
 		GlobalConfig.FakeData.MinOrders,
 		GlobalConfig.FakeData.MaxOrders)
@@ -173,7 +179,7 @@ func setDefaults() {
 	if GlobalConfig.Snowflake.DatacenterID == 0 {
 		GlobalConfig.Snowflake.DatacenterID = 1
 	}
-	
+
 	// 假数据配置默认值
 	if GlobalConfig.FakeData.CronExpression == "" {
 		GlobalConfig.FakeData.CronExpression = "0 */5 * * * *"
@@ -266,25 +272,25 @@ func overrideWithEnvVars() {
 	// 假数据配置 - 不使用环境变量覆盖，直接使用配置文件中的值
 	// 注释掉环境变量覆盖，确保在任何环境下都使用配置文件中的设置
 	/*
-	if env := os.Getenv("FAKE_DATA_ENABLED"); env != "" {
-		GlobalConfig.FakeData.Enabled = env == "true" || env == "1"
-	}
-	if env := os.Getenv("FAKE_DATA_CRON_EXPRESSION"); env != "" {
-		GlobalConfig.FakeData.CronExpression = env
-	}
-	if env := os.Getenv("FAKE_DATA_CLEANUP_CRON"); env != "" {
-		GlobalConfig.FakeData.CleanupCron = env
-	}
-	if env := os.Getenv("FAKE_DATA_MIN_ORDERS"); env != "" {
-		if minOrders := parsePort(env); minOrders > 0 {
-			GlobalConfig.FakeData.MinOrders = minOrders
+		if env := os.Getenv("FAKE_DATA_ENABLED"); env != "" {
+			GlobalConfig.FakeData.Enabled = env == "true" || env == "1"
 		}
-	}
-	if env := os.Getenv("FAKE_DATA_MAX_ORDERS"); env != "" {
-		if maxOrders := parsePort(env); maxOrders > 0 {
-			GlobalConfig.FakeData.MaxOrders = maxOrders
+		if env := os.Getenv("FAKE_DATA_CRON_EXPRESSION"); env != "" {
+			GlobalConfig.FakeData.CronExpression = env
 		}
-	}
+		if env := os.Getenv("FAKE_DATA_CLEANUP_CRON"); env != "" {
+			GlobalConfig.FakeData.CleanupCron = env
+		}
+		if env := os.Getenv("FAKE_DATA_MIN_ORDERS"); env != "" {
+			if minOrders := parsePort(env); minOrders > 0 {
+				GlobalConfig.FakeData.MinOrders = minOrders
+			}
+		}
+		if env := os.Getenv("FAKE_DATA_MAX_ORDERS"); env != "" {
+			if maxOrders := parsePort(env); maxOrders > 0 {
+				GlobalConfig.FakeData.MaxOrders = maxOrders
+			}
+		}
 	*/
 }
 

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"gin-fataMorgana/database"
@@ -46,8 +45,6 @@ func (s *DataCleanupService) CleanupOldSystemOrders() (*CleanupStats, error) {
 	// 计算清理时间点
 	cutoffTime := time.Now().AddDate(0, 0, -s.config.RetentionDays)
 
-	log.Printf("开始清理 %d 天前的系统订单数据，清理时间点: %s", s.config.RetentionDays, cutoffTime.Format("2006-01-02 15:04:05"))
-
 	// 清理系统订单
 	deletedOrders, err := s.cleanupSystemOrders(ctx, cutoffTime)
 	if err != nil {
@@ -68,9 +65,6 @@ func (s *DataCleanupService) CleanupOldSystemOrders() (*CleanupStats, error) {
 		LastCleanup:      time.Now(),
 		CleanupTime:      duration,
 	}
-
-	log.Printf("数据清理完成: 删除订单=%d, 删除拼单=%d, 耗时=%v",
-		stats.DeletedOrders, stats.DeletedGroupBuys, stats.CleanupTime)
 
 	return stats, nil
 }
@@ -93,8 +87,6 @@ func (s *DataCleanupService) cleanupSystemOrders(ctx context.Context, cutoffTime
 
 		deleted := result.RowsAffected
 		totalDeleted += deleted
-
-		log.Printf("删除系统订单批次: %d 条", deleted)
 
 		// 如果没有更多数据需要删除，退出循环
 		if deleted < int64(batchSize) {
@@ -127,8 +119,6 @@ func (s *DataCleanupService) cleanupSystemGroupBuys(ctx context.Context, cutoffT
 		deleted := result.RowsAffected
 		totalDeleted += deleted
 
-		log.Printf("删除系统拼单批次: %d 条", deleted)
-
 		// 如果没有更多数据需要删除，退出循环
 		if deleted < int64(batchSize) {
 			break
@@ -145,4 +135,4 @@ func (s *DataCleanupService) cleanupSystemGroupBuys(ctx context.Context, cutoffT
 func (s *DataCleanupService) GetCleanupStats() (*CleanupStats, error) {
 	// 这里可以实现获取历史清理统计信息的逻辑
 	return &CleanupStats{}, nil
-} 
+}

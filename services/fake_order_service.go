@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -15,20 +14,20 @@ import (
 
 // FakeOrderService 假订单生成服务
 type FakeOrderService struct {
-	orderRepo       *database.OrderRepository
-	groupBuyRepo    *database.GroupBuyRepository
-	config          *FakeOrderConfig
-	periodCache     map[string]string // 缓存时间段对应的期号
+	orderRepo    *database.OrderRepository
+	groupBuyRepo *database.GroupBuyRepository
+	config       *FakeOrderConfig
+	periodCache  map[string]string // 缓存时间段对应的期号
 }
 
 // FakeOrderConfig 假订单配置
 type FakeOrderConfig struct {
-	MinOrders       int     `yaml:"min_orders"`
-	MaxOrders       int     `yaml:"max_orders"`
-	PurchaseRatio   float64 `yaml:"purchase_ratio"`
-	TaskMinCount    int     `yaml:"task_min_count"`
-	TaskMaxCount    int     `yaml:"task_max_count"`
-	TimeWindow      TimeWindowConfig `yaml:"time_window"`
+	MinOrders     int              `yaml:"min_orders"`
+	MaxOrders     int              `yaml:"max_orders"`
+	PurchaseRatio float64          `yaml:"purchase_ratio"`
+	TaskMinCount  int              `yaml:"task_min_count"`
+	TaskMaxCount  int              `yaml:"task_max_count"`
+	TimeWindow    TimeWindowConfig `yaml:"time_window"`
 }
 
 // TimeWindowConfig 时间窗口配置
@@ -40,22 +39,22 @@ type TimeWindowConfig struct {
 
 // GenerationStats 生成统计
 type GenerationStats struct {
-	TotalGenerated    int64         `json:"total_generated"`
-	PurchaseOrders    int64         `json:"purchase_orders"`
-	GroupBuyOrders    int64         `json:"group_buy_orders"`
-	LastGeneration    time.Time     `json:"last_generation"`
-	AverageTime       time.Duration `json:"average_time"`
-	TotalAmount       float64       `json:"total_amount"`
-	TotalProfit       float64       `json:"total_profit"`
+	TotalGenerated int64         `json:"total_generated"`
+	PurchaseOrders int64         `json:"purchase_orders"`
+	GroupBuyOrders int64         `json:"group_buy_orders"`
+	LastGeneration time.Time     `json:"last_generation"`
+	AverageTime    time.Duration `json:"average_time"`
+	TotalAmount    float64       `json:"total_amount"`
+	TotalProfit    float64       `json:"total_profit"`
 }
 
 // NewFakeOrderService 创建新的假订单生成服务
 func NewFakeOrderService(config *FakeOrderConfig) *FakeOrderService {
 	return &FakeOrderService{
-		orderRepo:       database.NewOrderRepository(),
-		groupBuyRepo:    database.NewGroupBuyRepository(),
-		config:          config,
-		periodCache:     make(map[string]string),
+		orderRepo:    database.NewOrderRepository(),
+		groupBuyRepo: database.NewGroupBuyRepository(),
+		config:       config,
+		periodCache:  make(map[string]string),
 	}
 }
 
@@ -69,23 +68,15 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 		count = rand.Intn(s.config.MaxOrders-s.config.MinOrders+1) + s.config.MinOrders
 	}
 
-	log.Printf("🚀 开始生成 %d 条假订单", count)
-	log.Printf("📊 配置信息: 最小任务数=%d, 最大任务数=%d, 购买单比例=%.2f", 
-		s.config.TaskMinCount, s.config.TaskMaxCount, s.config.PurchaseRatio)
-
 	// 预加载期数数据到缓存
-	log.Println("📅 开始预加载期数数据...")
 	if err := s.preloadPeriodData(); err != nil {
-		log.Printf("❌ 预加载期数数据失败: %v", err)
-	} else {
-		log.Printf("✅ 期数数据预加载成功，缓存大小: %d", len(s.periodCache))
+		return nil, err
 	}
 
 	var purchaseOrders []*models.Order
 	var groupBuyOrders []*models.GroupBuy
 	var totalAmount, totalProfit float64
 
-	log.Println("🔄 开始生成订单数据...")
 	// 生成订单
 	for i := 0; i < count; i++ {
 		if rand.Float64() < s.config.PurchaseRatio {
@@ -101,39 +92,23 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 			totalAmount += groupBuy.PerPersonAmount
 		}
 	}
-	
-	log.Printf("📝 订单数据生成完成: 购买单=%d, 拼单=%d", len(purchaseOrders), len(groupBuyOrders))
 
 	// 逐个插入购买单
 	if len(purchaseOrders) > 0 {
-		log.Printf("💾 开始插入 %d 条购买单到数据库...", len(purchaseOrders))
-		successCount := 0
-		for i, order := range purchaseOrders {
+		for _, order := range purchaseOrders {
 			if err := s.orderRepo.CreateOrder(ctx, order); err != nil {
-				log.Printf("❌ 插入购买单失败 [%d/%d]: %v", i+1, len(purchaseOrders), err)
 				continue
 			}
-			successCount++
 		}
-		log.Printf("✅ 成功插入 %d/%d 条购买单", successCount, len(purchaseOrders))
-	} else {
-		log.Println("⚠️  没有购买单需要插入")
 	}
 
 	// 逐个插入拼单
 	if len(groupBuyOrders) > 0 {
-		log.Printf("💾 开始插入 %d 条拼单到数据库...", len(groupBuyOrders))
-		successCount := 0
-		for i, groupBuy := range groupBuyOrders {
+		for _, groupBuy := range groupBuyOrders {
 			if err := s.groupBuyRepo.Create(ctx, groupBuy); err != nil {
-				log.Printf("❌ 插入拼单失败 [%d/%d]: %v", i+1, len(groupBuyOrders), err)
 				continue
 			}
-			successCount++
 		}
-		log.Printf("✅ 成功插入 %d/%d 条拼单", successCount, len(groupBuyOrders))
-	} else {
-		log.Println("⚠️  没有拼单需要插入")
 	}
 
 	duration := time.Since(startTime)
@@ -148,10 +123,6 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 		TotalProfit:    totalProfit,
 	}
 
-	log.Printf("🎉 假订单生成完成: 总数=%d, 购买单=%d, 拼单=%d, 总金额=%.2f, 总利润=%.2f, 耗时=%v",
-		stats.TotalGenerated, stats.PurchaseOrders, stats.GroupBuyOrders,
-		stats.TotalAmount, stats.TotalProfit, stats.AverageTime)
-
 	return stats, nil
 }
 
@@ -159,22 +130,22 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 	// 生成随机创建时间（10分钟窗口）
 	createdAt := s.generateRandomTime()
-	
+
 	// 随机选择1-4个类型，每个类型数量为1
 	likeCount := 0
 	shareCount := 0
 	followCount := 0
 	favoriteCount := 0
-	
+
 	// 随机选择类型数量（1-4个）
 	typeCount := rand.Intn(4) + 1
-	
+
 	// 创建类型数组并随机打乱
 	types := []string{"like", "share", "follow", "favorite"}
 	rand.Shuffle(len(types), func(i, j int) {
 		types[i], types[j] = types[j], types[i]
 	})
-	
+
 	// 选择前typeCount个类型，数量设为1
 	for i := 0; i < typeCount; i++ {
 		switch types[i] {
@@ -190,14 +161,14 @@ func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 	}
 
 	// 生成总金额（10万到1000万之间）
-	totalAmount := float64(rand.Intn(9900000)+100000) // 100000-10000000
+	totalAmount := float64(rand.Intn(9900000) + 100000) // 100000-10000000
 
 	// 假购买订单不计算利润金额
 	profitAmount := 0.0
 
 	// 随机选择状态
 	status := s.getRandomPurchaseStatus()
-	
+
 	// 根据状态设置过期时间
 	expireTime := s.getStatusBasedExpireTime(status, createdAt)
 
@@ -229,22 +200,22 @@ func (s *FakeOrderService) generatePurchaseOrder() *models.Order {
 func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 	// 生成随机创建时间
 	createdAt := s.generateRandomTime()
-	
+
 	// 随机选择1-4个类型，每个类型数量为1
 	likeCount := 0
 	shareCount := 0
 	followCount := 0
 	favoriteCount := 0
-	
+
 	// 随机选择类型数量（1-4个）
 	typeCount := rand.Intn(4) + 1
-	
+
 	// 创建类型数组并随机打乱
 	types := []string{"like", "share", "follow", "favorite"}
 	rand.Shuffle(len(types), func(i, j int) {
 		types[i], types[j] = types[j], types[i]
 	})
-	
+
 	// 选择前typeCount个类型，数量设为1
 	for i := 0; i < typeCount; i++ {
 		switch types[i] {
@@ -260,18 +231,18 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 	}
 
 	// 随机生成单价（1万到10万之间）
-	unitPrice := float64(rand.Intn(90000)+10000) // 10000-100000
-	
+	unitPrice := float64(rand.Intn(90000) + 10000) // 10000-100000
+
 	// 计算总任务数量
 	totalTaskCount := likeCount + shareCount + followCount + favoriteCount
-	
+
 	// 计算总金额：单价 × 总任务数量
 	totalAmount := unitPrice * float64(totalTaskCount)
 
 	// 随机生成参与人数和目标人数
 	currentParticipants := rand.Intn(3) + 1 // 1-3人
 	targetParticipants := rand.Intn(5) + 3  // 3-7人
-	
+
 	// 计算人均金额：总金额 ÷ 目标人数
 	perPersonAmount := totalAmount / float64(targetParticipants)
 
@@ -280,25 +251,25 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 
 	// 随机选择状态
 	status := s.getRandomGroupBuyStatus()
-	
+
 	// 根据状态设置截止时间
 	deadline := s.getGroupBuyDeadline(status, createdAt)
 
 	groupBuy := &models.GroupBuy{
-		GroupBuyNo:        utils.GenerateSystemGroupBuyNo(),
-		Uid:               utils.GenerateSystemUID(),
-		CreatorUid:        utils.GenerateSystemUID(), // 创建者UID
+		GroupBuyNo:          utils.GenerateSystemGroupBuyNo(),
+		Uid:                 utils.GenerateSystemUID(),
+		CreatorUid:          utils.GenerateSystemUID(), // 创建者UID
 		CurrentParticipants: currentParticipants,
 		TargetParticipants:  targetParticipants,
-		GroupBuyType:      models.GroupBuyTypeNormal,
-		TotalAmount:       totalAmount,
-		PaidAmount:        perPersonAmount * float64(currentParticipants),
-		PerPersonAmount:   perPersonAmount,
-		ProfitMargin:      profitMargin, // 添加利润比例
-		Status:            status,
-		CreatedAt:         createdAt,
-		UpdatedAt:         createdAt,
-		Deadline:          deadline,
+		GroupBuyType:        models.GroupBuyTypeNormal,
+		TotalAmount:         totalAmount,
+		PaidAmount:          perPersonAmount * float64(currentParticipants),
+		PerPersonAmount:     perPersonAmount,
+		ProfitMargin:        profitMargin, // 添加利润比例
+		Status:              status,
+		CreatedAt:           createdAt,
+		UpdatedAt:           createdAt,
+		Deadline:            deadline,
 	}
 
 	return groupBuy
@@ -307,17 +278,17 @@ func (s *FakeOrderService) generateGroupBuyOrder() *models.GroupBuy {
 // generateRandomTime 生成随机时间（过去10分钟到未来10分钟）
 func (s *FakeOrderService) generateRandomTime() time.Time {
 	now := time.Now()
-	
+
 	// 时间窗口：当前时间前后各10分钟（过去10分钟到未来10分钟）
 	startTime := now.Add(-10 * time.Minute)
 	endTime := now.Add(10 * time.Minute)
-	
+
 	// 计算时间差
 	timeDiff := endTime.Sub(startTime)
-	
+
 	// 生成随机时间偏移
 	randomOffset := time.Duration(rand.Int63n(int64(timeDiff)))
-	
+
 	return startTime.Add(randomOffset)
 }
 
@@ -332,12 +303,10 @@ func (s *FakeOrderService) getPurchaseConfig() *models.PurchaseConfig {
 	}
 }
 
-
-
 // getRandomPurchaseStatus 获取随机购买单状态
 func (s *FakeOrderService) getRandomPurchaseStatus() string {
 	randNum := rand.Float64()
-	
+
 	if randNum < 0.6 {
 		return models.OrderStatusPending // 60% 进行中
 	} else if randNum < 0.9 {
@@ -350,7 +319,7 @@ func (s *FakeOrderService) getRandomPurchaseStatus() string {
 // getRandomGroupBuyStatus 获取随机拼单状态
 func (s *FakeOrderService) getRandomGroupBuyStatus() string {
 	randNum := rand.Float64()
-	
+
 	if randNum < 0.2 {
 		return models.GroupBuyStatusNotStarted // 20% 待开始
 	} else if randNum < 0.7 {
@@ -399,17 +368,17 @@ func (s *FakeOrderService) getTaskStatus(count int, orderStatus string) string {
 	if count == 0 {
 		return models.TaskStatusSuccess // 任务数为0时直接完成
 	}
-	
+
 	// 如果订单状态是已完成，任务状态也应该是已完成
 	if orderStatus == models.OrderStatusSuccess {
 		return models.TaskStatusSuccess
 	}
-	
+
 	// 如果订单状态是已关闭，任务状态也应该是已关闭
 	if orderStatus == models.OrderStatusCancelled {
 		return models.TaskStatusCancelled
 	}
-	
+
 	// 如果订单状态是进行中，根据概率设置任务状态
 	randNum := rand.Float64()
 	if randNum < 0.3 {
@@ -422,7 +391,7 @@ func (s *FakeOrderService) getTaskStatus(count int, orderStatus string) string {
 // calculateGroupBuyAmount 计算拼单人均金额（已废弃，新的逻辑直接生成随机金额）
 func (s *FakeOrderService) calculateGroupBuyAmount() float64 {
 	// 新的逻辑直接生成1万到10万之间的随机金额
-	return float64(rand.Intn(90000)+10000) // 10000-100000
+	return float64(rand.Intn(90000) + 10000) // 10000-100000
 }
 
 // contains 检查切片是否包含元素
@@ -439,30 +408,29 @@ func contains(slice []string, item string) bool {
 func (s *FakeOrderService) preloadPeriodData() error {
 	ctx := context.Background()
 	periodRepo := database.NewLotteryPeriodRepository()
-	
+
 	// 清空缓存
 	s.periodCache = make(map[string]string)
-	
+
 	// 获取当前时间前后30分钟的时间范围
 	now := time.Now()
 	startTime := now.Add(-30 * time.Minute)
 	endTime := now.Add(30 * time.Minute)
-	
+
 	// 查询这个时间范围内的所有期数
 	periods, err := periodRepo.GetPeriodsByTimeRange(ctx, startTime, endTime)
 	if err != nil {
 		return err
 	}
-	
+
 	// 将期数数据缓存到内存中
 	for _, period := range periods {
 		// 使用期数的时间范围作为key
-		key := fmt.Sprintf("%s_%s", period.OrderStartTime.Format("2006-01-02 15:04:05"), 
+		key := fmt.Sprintf("%s_%s", period.OrderStartTime.Format("2006-01-02 15:04:05"),
 			period.OrderEndTime.Format("2006-01-02 15:04:05"))
 		s.periodCache[key] = period.PeriodNumber
 	}
-	
-	log.Printf("预加载了 %d 个期数到缓存", len(periods))
+
 	return nil
 }
 
@@ -475,24 +443,24 @@ func (s *FakeOrderService) getPeriodNumberByTime(targetTime time.Time) string {
 		if len(parts) == 2 {
 			startTime, _ := time.Parse("2006-01-02 15:04:05", parts[0])
 			endTime, _ := time.Parse("2006-01-02 15:04:05", parts[1])
-			
+
 			// 检查目标时间是否在这个范围内
 			if targetTime.After(startTime) && targetTime.Before(endTime) {
 				return periodNumber
 			}
 		}
 	}
-	
+
 	// 如果缓存中没有找到，回退到数据库查询
 	ctx := context.Background()
 	periodRepo := database.NewLotteryPeriodRepository()
-	
+
 	period, err := periodRepo.GetPeriodByTime(ctx, targetTime)
 	if err != nil {
 		// 如果获取失败，使用目标时间生成期号
 		return targetTime.Format("20240101")
 	}
-	
+
 	return period.PeriodNumber
 }
 
@@ -505,4 +473,4 @@ func (s *FakeOrderService) getCurrentPeriodNumber() string {
 func (s *FakeOrderService) GetGenerationStats() (*GenerationStats, error) {
 	// 这里可以实现获取历史统计信息的逻辑
 	return &GenerationStats{}, nil
-} 
+}

@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"gin-fataMorgana/models"
-	"log"
 )
 
 type OrderRepository struct {
@@ -20,10 +19,10 @@ func (r *OrderRepository) GetOrdersByStatus(ctx context.Context, status string, 
 	var orders []models.Order
 	var total int64
 	query := r.db.WithContext(ctx).Model(&models.Order{})
-	
+
 	// 添加时间过滤条件：只查询创建时间不超过当前时间的订单
 	query = query.Where("created_at <= NOW()")
-	
+
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -48,10 +47,10 @@ func (r *OrderRepository) GetUserOrdersByStatus(ctx context.Context, uid string,
 	var orders []models.Order
 	var total int64
 	query := r.db.WithContext(ctx).Model(&models.Order{}).Where("uid = ?", uid)
-	
+
 	// 添加时间过滤条件：只查询创建时间不超过当前时间的订单
 	query = query.Where("created_at <= NOW()")
-	
+
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -68,15 +67,7 @@ func (r *OrderRepository) GetUserOrdersByStatus(ctx context.Context, uid string,
 }
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, order *models.Order) error {
-	log.Printf("🗄️  尝试创建订单: OrderNo=%s, UID=%s, Amount=%.2f, IsSystem=%v", 
-		order.OrderNo, order.Uid, order.Amount, order.IsSystemOrder)
-	
 	err := r.Create(ctx, order)
-	if err != nil {
-		log.Printf("❌ 创建订单失败: OrderNo=%s, 错误=%v", order.OrderNo, err)
-	} else {
-		log.Printf("✅ 创建订单成功: OrderNo=%s", order.OrderNo)
-	}
 	return err
 }
 

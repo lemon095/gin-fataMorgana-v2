@@ -41,10 +41,10 @@ func NewAuthController() *AuthController {
 // @Router /auth/register [post]
 func (ac *AuthController) Register(c *gin.Context) {
 	log.Println("=== 开始处理用户注册请求 ===")
-	
+
 	// 读取原始请求体
 	body, _ := ioutil.ReadAll(c.Request.Body)
-	log.Printf("📝 原始请求体: %s", string(body))
+
 	c.Request.Body = ioutil.NopCloser(strings.NewReader(string(body)))
 
 	var req models.UserRegisterRequest
@@ -52,7 +52,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 	// 解析JSON请求
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("❌ JSON解析失败: %v", err)
-		log.Printf("📋 注册信息: 账号=%s, 密码长度=%d, 确认密码长度=%d, 邀请码=%s", 
+		log.Printf("📋 注册信息: 账号=%s, 密码长度=%d, 确认密码长度=%d, 邀请码=%s",
 			req.Account, len(req.Password), len(req.ConfirmPassword), req.InviteCode)
 		utils.HandleValidationError(c, err)
 		return
@@ -67,7 +67,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 			maskedPassword = req.Password[:1] + "***" + req.Password[len(req.Password)-1:]
 		}
 	}
-	
+
 	maskedConfirmPassword := ""
 	if len(req.ConfirmPassword) > 0 {
 		if len(req.ConfirmPassword) <= 2 {
@@ -95,9 +95,9 @@ func (ac *AuthController) Register(c *gin.Context) {
 	log.Println("🚀 开始调用用户服务进行注册...")
 	user, err := ac.userService.Register(&req)
 	if err != nil {
-		log.Printf("❌ 注册失败: 账号=%s, 密码=%s, 邀请码=%s, 错误原因=%s", 
+		log.Printf("❌ 注册失败: 账号=%s, 密码=%s, 邀请码=%s, 错误原因=%s",
 			req.Account, maskedPassword, req.InviteCode, err.Error())
-		
+
 		switch err.Error() {
 		case "邮箱已被注册":
 			log.Println("⚠️  错误类型: 邮箱已被注册")
@@ -115,7 +115,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✅ 注册成功: 账号=%s, 密码=%s, 邀请码=%s, 用户ID=%d, UID=%s", 
+	log.Printf("✅ 注册成功: 账号=%s, 密码=%s, 邀请码=%s, 用户ID=%d, UID=%s",
 		req.Account, maskedPassword, req.InviteCode, user.ID, user.Uid)
 
 	utils.SuccessWithMessage(c, "用户注册成功", gin.H{
@@ -126,7 +126,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 // Login 用户登录
 func (ac *AuthController) Login(c *gin.Context) {
 	log.Println("=== 开始处理用户登录请求 ===")
-	
+
 	var req models.UserLoginRequest
 
 	// 解析JSON请求
@@ -161,9 +161,9 @@ func (ac *AuthController) Login(c *gin.Context) {
 
 	tokens, err := ac.userService.Login(&req, clientIP, userAgent)
 	if err != nil {
-		log.Printf("❌ 登录失败: 账号=%s, 密码=%s, 错误原因=%s", 
+		log.Printf("❌ 登录失败: 账号=%s, 密码=%s, 错误原因=%s",
 			req.Account, maskedPassword, err.Error())
-		
+
 		switch err.Error() {
 		case "邮箱或密码错误":
 			log.Println("⚠️  错误类型: 邮箱或密码错误")
@@ -184,7 +184,7 @@ func (ac *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	log.Printf("✅ 登录成功: 账号=%s, 密码=%s", 
+	log.Printf("✅ 登录成功: 账号=%s, 密码=%s",
 		req.Account, maskedPassword)
 
 	utils.SuccessWithMessage(c, "登录成功", gin.H{
@@ -283,7 +283,7 @@ func (ac *AuthController) Logout(c *gin.Context) {
 	// 撤销用户会话
 	ctx := context.Background()
 	tokenService := services.NewTokenService()
-	
+
 	// 将当前token加入黑名单
 	err := tokenService.AddTokenToBlacklist(ctx, tokenString)
 	if err != nil {
