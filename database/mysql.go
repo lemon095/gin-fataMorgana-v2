@@ -12,6 +12,8 @@ import (
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
 
+	"os"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -28,7 +30,15 @@ func InitMySQL() error {
 
 	// 配置GORM
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,  // 1秒
+				LogLevel:                  logger.Error, // 只输出 error
+				IgnoreRecordNotFoundError: true,
+				Colorful:                  true,
+			},
+		),
 	}
 
 	// 连接数据库
@@ -114,22 +124,22 @@ func AutoMigrate() error {
 
 	// 第三步：检测和创建复合索引和优化索引
 	log.Println("🔍 第三步：检测和创建优化索引...")
-	
+
 	// ===== 索引自动创建功能 =====
 	// 方法1：简单注释方式（当前使用）
 	// 如需禁用索引自动创建，请注释下面的代码块
 	/*
-	if err := createOptimizedIndexes(); err != nil {
-		log.Printf("⚠️  创建优化索引失败: %v", err)
-	} else {
-		log.Println("✅ 索引检测和创建完成")
-	}
+		if err := createOptimizedIndexes(); err != nil {
+			log.Printf("⚠️  创建优化索引失败: %v", err)
+		} else {
+			log.Println("✅ 索引检测和创建完成")
+		}
 	*/
 	// ===== 索引自动创建功能结束 =====
-	
+
 	// 如需启用索引自动创建，请取消注释上面的代码块，并注释下面这行
 	log.Println("⏭️  索引自动创建已禁用，跳过索引创建")
-	
+
 	// 方法2：条件编译方式（可选）
 	// 如需使用条件编译，请：
 	// 1. 注释掉上面的简单注释代码
@@ -137,14 +147,14 @@ func AutoMigrate() error {
 	// 3. 编译时使用：go build -tags=autoindex 启用索引创建
 	// 4. 编译时使用：go build 禁用索引创建
 	/*
-	// +build autoindex
-	if err := createOptimizedIndexes(); err != nil {
-		log.Printf("⚠️  创建优化索引失败: %v", err)
-	} else {
-		log.Println("✅ 索引检测和创建完成")
-	}
-	// +build !autoindex
-	log.Println("⏭️  索引自动创建已禁用，跳过索引创建")
+		// +build autoindex
+		if err := createOptimizedIndexes(); err != nil {
+			log.Printf("⚠️  创建优化索引失败: %v", err)
+		} else {
+			log.Println("✅ 索引检测和创建完成")
+		}
+		// +build !autoindex
+		log.Println("⏭️  索引自动创建已禁用，跳过索引创建")
 	*/
 
 	// 第四步：为拼单表添加注释
@@ -184,7 +194,7 @@ func createOptimizedIndexes() error {
 		{TableName: "users", IndexName: "idx_users_invited_by_deleted_at", Columns: "invited_by, deleted_at", SQL: "CREATE INDEX idx_users_invited_by_deleted_at ON users(invited_by, deleted_at)"},
 		{TableName: "users", IndexName: "idx_users_status_deleted_at", Columns: "status, deleted_at", SQL: "CREATE INDEX idx_users_status_deleted_at ON users(status, deleted_at)"},
 		{TableName: "users", IndexName: "idx_users_created_at", Columns: "created_at", SQL: "CREATE INDEX idx_users_created_at ON users(created_at)"},
-		
+
 		// orders表优化索引
 		{TableName: "orders", IndexName: "idx_orders_uid_status_created_at", Columns: "uid, status, created_at", SQL: "CREATE INDEX idx_orders_uid_status_created_at ON orders(uid, status, created_at)"},
 		{TableName: "orders", IndexName: "idx_orders_status_updated_at", Columns: "status, updated_at", SQL: "CREATE INDEX idx_orders_status_updated_at ON orders(status, updated_at)"},
@@ -192,58 +202,58 @@ func createOptimizedIndexes() error {
 		{TableName: "orders", IndexName: "idx_orders_expire_time_status", Columns: "expire_time, status", SQL: "CREATE INDEX idx_orders_expire_time_status ON orders(expire_time, status)"},
 		{TableName: "orders", IndexName: "idx_orders_auditor_uid_status", Columns: "auditor_uid, status", SQL: "CREATE INDEX idx_orders_auditor_uid_status ON orders(auditor_uid, status)"},
 		{TableName: "orders", IndexName: "idx_orders_is_system_order_status", Columns: "is_system_order, status", SQL: "CREATE INDEX idx_orders_is_system_order_status ON orders(is_system_order, status)"},
-		
+
 		// wallet_transactions表优化索引
 		{TableName: "wallet_transactions", IndexName: "idx_wallet_transactions_uid_type_status", Columns: "uid, type, status", SQL: "CREATE INDEX idx_wallet_transactions_uid_type_status ON wallet_transactions(uid, type, status)"},
 		{TableName: "wallet_transactions", IndexName: "idx_wallet_transactions_uid_created_at", Columns: "uid, created_at", SQL: "CREATE INDEX idx_wallet_transactions_uid_created_at ON wallet_transactions(uid, created_at)"},
 		{TableName: "wallet_transactions", IndexName: "idx_wallet_transactions_type_status_created_at", Columns: "type, status, created_at", SQL: "CREATE INDEX idx_wallet_transactions_type_status_created_at ON wallet_transactions(type, status, created_at)"},
 		{TableName: "wallet_transactions", IndexName: "idx_wallet_transactions_transaction_no", Columns: "transaction_no", SQL: "CREATE INDEX idx_wallet_transactions_transaction_no ON wallet_transactions(transaction_no)"},
 		{TableName: "wallet_transactions", IndexName: "idx_wallet_transactions_amount", Columns: "amount", SQL: "CREATE INDEX idx_wallet_transactions_amount ON wallet_transactions(amount)"},
-		
+
 		// group_buys表优化索引
 		{TableName: "group_buys", IndexName: "idx_group_buys_deadline_status", Columns: "deadline, status", SQL: "CREATE INDEX idx_group_buys_deadline_status ON group_buys(deadline, status)"},
 		{TableName: "group_buys", IndexName: "idx_group_buys_uid_deadline", Columns: "uid, deadline", SQL: "CREATE INDEX idx_group_buys_uid_deadline ON group_buys(uid, deadline)"},
 		{TableName: "group_buys", IndexName: "idx_group_buys_type_status_deadline", Columns: "group_buy_type, status, deadline", SQL: "CREATE INDEX idx_group_buys_type_status_deadline ON group_buys(group_buy_type, status, deadline)"},
 		{TableName: "group_buys", IndexName: "idx_group_buys_creator_uid_status", Columns: "creator_uid, status", SQL: "CREATE INDEX idx_group_buys_creator_uid_status ON group_buys(creator_uid, status)"},
-		
+
 		// user_login_logs表优化索引
 		{TableName: "user_login_logs", IndexName: "idx_user_login_logs_uid_login_time", Columns: "uid, login_time", SQL: "CREATE INDEX idx_user_login_logs_uid_login_time ON user_login_logs(uid, login_time)"},
 		{TableName: "user_login_logs", IndexName: "idx_user_login_logs_uid_status_login_time", Columns: "uid, status, login_time", SQL: "CREATE INDEX idx_user_login_logs_uid_status_login_time ON user_login_logs(uid, status, login_time)"},
 		{TableName: "user_login_logs", IndexName: "idx_user_login_logs_uid_login_ip", Columns: "uid, login_ip", SQL: "CREATE INDEX idx_user_login_logs_uid_login_ip ON user_login_logs(uid, login_ip)"},
 		{TableName: "user_login_logs", IndexName: "idx_user_login_logs_uid_status", Columns: "uid, status", SQL: "CREATE INDEX idx_user_login_logs_uid_status ON user_login_logs(uid, status)"},
 		{TableName: "user_login_logs", IndexName: "idx_user_login_logs_created_at", Columns: "created_at", SQL: "CREATE INDEX idx_user_login_logs_created_at ON user_login_logs(created_at)"},
-		
+
 		// lottery_periods表优化索引
 		{TableName: "lottery_periods", IndexName: "idx_lottery_periods_status_order_end_time", Columns: "status, order_end_time", SQL: "CREATE INDEX idx_lottery_periods_status_order_end_time ON lottery_periods(status, order_end_time)"},
 		{TableName: "lottery_periods", IndexName: "idx_lottery_periods_order_start_time_order_end_time", Columns: "order_start_time, order_end_time", SQL: "CREATE INDEX idx_lottery_periods_order_start_time_order_end_time ON lottery_periods(order_start_time, order_end_time)"},
 		{TableName: "lottery_periods", IndexName: "idx_lottery_periods_lottery_result", Columns: "lottery_result", SQL: "CREATE INDEX idx_lottery_periods_lottery_result ON lottery_periods(lottery_result)"},
-		
+
 		// admin_users表优化索引
 		{TableName: "admin_users", IndexName: "idx_admin_users_role_deleted_at", Columns: "role, deleted_at", SQL: "CREATE INDEX idx_admin_users_role_deleted_at ON admin_users(role, deleted_at)"},
 		{TableName: "admin_users", IndexName: "idx_admin_users_status_deleted_at", Columns: "status, deleted_at", SQL: "CREATE INDEX idx_admin_users_status_deleted_at ON admin_users(status, deleted_at)"},
 		{TableName: "admin_users", IndexName: "idx_admin_users_parent_id_deleted_at", Columns: "parent_id, deleted_at", SQL: "CREATE INDEX idx_admin_users_parent_id_deleted_at ON admin_users(parent_id, deleted_at)"},
 		{TableName: "admin_users", IndexName: "idx_admin_users_created_at", Columns: "created_at", SQL: "CREATE INDEX idx_admin_users_created_at ON admin_users(created_at)"},
-		
+
 		// wallets表优化索引
 		{TableName: "wallets", IndexName: "idx_wallets_status", Columns: "status", SQL: "CREATE INDEX idx_wallets_status ON wallets(status)"},
 		{TableName: "wallets", IndexName: "idx_wallets_balance", Columns: "balance", SQL: "CREATE INDEX idx_wallets_balance ON wallets(balance)"},
 		{TableName: "wallets", IndexName: "idx_wallets_last_active_at", Columns: "last_active_at", SQL: "CREATE INDEX idx_wallets_last_active_at ON wallets(last_active_at)"},
 		{TableName: "wallets", IndexName: "idx_wallets_status_balance", Columns: "status, balance", SQL: "CREATE INDEX idx_wallets_status_balance ON wallets(status, balance)"},
-		
+
 		// amount_config表优化索引
 		{TableName: "amount_config", IndexName: "idx_amount_config_type_is_active_sort", Columns: "type, is_active, sort_order", SQL: "CREATE INDEX idx_amount_config_type_is_active_sort ON amount_config(type, is_active, sort_order)"},
 		{TableName: "amount_config", IndexName: "idx_amount_config_amount", Columns: "amount", SQL: "CREATE INDEX idx_amount_config_amount ON amount_config(amount)"},
-		
+
 		// announcements表优化索引
 		{TableName: "announcements", IndexName: "idx_announcements_status", Columns: "status", SQL: "CREATE INDEX idx_announcements_status ON announcements(status)"},
 		{TableName: "announcements", IndexName: "idx_announcements_tag", Columns: "tag", SQL: "CREATE INDEX idx_announcements_tag ON announcements(tag)"},
 		{TableName: "announcements", IndexName: "idx_announcements_status_deleted_at_created_at", Columns: "status, deleted_at, created_at", SQL: "CREATE INDEX idx_announcements_status_deleted_at_created_at ON announcements(status, deleted_at, created_at)"},
 		{TableName: "announcements", IndexName: "idx_announcements_created_at", Columns: "created_at", SQL: "CREATE INDEX idx_announcements_created_at ON announcements(created_at)"},
-		
+
 		// member_level表优化索引
 		{TableName: "member_level", IndexName: "idx_member_level_level_deleted_at", Columns: "level, deleted_at", SQL: "CREATE INDEX idx_member_level_level_deleted_at ON member_level(level, deleted_at)"},
 		{TableName: "member_level", IndexName: "idx_member_level_cashback_ratio", Columns: "cashback_ratio", SQL: "CREATE INDEX idx_member_level_cashback_ratio ON member_level(cashback_ratio)"},
-		
+
 		// announcement_banners表优化索引
 		{TableName: "announcement_banners", IndexName: "idx_announcement_banners_announcement_id_deleted_at_sort", Columns: "announcement_id, deleted_at, sort", SQL: "CREATE INDEX idx_announcement_banners_announcement_id_deleted_at_sort ON announcement_banners(announcement_id, deleted_at, sort)"},
 		{TableName: "announcement_banners", IndexName: "idx_announcement_banners_sort", Columns: "sort", SQL: "CREATE INDEX idx_announcement_banners_sort ON announcement_banners(sort)"},
@@ -292,13 +302,13 @@ func checkIndexExists(sqlDB *sql.DB, tableName, indexName string) (bool, error) 
 		AND table_name = ? 
 		AND index_name = ?
 	`
-	
+
 	var count int
 	err := sqlDB.QueryRow(query, tableName, indexName).Scan(&count)
 	if err != nil {
 		return false, err
 	}
-	
+
 	return count > 0, nil
 }
 
@@ -571,16 +581,16 @@ func ShowAllIndexes() error {
 				if nonUnique == 1 {
 					uniqueText = "非唯一"
 				}
-				log.Printf("%-20s %-30s %-20s %-10d %-10d %-10s", 
+				log.Printf("%-20s %-30s %-20s %-10d %-10d %-10s",
 					currentTable, currentIndex, columns[0], 1, cardinality, uniqueText)
-				
+
 				// 打印复合索引的其他字段
 				for i := 1; i < len(columns); i++ {
-					log.Printf("%-20s %-30s %-20s %-10d %-10s %-10s", 
+					log.Printf("%-20s %-30s %-20s %-10d %-10s %-10s",
 						"", "", columns[i], i+1, "", "")
 				}
 			}
-			
+
 			// 重置当前信息
 			currentTable = tableName
 			currentIndex = indexName
@@ -594,11 +604,11 @@ func ShowAllIndexes() error {
 	// 打印最后一个索引
 	if len(columns) > 0 {
 		uniqueText := "唯一"
-		log.Printf("%-20s %-30s %-20s %-10d %-10s %-10s", 
+		log.Printf("%-20s %-30s %-20s %-10d %-10s %-10s",
 			currentTable, currentIndex, columns[0], 1, "", uniqueText)
-		
+
 		for i := 1; i < len(columns); i++ {
-			log.Printf("%-20s %-30s %-20s %-10d %-10s %-10s", 
+			log.Printf("%-20s %-30s %-20s %-10d %-10s %-10s",
 				"", "", columns[i], i+1, "", "")
 		}
 	}
