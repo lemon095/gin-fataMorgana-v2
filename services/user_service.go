@@ -75,7 +75,7 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	// 验证邀请码是否来自活跃的管理员
 	if req.InviteCode != "" {
 		adminUserRepo := database.NewAdminUserRepository()
-		adminUser, err := adminUserRepo.GetActiveInviteCode(ctx, req.InviteCode)
+		adminUser, err := adminUserRepo.GetActiveInviteCode(ctx, strings.ToUpper(req.InviteCode))
 		if err != nil {
 
 			return nil, utils.NewAppError(utils.CodeInviteCodeAdminDisabled, "邀请码无效或管理员账户已被禁用")
@@ -100,9 +100,9 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		Uid:          userID,
 		Username:     username,
 		Password:     req.Password,
-		Status:       1, // 默认待审核
-		Experience:   1, // 新注册用户默认等级为1
-		InvitedBy:    req.InviteCode,
+		Status:       1,                                                                                   // 默认待审核
+		Experience:   1,                                                                                   // 新注册用户默认等级为1
+		InvitedBy:    strings.ToUpper(req.InviteCode),                                                     // 统一存储为大写格式
 		BankCardInfo: "{\"card_number\":\"\",\"card_holder\":\"\",\"bank_name\":\"\",\"card_type\":\"\"}", // 无条件赋值
 	}
 	if isEmail(req.Account) {

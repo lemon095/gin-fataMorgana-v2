@@ -12,8 +12,8 @@ const (
 	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 
-	// 邀请码字符集（字母和数字混合，大小写随机）
-	inviteCodeBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	// 邀请码字符集（字母和数字混合，统一大写）
+	inviteCodeBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
 
 var src = rand.NewSource(time.Now().UnixNano())

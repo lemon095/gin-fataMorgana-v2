@@ -126,9 +126,145 @@ clean_build_cache() {
     echo "✅ 构建缓存清理完成！"
 }
 
+# 清理容器日志
+clean_container_logs() {
+    echo "🧹 清理容器日志..."
+    
+    # 清理所有容器的日志文件
+    docker container ls -aq | xargs -r docker container inspect --format='{{.LogPath}}' | xargs -r sh -c 'if [ -f "$1" ]; then echo "清理: $1"; truncate -s 0 "$1"; fi' _
+    
+    # 清理项目日志目录
+    if [ -d "./logs" ]; then
+        echo "🗑️  清理项目日志目录..."
+        find ./logs -name "*.log" -type f -exec truncate -s 0 {} \;
+        echo "✅ 项目日志清理完成"
+    fi
+    
+    echo "✅ 容器日志清理完成！"
+}
+
+# 轮转容器日志
+rotate_container_logs() {
+    echo "🔄 轮转容器日志..."
+    
+    # 轮转所有容器的日志文件
+    docker container ls -aq | xargs -r docker container inspect --format='{{.LogPath}}' | xargs -r sh -c 'if [ -f "$1" ]; then echo "轮转: $1"; mv "$1" "$1.old"; fi' _
+    
+    # 轮转项目日志目录
+    if [ -d "./logs" ]; then
+        echo "🔄 轮转项目日志目录..."
+        find ./logs -name "*.log" -type f -exec sh -c 'mv "$1" "$1.old"' _ {} \;
+        echo "✅ 项目日志轮转完成"
+    fi
+    
+    echo "✅ 容器日志轮转完成！"
+}
+
+# 清理历史日志（释放磁盘空间）
+clean_old_logs() {
+    echo "🧹 清理历史日志文件..."
+    
+    # 清理所有容器历史日志文件
+    echo "🗑️  清理容器历史日志..."
+    find /var/lib/docker/containers -name "*.log.old" -type f -delete 2>/dev/null || true
+    
+    # 清理所有项目历史日志文件
+    if [ -d "./logs" ]; then
+        echo "🗑️  清理项目历史日志..."
+        find ./logs -name "*.log.old" -type f -delete 2>/dev/null || true
+    fi
+    
+    echo "✅ 历史日志清理完成！"
+}
+
+# 智能日志轮转（轮转后自动清理旧文件）
+smart_logs_rotate() {
+    echo "🔄 执行智能日志轮转..."
+    
+    # 先轮转日志
+    rotate_container_logs
+    
+    # 再清理历史日志
+    clean_old_logs
+    
+    # 显示清理效果
+    echo "📊 清理后的磁盘使用情况:"
+    df -h /
+    
+    echo "✅ 智能日志轮转完成！"
+}
+
+# 自动清理任务
+auto_clean() {
+    echo "🧹 执行自动清理任务..."
+    DATE=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$DATE] 开始执行每日Docker清理任务..."
+    
+    # 1. 清理容器日志
+    echo "[$DATE] 清理容器日志..."
+    docker container ls -aq | xargs -r docker container inspect --format='{{.LogPath}}' | xargs -r sh -c 'if [ -f "$1" ]; then echo "清理: $1"; truncate -s 0 "$1"; fi' _
+    
+    # 2. 清理项目日志
+    if [ -d "./logs" ]; then
+        echo "[$DATE] 清理项目日志..."
+        find ./logs -name "*.log" -type f -exec truncate -s 0 {} \;
+    fi
+    
+    # 3. 清理历史日志文件（释放磁盘空间）
+    echo "[$DATE] 清理历史日志文件..."
+    clean_old_logs
+    
+    # 4. 清理未使用的Docker资源
+    echo "[$DATE] 清理未使用的Docker资源..."
+    docker system prune -f
+    
+    # 5. 清理构建缓存
+    echo "[$DATE] 清理构建缓存..."
+    docker builder prune -f
+    
+    # 6. 检查磁盘使用情况
+    echo "[$DATE] 检查磁盘使用情况..."
+    df -h /
+    
+    # 7. 检查Docker磁盘使用情况
+    echo "[$DATE] 检查Docker磁盘使用情况..."
+    docker system df
+    
+    echo "[$DATE] 每日Docker清理任务完成！"
+}
+
+# 设置定时清理任务
+setup_cron_clean() {
+    echo "⏰ 设置每日15点自动清理定时任务..."
+    
+    # 获取脚本的绝对路径
+    SCRIPT_PATH=$(readlink -f "$0")
+    
+    # 创建crontab条目
+    CRON_JOB="0 15 * * * $SCRIPT_PATH auto-clean >> /var/log/docker-daily-clean.log 2>&1"
+    
+    # 检查是否已经存在相同的定时任务
+    if crontab -l 2>/dev/null | grep -q "$SCRIPT_PATH auto-clean"; then
+        echo "⚠️  定时任务已存在，跳过设置"
+    else
+        # 添加新的定时任务
+        (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+        echo "✅ 定时任务设置成功！"
+        echo "📅 每天下午15:00将自动执行清理"
+    fi
+    
+    # 显示当前的crontab
+    echo "📋 当前定时任务列表："
+    crontab -l 2>/dev/null | grep -E "(docker|clean|$SCRIPT_PATH)" || echo "暂无相关定时任务"
+}
+
 case "$1" in
     start)
         echo "🚀 启动生产环境服务..."
+        
+        # 自动清理旧日志
+        echo "🧹 自动清理旧日志..."
+        clean_container_logs
         
         # 检查代码变更
         check_code_changes
@@ -188,6 +324,10 @@ case "$1" in
     update)
         echo "🔄 零停机更新服务..."
         
+        # 自动清理旧日志
+        echo "🧹 自动清理旧日志..."
+        clean_container_logs
+        
         # 检查代码变更
         check_code_changes
         NEED_REBUILD=$?
@@ -241,6 +381,11 @@ case "$1" in
         ;;
     force-update)
         echo "🔄 强制更新服务（清理缓存）..."
+        
+        # 自动清理旧日志和缓存
+        echo "🧹 自动清理旧日志和缓存..."
+        clean_container_logs
+        clean_build_cache
         
         # 拉取最新代码
         pull_latest_code
@@ -299,8 +444,26 @@ case "$1" in
     clean-cache)
         clean_build_cache
         ;;
+    clean-logs)
+        clean_container_logs
+        ;;
+    logs-rotate)
+        rotate_container_logs
+        ;;
+    clean-old-logs)
+        clean_old_logs
+        ;;
+    smart-rotate)
+        smart_logs_rotate
+        ;;
+    setup-cron)
+        setup_cron_clean
+        ;;
+    auto-clean)
+        auto_clean
+        ;;
     *)
-        echo "❓ 使用方法: $0 {start|stop|restart|logs|status|update|force-update|backup|clean|clean-cache}"
+        echo "❓ 使用方法: $0 {start|stop|restart|logs|status|update|force-update|backup|clean|clean-cache|clean-logs|logs-rotate|clean-old-logs|smart-rotate|setup-cron|auto-clean}"
         echo ""
         echo "命令说明:"
         echo "  start        - 启动生产环境服务（智能构建）"
@@ -313,6 +476,12 @@ case "$1" in
         echo "  backup       - 数据库备份提示"
         echo "  clean        - 清理Docker资源"
         echo "  clean-cache  - 清理构建缓存"
+        echo "  clean-logs   - 清理容器日志"
+        echo "  logs-rotate  - 轮转容器日志"
+        echo "  clean-old-logs - 清理历史日志文件（释放磁盘空间）"
+        echo "  smart-rotate - 智能轮转（轮转后自动清理历史文件）"
+        echo "  setup-cron   - 设置每日15点自动清理定时任务"
+        echo "  auto-clean   - 执行自动清理任务"
         echo ""
         echo "📝 配置说明:"
         echo "  - 服务端口: 9001"
@@ -325,8 +494,15 @@ case "$1" in
         echo "  - 强制构建: 清理缓存后重新构建，用于解决构建问题"
         echo "  - 缓存清理: 定期清理构建缓存，释放磁盘空间"
         echo ""
+        echo "🧹 日志管理:"
+        echo "  - 清理日志: 清空容器和项目日志文件"
+        echo "  - 轮转日志: 将日志文件重命名为 .old 后缀"
+        echo "  - 清理历史: 删除所有 .old 后缀的历史日志文件"
+        echo "  - 智能轮转: 轮转后自动清理历史文件（推荐）"
+        echo "  - 定时清理: 每天15点自动执行清理任务"
+        echo ""
         echo "⚠️  注意: 请确保MySQL和Redis服务已启动并可访问"
-        echo "💡 提示: 使用 clean-cache 定期清理构建缓存"
+        echo "💡 提示: 使用 setup-cron 设置定时清理，使用 clean-logs 手动清理日志"
         exit 1
         ;;
 esac 
