@@ -18,7 +18,7 @@ func NewOperationFailureRepository() *OperationFailureRepository {
 
 // Create 创建失败记录
 func (r *OperationFailureRepository) Create(ctx context.Context, failure *models.OperationFailure) error {
-	return r.Create(ctx, failure)
+	return r.db.WithContext(ctx).Create(failure).Error
 }
 
 // GetByID 根据ID获取失败记录
