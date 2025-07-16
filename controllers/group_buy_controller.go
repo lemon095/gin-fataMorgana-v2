@@ -14,13 +14,15 @@ import (
 
 // GroupBuyController 拼单控制器
 type GroupBuyController struct {
-	groupBuyService *services.GroupBuyService
+	groupBuyService         *services.GroupBuyService
+	operationFailureService *services.OperationFailureService
 }
 
 // NewGroupBuyController 创建拼单控制器实例
 func NewGroupBuyController() *GroupBuyController {
 	return &GroupBuyController{
-		groupBuyService: services.NewGroupBuyService(),
+		groupBuyService:         services.NewGroupBuyService(),
+		operationFailureService: services.NewOperationFailureService(),
 	}
 }
 
@@ -101,6 +103,12 @@ func (c *GroupBuyController) JoinGroupBuy(ctx *gin.Context) {
 	// 调用服务层
 	response, err := c.groupBuyService.JoinGroupBuy(ctx, req.GroupBuyNo, user.Uid)
 	if err != nil {
+		// 记录操作失败
+		c.operationFailureService.RecordFailure(ctx.Request.Context(), &user.Uid, models.OperationTypeGroupBuyJoin, req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
+
 		utils.ErrorWithMessage(ctx, utils.CodeDatabaseError, err.Error())
 		return
 	}

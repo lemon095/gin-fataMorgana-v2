@@ -13,13 +13,15 @@ import (
 
 // WalletController 钱包控制器
 type WalletController struct {
-	walletService *services.WalletService
+	walletService           *services.WalletService
+	operationFailureService *services.OperationFailureService
 }
 
 // NewWalletController 创建钱包控制器实例
 func NewWalletController() *WalletController {
 	return &WalletController{
-		walletService: services.NewWalletService(),
+		walletService:           services.NewWalletService(),
+		operationFailureService: services.NewOperationFailureService(),
 	}
 }
 
@@ -144,11 +146,17 @@ func (wc *WalletController) Recharge(c *gin.Context) {
 
 	transactionNo, err := wc.walletService.Recharge(req.Uid, req.Amount, req.Description)
 	if err != nil {
+		// 记录操作失败
+		wc.operationFailureService.RecordFailure(c.Request.Context(), &user.Uid, models.OperationTypeWalletRecharge, req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
+
 		// 检查是否是AppError类型
 		if appErr, ok := err.(*utils.AppError); ok {
 			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
 		} else {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		}
 		return
 	}
@@ -226,6 +234,12 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 
 	response, err := wc.walletService.RequestWithdraw(&req, uid)
 	if err != nil {
+		// 记录操作失败
+		wc.operationFailureService.RecordWalletWithdrawFailure(c.Request.Context(), uid, req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
+
 		// 检查是否是AppError类型
 		if appErr, ok := err.(*utils.AppError); ok {
 			// 特殊处理银行卡绑定错误
@@ -235,7 +249,7 @@ func (wc *WalletController) RequestWithdraw(c *gin.Context) {
 			}
 			utils.ErrorWithMessage(c, appErr.Code, appErr.Message)
 		} else {
-		utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
+			utils.ErrorWithMessage(c, utils.CodeDatabaseError, err.Error())
 		}
 		return
 	}

@@ -16,13 +16,15 @@ import (
 
 // AuthController 认证控制器
 type AuthController struct {
-	userService *services.UserService
+	userService             *services.UserService
+	operationFailureService *services.OperationFailureService
 }
 
 // NewAuthController 创建认证控制器实例
 func NewAuthController() *AuthController {
 	return &AuthController{
-		userService: services.NewUserService(),
+		userService:             services.NewUserService(),
+		operationFailureService: services.NewOperationFailureService(),
 	}
 }
 
@@ -66,6 +68,12 @@ func (ac *AuthController) Register(c *gin.Context) {
 		utils.LogError(c, "注册失败: 账号=%s, 邀请码=%s, 错误原因=%s",
 			req.Account, req.InviteCode, err.Error())
 
+		// 记录操作失败
+		ac.operationFailureService.RecordRegisterFailure(c.Request.Context(), req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
+
 		switch err.Error() {
 		case "邮箱已被注册":
 			utils.EmailAlreadyExists(c)
@@ -104,6 +112,12 @@ func (ac *AuthController) Login(c *gin.Context) {
 	if err != nil {
 		utils.LogError(c, "登录失败: 账号=%s, 密码=%s, 错误原因=%s",
 			req.Account, req.Password, err.Error())
+
+		// 记录操作失败
+		ac.operationFailureService.RecordLoginFailure(c.Request.Context(), nil, req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
 
 		switch err.Error() {
 		case "邮箱或密码错误":
@@ -261,6 +275,12 @@ func (ac *AuthController) BindBankCard(c *gin.Context) {
 
 	userResponse, err := ac.userService.BindBankCard(&req, user.Uid)
 	if err != nil {
+		// 记录操作失败
+		ac.operationFailureService.RecordBankCardBindFailure(c.Request.Context(), user.Uid, req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
+
 		switch err.Error() {
 		case "用户不存在":
 			utils.UserNotFound(c)

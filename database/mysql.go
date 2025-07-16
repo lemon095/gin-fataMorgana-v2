@@ -108,6 +108,7 @@ func AutoMigrate() error {
 		&models.GroupBuy{},
 		&models.MemberLevel{},
 		&models.LotteryPeriod{},
+		&models.OperationFailure{},
 	)
 	if err != nil {
 		return utils.NewAppError(utils.CodeDBMigrationFailed, "数据库迁移失败")

@@ -281,6 +281,25 @@ CREATE TABLE IF NOT EXISTS `member_level` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户等级配置表 - 存储用户等级配置信息，包括等级、经验值范围、返现比例等';
 
 -- ========================================
+-- 5. 操作失败记录表
+-- ========================================
+
+-- 操作失败记录表
+CREATE TABLE IF NOT EXISTS `operation_failures` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uid` varchar(8) DEFAULT NULL COMMENT '用户唯一ID（可为空，如注册时）',
+  `operation_type` varchar(50) NOT NULL COMMENT '操作类型：login-登录, register-注册, order_create-创建订单, wallet_withdraw-提现等',
+  `request_data` json DEFAULT NULL COMMENT '请求数据（JSON格式）',
+  `response_data` json DEFAULT NULL COMMENT '响应数据（JSON格式）',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_uid_operation_type` (`uid`, `operation_type`),
+  KEY `idx_operation_type_created_at` (`operation_type`, `created_at`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+COMMENT='操作失败记录表 - 记录用户操作失败信息';
+
+-- ========================================
 -- 表统计信息更新
 -- ========================================
 

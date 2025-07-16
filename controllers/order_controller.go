@@ -14,13 +14,15 @@ import (
 
 // OrderController 订单控制器
 type OrderController struct {
-	orderService *services.OrderService
+	orderService            *services.OrderService
+	operationFailureService *services.OperationFailureService
 }
 
 // NewOrderController 创建订单控制器实例
 func NewOrderController() *OrderController {
 	return &OrderController{
-		orderService: services.NewOrderService(),
+		orderService:            services.NewOrderService(),
+		operationFailureService: services.NewOperationFailureService(),
 	}
 }
 
@@ -195,6 +197,12 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 	// 创建订单
 	response, err := oc.orderService.CreateOrder(&req, operatorUidStr)
 	if err != nil {
+		// 记录操作失败
+		oc.operationFailureService.RecordOrderCreateFailure(c.Request.Context(), user.Uid, req, gin.H{
+			"error": err.Error(),
+			"code":  utils.CodeOperationFailed,
+		})
+
 		utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
 		return
 	}
