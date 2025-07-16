@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -574,9 +575,11 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 	// 缓存未命中，从数据库获取
 	wallet, err = s.walletRepo.FindWalletByUid(ctx, uid)
 	if err != nil {
-		// 如果钱包不存在，自动创建钱包
-		if err.Error() == "record not found" {
-			utils.LogInfo(nil, "用户钱包不存在，自动创建钱包 - UID: %s", uid)
+		// 检查是否是记录不存在的错误（支持多种错误格式）
+		if strings.Contains(err.Error(), "record not found") ||
+			strings.Contains(err.Error(), "no rows in result set") ||
+			strings.Contains(err.Error(), "not found") {
+			utils.LogInfo(nil, "用户钱包不存在，自动创建钱包 - UID: %s, 数据库报错的err: %s", uid, err.Error())
 			wallet, err = s.CreateWallet(uid)
 			if err != nil {
 				utils.LogError(nil, "获取钱包失败1: %v", err)

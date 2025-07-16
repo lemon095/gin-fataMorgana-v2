@@ -76,23 +76,50 @@ pull_latest_code() {
     # 保存当前工作目录
     PWD_BACKUP=$(pwd)
     
+    # 检查是否有未提交的更改
+    if ! git diff-index --quiet HEAD --; then
+        echo "🔄 检测到本地更改，先暂存更改..."
+        git stash push -m "Auto stash before pull $(date '+%Y-%m-%d %H:%M:%S')"
+        STASHED=true
+    else
+        STASHED=false
+    fi
+    
     # 拉取最新代码
     if git pull origin $CURRENT_BRANCH; then
         echo "✅ 代码拉取成功"
         
+        # 如果有暂存的更改，尝试恢复
+        if [ "$STASHED" = true ]; then
+            echo "🔄 恢复暂存的本地更改..."
+            if git stash pop; then
+                echo "✅ 本地更改恢复成功"
+            else
+                echo "⚠️  本地更改恢复失败，请手动处理冲突"
+                echo "💡 使用 'git stash list' 查看暂存的更改"
+                echo "💡 使用 'git stash show -p' 查看具体更改内容"
+            fi
+        fi
+        
         # 检查是否有新提交
         if git log --oneline -1 | grep -q "$(git rev-parse HEAD)"; then
             echo "📝 代码已是最新版本"
+            return 0
         else
             echo "🔄 检测到新代码，需要重新构建镜像"
             return 1
         fi
     else
         echo "❌ 代码拉取失败"
+        
+        # 如果有暂存的更改，恢复
+        if [ "$STASHED" = true ]; then
+            echo "🔄 恢复暂存的本地更改..."
+            git stash pop
+        fi
+        
         return 1
     fi
-    
-    return 0
 }
 
 # 清理构建缓存
@@ -328,9 +355,20 @@ case "$1" in
         echo "🧹 自动清理旧日志..."
         clean_container_logs
         
+        # 先拉取最新代码
+        echo "📥 拉取最新代码..."
+        pull_latest_code
+        PULL_RESULT=$?
+        
         # 检查代码变更
         check_code_changes
         NEED_REBUILD=$?
+        
+        # 如果拉取成功或有代码变更，需要重新构建
+        if [ $PULL_RESULT -eq 1 ] || [ $NEED_REBUILD -eq 1 ]; then
+            echo "🔄 检测到代码变更，需要重新构建"
+            NEED_REBUILD=1
+        fi
         
         # 检查当前服务状态
         if ! docker compose -f $COMPOSE_FILE ps | grep -q "Up"; then
