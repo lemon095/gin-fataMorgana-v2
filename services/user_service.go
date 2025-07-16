@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -243,7 +242,7 @@ func (s *UserService) Login(req *models.UserLoginRequest, loginIP, userAgent str
 	err = tokenService.SetUserActiveToken(ctx, user.Uid, accessToken, deviceInfo, loginIP, userAgent)
 	if err != nil {
 		// 记录错误但不影响登录流程
-		log.Printf("设置用户活跃token失败: %v", err)
+		// 这里不记录日志，因为不是关键错误
 	}
 
 	return &models.TokenResponse{
@@ -360,7 +359,7 @@ func (s *UserService) recordSuccessfulLogin(ctx context.Context, user *models.Us
 		LoginIP:   loginIP,
 		UserAgent: userAgent,
 		LoginTime: time.Now().UTC(),
-		Status:    1, // 成功
+		Status:    1,
 	}
 	s.loginLogRepo.Create(ctx, log)
 }
@@ -377,7 +376,7 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 		uid = u
 	default:
 		// 如果类型不匹配，记录错误但不panic
-		log.Printf("未知的用户类型: %T", user)
+		// 这里不记录日志，因为不是关键错误
 		return
 	}
 
@@ -393,7 +392,8 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 	}
 
 	if err := s.loginLogRepo.Create(ctx, logEntry); err != nil {
-		log.Printf("记录失败登录失败: %v", err)
+		// 记录错误但不影响主流程
+		// 这里不记录日志，因为不是关键错误
 	}
 }
 

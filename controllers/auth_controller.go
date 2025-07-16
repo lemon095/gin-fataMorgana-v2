@@ -9,7 +9,6 @@ import (
 	"gin-fataMorgana/services"
 	"gin-fataMorgana/utils"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -40,8 +39,6 @@ func NewAuthController() *AuthController {
 // @Failure 500 {object} utils.Response "服务器错误"
 // @Router /auth/register [post]
 func (ac *AuthController) Register(c *gin.Context) {
-	log.Println("=== 开始处理用户注册请求 ===")
-
 	// 读取原始请求体
 	body, _ := ioutil.ReadAll(c.Request.Body)
 
@@ -51,72 +48,36 @@ func (ac *AuthController) Register(c *gin.Context) {
 
 	// 解析JSON请求
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("❌ JSON解析失败: %v", err)
-		log.Printf("📋 注册信息: 账号=%s, 密码长度=%d, 确认密码长度=%d, 邀请码=%s",
-			req.Account, len(req.Password), len(req.ConfirmPassword), req.InviteCode)
+		utils.LogError(c, "JSON解析失败: %v", err)
 		utils.HandleValidationError(c, err)
 		return
 	}
-
-	// 输出注册信息（密码脱敏）
-	maskedPassword := ""
-	if len(req.Password) > 0 {
-		if len(req.Password) <= 2 {
-			maskedPassword = "***"
-		} else {
-			maskedPassword = req.Password[:1] + "***" + req.Password[len(req.Password)-1:]
-		}
-	}
-
-	maskedConfirmPassword := ""
-	if len(req.ConfirmPassword) > 0 {
-		if len(req.ConfirmPassword) <= 2 {
-			maskedConfirmPassword = "***"
-		} else {
-			maskedConfirmPassword = req.ConfirmPassword[:1] + "***" + req.ConfirmPassword[len(req.ConfirmPassword)-1:]
-		}
-	}
-
-	log.Printf("📋 注册信息解析成功:")
-	log.Printf("   📧 账号: %s", req.Account)
-	log.Printf("   🔒 密码: %s (长度: %d)", maskedPassword, len(req.Password))
-	log.Printf("   🔒 确认密码: %s (长度: %d)", maskedConfirmPassword, len(req.ConfirmPassword))
-	log.Printf("   🎫 邀请码: %s", req.InviteCode)
 
 	// 如果结构体有BankCardInfo字段且为空，赋默认值
 	type bankCardInfoSetter interface {
 		SetBankCardInfoDefault()
 	}
 	if setter, ok := any(&req).(bankCardInfoSetter); ok {
-		log.Println("🔧 设置银行卡信息默认值")
 		setter.SetBankCardInfoDefault()
 	}
 
-	log.Println("🚀 开始调用用户服务进行注册...")
 	user, err := ac.userService.Register(&req)
 	if err != nil {
-		log.Printf("❌ 注册失败: 账号=%s, 密码=%s, 邀请码=%s, 错误原因=%s",
-			req.Account, maskedPassword, req.InviteCode, err.Error())
+		utils.LogError(c, "注册失败: 账号=%s, 邀请码=%s, 错误原因=%s",
+			req.Account, req.InviteCode, err.Error())
 
 		switch err.Error() {
 		case "邮箱已被注册":
-			log.Println("⚠️  错误类型: 邮箱已被注册")
 			utils.EmailAlreadyExists(c)
 		case "该邮箱已被删除，无法重新注册":
-			log.Println("⚠️  错误类型: 邮箱已被删除")
 			utils.ErrorWithMessage(c, utils.CodeUserAlreadyExists, err.Error())
 		case "两次输入的密码不一致":
-			log.Println("⚠️  错误类型: 密码不一致")
 			utils.ErrorWithMessage(c, utils.CodeValidationFailed, err.Error())
 		default:
-			log.Printf("⚠️  错误类型: 其他错误 - %s", err.Error())
 			utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
 		}
 		return
 	}
-
-	log.Printf("✅ 注册成功: 账号=%s, 密码=%s, 邀请码=%s, 用户ID=%d, UID=%s",
-		req.Account, maskedPassword, req.InviteCode, user.ID, user.Uid)
 
 	utils.SuccessWithMessage(c, "用户注册成功", gin.H{
 		"user": user,
@@ -125,67 +86,39 @@ func (ac *AuthController) Register(c *gin.Context) {
 
 // Login 用户登录
 func (ac *AuthController) Login(c *gin.Context) {
-	log.Println("=== 开始处理用户登录请求 ===")
-
 	var req models.UserLoginRequest
 
 	// 解析JSON请求
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("❌ 登录JSON解析失败: %v", err)
-		log.Printf("📋 登录信息: 账号=%s, 密码长度=%d", req.Account, len(req.Password))
+		utils.LogError(c, "登录JSON解析失败: %v", err)
 		utils.HandleValidationError(c, err)
 		return
 	}
-
-	// 输出登录信息（密码脱敏）
-	maskedPassword := ""
-	if len(req.Password) > 0 {
-		if len(req.Password) <= 2 {
-			maskedPassword = "***"
-		} else {
-			maskedPassword = req.Password[:1] + "***" + req.Password[len(req.Password)-1:]
-		}
-	}
-
-	log.Printf("📋 登录信息解析成功:")
-	log.Printf("   📧 账号: %s", req.Account)
-	log.Printf("   🔒 密码: %s (长度: %d)", maskedPassword, len(req.Password))
 
 	// 获取客户端IP地址
 	clientIP := c.ClientIP()
 	// 获取User-Agent
 	userAgent := c.GetHeader("User-Agent")
 
-	log.Printf("🌐 客户端信息: IP=%s, User-Agent=%s", clientIP, userAgent)
-	log.Println("🚀 开始调用用户服务进行登录...")
-
 	tokens, err := ac.userService.Login(&req, clientIP, userAgent)
 	if err != nil {
-		log.Printf("❌ 登录失败: 账号=%s, 密码=%s, 错误原因=%s",
-			req.Account, maskedPassword, err.Error())
+		utils.LogError(c, "登录失败: 账号=%s, 密码=%s, 错误原因=%s",
+			req.Account, req.Password, err.Error())
 
 		switch err.Error() {
 		case "邮箱或密码错误":
-			log.Println("⚠️  错误类型: 邮箱或密码错误")
 			utils.LoginFailed(c)
 		case "账户已被删除，无法登录":
-			log.Println("⚠️  错误类型: 账户已被删除")
 			utils.ErrorWithMessage(c, utils.CodeUserNotFound, err.Error())
 		case "账户已被禁用，无法登录":
-			log.Println("⚠️  错误类型: 账户已被禁用")
 			utils.AccountLocked(c)
 		case "账户待审核，无法登录":
-			log.Println("⚠️  错误类型: 账户待审核")
 			utils.ErrorWithMessage(c, utils.CodeUserPendingApproval, err.Error())
 		default:
-			log.Printf("⚠️  错误类型: 其他错误 - %s", err.Error())
 			utils.ErrorWithMessage(c, utils.CodeOperationFailed, err.Error())
 		}
 		return
 	}
-
-	log.Printf("✅ 登录成功: 账号=%s, 密码=%s",
-		req.Account, maskedPassword)
 
 	utils.SuccessWithMessage(c, "登录成功", gin.H{
 		"tokens": tokens,
@@ -288,14 +221,14 @@ func (ac *AuthController) Logout(c *gin.Context) {
 	err := tokenService.AddTokenToBlacklist(ctx, tokenString)
 	if err != nil {
 		// 记录错误但不影响登出流程
-		log.Printf("将token加入黑名单失败: %v", err)
+		utils.LogError(c, "将token加入黑名单失败: %v", err)
 	}
 
 	// 撤销用户会话
 	err = tokenService.RevokeUserSession(ctx, uid)
 	if err != nil {
 		// 记录错误但不影响登出流程
-		log.Printf("撤销用户会话失败: %v", err)
+		utils.LogError(c, "撤销用户会话失败: %v", err)
 	}
 
 	utils.SuccessWithMessage(c, "登出成功", nil)

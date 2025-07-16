@@ -5,8 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"log"
-
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -248,7 +246,7 @@ func CreateValidationErrorResponse(err error) Response {
 
 // HandleValidationError 处理验证错误并返回响应
 func HandleValidationError(c *gin.Context, err error) {
-	log.Printf("参数校验失败: %+v", err)
+
 	response := CreateValidationErrorResponse(err)
 	c.JSON(getHTTPStatus(CodeInvalidParams), response)
 }

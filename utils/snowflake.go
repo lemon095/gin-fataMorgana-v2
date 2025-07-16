@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"time"
 )
@@ -72,13 +71,13 @@ func InitSnowflake(workerID int64) {
 	// 使用配置中的worker_id作为机器ID
 	machineID := workerID
 	globalUIDGenerator = NewSnowflakeUID(machineID)
-	log.Printf("雪花算法初始化成功，机器ID: %d", machineID)
+
 }
 
 // GenerateUID 全局UID生成函数
 func GenerateUID() string {
 	if globalUIDGenerator == nil {
-		log.Printf("警告：雪花算法未初始化，使用备用UID生成方法")
+
 		// 备用方案：使用时间戳生成UID
 		timestamp := time.Now().UnixNano() / 1e6
 		return fmt.Sprintf("%08d", timestamp%100000000)

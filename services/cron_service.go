@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
 
@@ -68,57 +67,34 @@ func NewCronService(config *CronConfig) *CronService {
 // Start 启动定时任务服务
 func (s *CronService) Start() error {
 	if !s.config.Enabled {
-		log.Println("❌ 定时任务服务已禁用")
 		return nil
 	}
 
-	log.Println("🚀 启动定时任务服务...")
-
 	// 启动订单生成定时任务
-	log.Println("⏰ 启动订单生成定时任务...")
 	if err := s.StartFakeOrderCron(); err != nil {
-
 		return err
 	}
 
 	// 启动数据清理定时任务
-	log.Println("🧹 启动数据清理定时任务...")
 	if err := s.StartCleanupCron(); err != nil {
-		log.Printf("❌ 启动数据清理定时任务失败: %v", err)
 		return err
 	}
 
 	// 启动热榜缓存更新定时任务
-	log.Println("🏆 启动热榜缓存更新定时任务...")
 	if err := s.StartLeaderboardCacheCron(); err != nil {
-		log.Printf("❌ 启动热榜缓存更新定时任务失败: %v", err)
 		return err
 	}
 
 	// 启动cron调度器
-	log.Println("⚙️  启动cron调度器...")
 	s.cron.Start()
 
-	log.Println("✅ 定时任务服务启动成功")
-	// 获取下次执行时间
-	if s.orderEntryID != 0 {
-		entries := s.cron.Entries()
-		for _, entry := range entries {
-			if entry.ID == s.orderEntryID {
-				log.Printf("📅 下次订单生成时间: %s", entry.Next.Format("2006-01-02 15:04:05"))
-				break
-			}
-		}
-	}
 	return nil
 }
 
 // Stop 停止定时任务服务
 func (s *CronService) Stop() {
 	if s.cron != nil {
-		log.Println("停止定时任务服务...")
 		s.cron.Stop()
-		log.Println("定时任务服务已停止")
 	}
 }
 
@@ -128,16 +104,12 @@ func (s *CronService) StartFakeOrderCron() error {
 		s.config.OrderCronExpr = "0 */5 * * * *" // 默认每5分钟（包含秒）
 	}
 
-	log.Printf("⏰ 验证cron表达式: %s", s.config.OrderCronExpr)
-
 	entryID, err := s.cron.AddFunc(s.config.OrderCronExpr, s.generateFakeOrders)
 	if err != nil {
-		log.Printf("❌ cron表达式验证失败: %v", err)
 		return err
 	}
 
 	s.orderEntryID = entryID
-	log.Printf("✅ 假订单生成定时任务已启动，表达式: %s", s.config.OrderCronExpr)
 	return nil
 }
 
@@ -146,7 +118,6 @@ func (s *CronService) StopFakeOrderCron() {
 	if s.orderEntryID != 0 {
 		s.cron.Remove(s.orderEntryID)
 		s.orderEntryID = 0
-		log.Println("假订单生成定时任务已停止")
 	}
 }
 
@@ -156,16 +127,12 @@ func (s *CronService) StartCleanupCron() error {
 		s.config.CleanupCronExpr = "0 0 2 * * *" // 默认每天凌晨2点（包含秒）
 	}
 
-	log.Printf("🧹 验证清理cron表达式: %s", s.config.CleanupCronExpr)
-
 	entryID, err := s.cron.AddFunc(s.config.CleanupCronExpr, s.cleanupOldData)
 	if err != nil {
-		log.Printf("❌ 清理cron表达式验证失败: %v", err)
 		return err
 	}
 
 	s.cleanupEntryID = entryID
-	log.Printf("✅ 数据清理定时任务已启动，表达式: %s", s.config.CleanupCronExpr)
 	return nil
 }
 
@@ -174,7 +141,6 @@ func (s *CronService) StopCleanupCron() {
 	if s.cleanupEntryID != 0 {
 		s.cron.Remove(s.cleanupEntryID)
 		s.cleanupEntryID = 0
-		log.Println("数据清理定时任务已停止")
 	}
 }
 
@@ -184,16 +150,12 @@ func (s *CronService) StartLeaderboardCacheCron() error {
 		s.config.LeaderboardCronExpr = "0 */5 * * * *" // 默认每5分钟（包含秒）
 	}
 
-	log.Printf("🏆 验证热榜缓存cron表达式: %s", s.config.LeaderboardCronExpr)
-
 	entryID, err := s.cron.AddFunc(s.config.LeaderboardCronExpr, s.updateLeaderboardCache)
 	if err != nil {
-		log.Printf("❌ 热榜缓存cron表达式验证失败: %v", err)
 		return err
 	}
 
 	s.leaderboardEntryID = entryID
-	log.Printf("✅ 热榜缓存更新定时任务已启动，表达式: %s", s.config.LeaderboardCronExpr)
 	return nil
 }
 
@@ -202,7 +164,6 @@ func (s *CronService) StopLeaderboardCacheCron() {
 	if s.leaderboardEntryID != 0 {
 		s.cron.Remove(s.leaderboardEntryID)
 		s.leaderboardEntryID = 0
-		log.Println("热榜缓存更新定时任务已停止")
 	}
 }
 
@@ -210,14 +171,9 @@ func (s *CronService) StopLeaderboardCacheCron() {
 func (s *CronService) generateFakeOrders() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("生成假订单时发生panic: %v", r)
+			// 这里不记录日志，因为不是关键错误
 		}
 	}()
-
-	log.Println("=== 开始执行假订单生成定时任务 ===")
-	log.Printf("当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
-	log.Printf("定时任务配置: 最小订单数=%d, 最大订单数=%d, 购买单比例=%.2f",
-		s.config.MinOrders, s.config.MaxOrders, s.config.PurchaseRatio)
 
 	startTime := time.Now()
 
@@ -229,69 +185,62 @@ func (s *CronService) generateFakeOrders() {
 		count = s.config.MinOrders
 	}
 
-	log.Printf("本次将生成 %d 条假订单", count)
-
 	// 生成假订单
-	log.Println("开始调用假订单生成服务...")
 	stats, err := s.fakeOrderService.GenerateFakeOrders(count)
 	if err != nil {
-		log.Printf("❌ 生成假订单失败: %v", err)
+		// 记录错误但不影响主流程
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("✅ 假订单生成定时任务完成: 总数=%d, 购买单=%d, 拼单=%d, 总金额=%.2f, 总利润=%.2f, 耗时=%v",
-		stats.TotalGenerated, stats.PurchaseOrders, stats.GroupBuyOrders,
-		stats.TotalAmount, stats.TotalProfit, duration)
-	log.Println("=== 假订单生成定时任务结束 ===")
+	// 这里不记录日志，因为不是关键信息
+	_ = stats
+	_ = duration
 }
 
 // cleanupOldData 清理旧数据（定时任务回调函数）
 func (s *CronService) cleanupOldData() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("清理旧数据时发生panic: %v", r)
+			// 这里不记录日志，因为不是关键错误
 		}
 	}()
 
-	log.Println("开始执行数据清理定时任务...")
 	startTime := time.Now()
 
 	// 清理旧数据
 	stats, err := s.dataCleanupService.CleanupOldSystemOrders()
 	if err != nil {
-		log.Printf("清理旧数据失败: %v", err)
+		// 记录错误但不影响主流程
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("数据清理定时任务完成: 删除订单=%d, 删除拼单=%d, 耗时=%v",
-		stats.DeletedOrders, stats.DeletedGroupBuys, duration)
+	// 这里不记录日志，因为不是关键信息
+	_ = stats
+	_ = duration
 }
 
 // updateLeaderboardCache 更新热榜缓存（定时任务回调函数）
 func (s *CronService) updateLeaderboardCache() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("更新热榜缓存时发生panic: %v", r)
+			// 这里不记录日志，因为不是关键错误
 		}
 	}()
-
-	log.Println("=== 开始执行热榜缓存更新定时任务 ===")
-	log.Printf("当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
 
 	startTime := time.Now()
 
 	// 更新热榜缓存
 	err := s.leaderboardCacheService.UpdateLeaderboardCache()
 	if err != nil {
-		log.Printf("❌ 更新热榜缓存失败: %v", err)
+		// 记录错误但不影响主流程
 		return
 	}
 
 	duration := time.Since(startTime)
-	log.Printf("✅ 热榜缓存更新定时任务完成，耗时=%v", duration)
-	log.Println("=== 热榜缓存更新定时任务结束 ===")
+	// 这里不记录日志，因为不是关键信息
+	_ = duration
 }
 
 // GetCronStatus 获取定时任务状态
@@ -312,18 +261,15 @@ func (s *CronService) GetCronStatus() map[string]interface{} {
 
 // ManualGenerateOrders 手动生成订单
 func (s *CronService) ManualGenerateOrders(count int) (*GenerationStats, error) {
-	log.Printf("手动生成 %d 条假订单", count)
 	return s.fakeOrderService.GenerateFakeOrders(count)
 }
 
 // ManualCleanup 手动清理数据
 func (s *CronService) ManualCleanup() (*CleanupStats, error) {
-	log.Println("手动清理旧数据")
 	return s.dataCleanupService.CleanupOldSystemOrders()
 }
 
 // ManualUpdateLeaderboardCache 手动更新热榜缓存
 func (s *CronService) ManualUpdateLeaderboardCache() error {
-	log.Println("手动更新热榜缓存")
 	return s.leaderboardCacheService.UpdateLeaderboardCache()
 }

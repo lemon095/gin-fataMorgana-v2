@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"gin-fataMorgana/config"
@@ -38,7 +37,6 @@ func InitRedis() error {
 		return fmt.Errorf("Redis连接测试失败: %w", err)
 	}
 
-	log.Println("Redis连接成功")
 	return nil
 }
 

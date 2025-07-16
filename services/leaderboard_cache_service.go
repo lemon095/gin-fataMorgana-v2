@@ -7,7 +7,6 @@ import (
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
-	"log"
 	"time"
 )
 
@@ -104,18 +103,14 @@ func (s *LeaderboardCacheService) GetCachedLeaderboardData() (*CachedLeaderboard
 	// 从Redis获取缓存数据
 	cachedData, err := database.RedisClient.Get(ctx, cacheKey).Result()
 	if err != nil {
-		log.Printf("⚠️ [缓存服务] 缓存未命中: %v", err)
 		return nil, err
 	}
 
 	// 反序列化缓存数据
 	var cacheData CachedLeaderboardData
 	if err := json.Unmarshal([]byte(cachedData), &cacheData); err != nil {
-		log.Printf("❌ [缓存服务] 反序列化缓存数据失败: %v", err)
 		return nil, utils.NewAppError(utils.CodeDatabaseError, "反序列化缓存数据失败")
 	}
-
-	log.Printf("✅ [缓存服务] 成功获取缓存数据，包含 %d 条记录", len(cacheData.TopUsers))
 	return &cacheData, nil
 }
 
@@ -124,28 +119,21 @@ func (s *LeaderboardCacheService) GetUserRankFromCache(uid string, cachedData *C
 	// 先检查用户是否在缓存的前10名中
 	for _, entry := range cachedData.TopUsers {
 		if entry.Uid == uid {
-			log.Printf("✅ [缓存服务] 用户 %s 在前10名中，排名第%d", uid, entry.Rank)
 			return &entry
 		}
 	}
 
 	// 如果用户不在前10名中，需要实时查询用户排名
-	log.Printf("🔍 [缓存服务] 用户 %s 不在前10名中，需要实时查询排名", uid)
 
 	ctx := context.Background()
 	userData, rank, err := s.leaderboardRepo.GetUserWeeklyRank(ctx, uid, cachedData.WeekStart, cachedData.WeekEnd)
 	if err != nil {
-		log.Printf("❌ [缓存服务] 查询用户排名失败: %v", err)
 		return s.getDefaultUserRankInfo(uid)
 	}
 
 	if userData == nil {
-		log.Printf("⚠️ [缓存服务] 用户 %s 没有完成任何订单", uid)
 		return s.getDefaultUserRankInfo(uid)
 	}
-
-	log.Printf("✅ [缓存服务] 用户 %s 排名第%d，完成订单数=%d，总金额=%.2f",
-		uid, rank, userData.OrderCount, userData.TotalAmount)
 
 	return &models.LeaderboardEntry{
 		ID:          uint(rank),
@@ -162,11 +150,9 @@ func (s *LeaderboardCacheService) GetUserRankFromCache(uid string, cachedData *C
 
 // getDefaultUserRankInfo 获取默认用户排名信息
 func (s *LeaderboardCacheService) getDefaultUserRankInfo(uid string) *models.LeaderboardEntry {
-	log.Printf("🔍 [缓存服务] 获取用户 %s 的默认排名信息", uid)
 	userRepo := database.NewUserRepository()
 	user, err := userRepo.FindByUid(context.Background(), uid)
 	if err != nil {
-		log.Printf("❌ [缓存服务] 查询用户信息失败: %v", err)
 		return &models.LeaderboardEntry{
 			ID:          999,
 			Uid:         uid,
@@ -180,7 +166,6 @@ func (s *LeaderboardCacheService) getDefaultUserRankInfo(uid string) *models.Lea
 		}
 	}
 
-	log.Printf("✅ [缓存服务] 用户 %s 默认排名信息：用户名=%s", uid, user.Username)
 	return &models.LeaderboardEntry{
 		ID:          999,
 		Uid:         user.Uid,

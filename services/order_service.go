@@ -7,14 +7,13 @@ import (
 	"gin-fataMorgana/database"
 	"gin-fataMorgana/models"
 	"gin-fataMorgana/utils"
-	"log"
 	"time"
 )
 
 // OrderService 订单服务
 type OrderService struct {
-	orderRepo       *database.OrderRepository
-	walletRepo      *database.WalletRepository
+	orderRepo  *database.OrderRepository
+	walletRepo *database.WalletRepository
 	// 使用并发安全的钱包服务
 	walletService *WalletService
 }
@@ -22,9 +21,9 @@ type OrderService struct {
 // NewOrderService 创建订单服务实例
 func NewOrderService() *OrderService {
 	return &OrderService{
-		orderRepo:       database.NewOrderRepository(),
-		walletRepo:      database.NewWalletRepository(),
-		walletService:   NewWalletService(),
+		orderRepo:     database.NewOrderRepository(),
+		walletRepo:    database.NewWalletRepository(),
+		walletService: NewWalletService(),
 	}
 }
 
@@ -60,11 +59,11 @@ type GetOrderStatsResponse struct {
 
 // 分页信息结构体
 type PaginationInfo struct {
-	Page       int `json:"page"`
-	PageSize   int `json:"page_size"`
-	Total      int `json:"total"`
-	CurrentPage int `json:"current_page"`
-	TotalPages  int `json:"total_pages"`
+	Page        int  `json:"page"`
+	PageSize    int  `json:"page_size"`
+	Total       int  `json:"total"`
+	CurrentPage int  `json:"current_page"`
+	TotalPages  int  `json:"total_pages"`
 	HasNext     bool `json:"has_next"`
 	HasPrev     bool `json:"has_prev"`
 }
@@ -164,7 +163,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		TransactionNo:  utils.GenerateTransactionNo("ORDER"),
 		Uid:            req.Uid,
 		Type:           models.TransactionTypeOrderBuy,
-		Amount:         totalAmount, // 使用计算后的总价
+		Amount:         totalAmount,                  // 使用计算后的总价
 		BalanceBefore:  wallet.Balance + totalAmount, // 计算扣减前的余额
 		BalanceAfter:   wallet.Balance,
 		Status:         models.TransactionStatusSuccess,
@@ -319,18 +318,18 @@ func (s *OrderService) getGroupBuyList(ctx context.Context, uid string, page, pa
 	for _, groupBuy := range groupBuys {
 		// 将拼单数据转换为订单响应格式
 		orderResponse := models.OrderResponse{
-			ID:           groupBuy.ID,
-			OrderNo:      groupBuy.GroupBuyNo,
-			Uid:          groupBuy.Uid,
-			Amount:       groupBuy.PerPersonAmount,
-			ProfitAmount: 0, // 拼单没有利润金额
-			Status:       groupBuy.Status,
-			StatusName:   s.getGroupBuyStatusName(groupBuy.Status),
-			ExpireTime:   groupBuy.Deadline,
-			CreatedAt:    groupBuy.CreatedAt,
-			UpdatedAt:    groupBuy.UpdatedAt,
+			ID:            groupBuy.ID,
+			OrderNo:       groupBuy.GroupBuyNo,
+			Uid:           groupBuy.Uid,
+			Amount:        groupBuy.PerPersonAmount,
+			ProfitAmount:  0, // 拼单没有利润金额
+			Status:        groupBuy.Status,
+			StatusName:    s.getGroupBuyStatusName(groupBuy.Status),
+			ExpireTime:    groupBuy.Deadline,
+			CreatedAt:     groupBuy.CreatedAt,
+			UpdatedAt:     groupBuy.UpdatedAt,
 			IsSystemOrder: false, // 拼单不是系统订单
-			IsExpired:    time.Now().UTC().After(groupBuy.Deadline),
+			IsExpired:     time.Now().UTC().After(groupBuy.Deadline),
 			RemainingTime: func() int64 {
 				if time.Now().UTC().After(groupBuy.Deadline) {
 					return 0
@@ -405,15 +404,9 @@ func (s *OrderService) GetOrderStats(uid string) (*GetOrderStatsResponse, error)
 	}, nil
 }
 
-
-
 // GetPeriodList 获取期数列表
 func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {
 	ctx := context.Background()
-
-	// 添加时间调试信息
-	now := time.Now().UTC()
-	log.Printf("当前时间(UTC): %s", now.Format("2006-01-02 15:04:05 UTC"))
 
 	// 创建期数Repository
 	periodRepo := database.NewLotteryPeriodRepository()
@@ -423,13 +416,6 @@ func (s *OrderService) GetPeriodList() (*models.PeriodListResponse, error) {
 	if err != nil {
 		return nil, utils.NewAppError(utils.CodePeriodInfoGetFailed, "获取期数信息失败")
 	}
-
-	// 添加期数时间调试信息
-	log.Printf("期数信息: ID=%d, 期号=%s, 开始时间=%s, 结束时间=%s, 状态=%s", 
-		period.ID, period.PeriodNumber, 
-		period.OrderStartTime.Format("2006-01-02 15:04:05 UTC"),
-		period.OrderEndTime.Format("2006-01-02 15:04:05 UTC"),
-		period.GetStatus())
 
 	// 获取价格配置
 	purchaseConfig, err := s.getPurchaseConfig(ctx)
@@ -550,7 +536,7 @@ func (s *OrderService) GetAllOrderList(req *models.GetOrderListRequest) (*GetOrd
 func (s *OrderService) cacheOrderData(ctx context.Context, order *models.Order) error {
 	// 创建缓存服务实例
 	cacheService := NewOrderCacheService()
-	
+
 	// 缓存订单数据
 	return cacheService.CacheOrder(ctx, order)
 }
