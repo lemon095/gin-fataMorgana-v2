@@ -169,8 +169,8 @@ func (s *WalletService) AtomicBalanceOperationWithRetry(ctx context.Context, uid
 	}
 
 	// 8. 记录操作日志
-	utils.LogInfo(nil, "钱包余额操作成功 - UID: %s, 操作前: %.2f, 操作后: %.2f",
-		uid, balanceBefore, wallet.Balance)
+	utils.LogInfo(nil, "钱包余额操作成功 - UID: %s, 操作前: %.2f, 操作后: %.2f, 变化金额: %.2f",
+		uid, balanceBefore, wallet.Balance, wallet.Balance-balanceBefore)
 
 	return nil
 }
@@ -578,7 +578,8 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 		// 检查是否是记录不存在的错误（支持多种错误格式）
 		if strings.Contains(err.Error(), "record not found") ||
 			strings.Contains(err.Error(), "no rows in result set") ||
-			strings.Contains(err.Error(), "not found") {
+			strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "记录不存在") {
 			utils.LogInfo(nil, "用户钱包不存在，自动创建钱包 - UID: %s, 数据库报错的err: %s", uid, err.Error())
 			wallet, err = s.CreateWallet(uid)
 			if err != nil {
