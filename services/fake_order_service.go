@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -63,6 +64,33 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 	startTime := time.Now()
 	ctx := context.Background()
 
+	// 使用分布式锁防止多个任务同时运行
+	lockKey := "fake_order_generation_lock"
+	lockValue := fmt.Sprintf("process_%d_%d", os.Getpid(), time.Now().UnixNano())
+
+	// 尝试获取锁，超时时间30秒
+	success, err := database.GetGlobalRedisHelper().SetNX(ctx, lockKey, lockValue, 30*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("获取分布式锁失败: %v", err)
+	}
+
+	if !success {
+		return nil, fmt.Errorf("假订单生成任务正在运行中，请稍后重试")
+	}
+
+	// 确保锁会被释放
+	defer func() {
+		// 使用Lua脚本确保原子性释放锁
+		luaScript := `
+			if redis.call("get", KEYS[1]) == ARGV[1] then
+				return redis.call("del", KEYS[1])
+			else
+				return 0
+			end
+		`
+		database.RedisClient.Eval(ctx, luaScript, []string{lockKey}, []string{lockValue})
+	}()
+
 	// 生成随机订单数量
 	if count <= 0 {
 		count = rand.Intn(s.config.MaxOrders-s.config.MinOrders+1) + s.config.MinOrders
@@ -97,6 +125,8 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 	if len(purchaseOrders) > 0 {
 		for _, order := range purchaseOrders {
 			if err := s.orderRepo.CreateOrder(ctx, order); err != nil {
+				// 记录错误但不中断流程
+				utils.LogWarn(nil, "创建假订单失败: %v", err)
 				continue
 			}
 		}
@@ -106,6 +136,8 @@ func (s *FakeOrderService) GenerateFakeOrders(count int) (*GenerationStats, erro
 	if len(groupBuyOrders) > 0 {
 		for _, groupBuy := range groupBuyOrders {
 			if err := s.groupBuyRepo.Create(ctx, groupBuy); err != nil {
+				// 记录错误但不中断流程
+				utils.LogWarn(nil, "创建假拼单失败: %v", err)
 				continue
 			}
 		}

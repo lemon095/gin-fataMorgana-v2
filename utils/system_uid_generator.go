@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -12,6 +13,7 @@ type SystemUIDGenerator struct {
 	sequence        int64
 	lastTime        int64
 	machineID       int64
+	processID       int64 // 添加进程ID
 	groupBuyCounter int64 // 拼单计数器，确保拼单号唯一性
 	orderCounter    int64 // 订单计数器，确保订单号唯一性
 }
@@ -21,7 +23,8 @@ func NewSystemUIDGenerator(machineID int64) *SystemUIDGenerator {
 	return &SystemUIDGenerator{
 		lastTime:     0,
 		sequence:     0,
-		machineID:    machineID % 100, // 确保机器ID在0-99范围内
+		machineID:    machineID % 100,           // 确保机器ID在0-99范围内
+		processID:    int64(os.Getpid()) % 1000, // 进程ID后3位
 		orderCounter: 0,
 	}
 }
@@ -71,7 +74,7 @@ func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
 
 	// 获取当前时间戳（纳秒级精度）
 	currentTime := time.Now().UnixNano()
-	
+
 	// 处理时钟回退
 	if currentTime < s.lastTime {
 		// 等待到下一个微秒
@@ -94,10 +97,10 @@ func (s *SystemUIDGenerator) GenerateSystemOrderNo() string {
 
 	s.lastTime = currentTime
 
-	// 生成订单号：ORD + 时间戳后4位 + 机器ID2位 + 计数器4位
+	// 生成订单号：ORD + 时间戳后4位 + 机器ID2位 + 进程ID后2位 + 计数器4位
 	// 使用纳秒时间戳的后4位，提高唯一性
 	timestamp := (currentTime / 1000000) % 10000 // 取纳秒时间戳后4位
-	return fmt.Sprintf("ORD%04d%02d%04d", timestamp, s.machineID, s.orderCounter)
+	return fmt.Sprintf("ORD%04d%02d%02d%04d", timestamp, s.machineID, s.processID%100, s.orderCounter)
 }
 
 // GenerateSystemGroupBuyNo 生成系统拼单号
@@ -110,7 +113,7 @@ func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
 
 	// 获取当前时间戳（纳秒级精度）
 	currentTime := time.Now().UnixNano()
-	
+
 	// 处理时钟回退
 	if currentTime < s.lastTime {
 		// 等待到下一个微秒
@@ -133,10 +136,10 @@ func (s *SystemUIDGenerator) GenerateSystemGroupBuyNo() string {
 
 	s.lastTime = currentTime
 
-	// 生成拼单号：GB + 时间戳后4位 + 机器ID2位 + 计数器4位
+	// 生成拼单号：GB + 时间戳后4位 + 机器ID2位 + 进程ID后2位 + 计数器4位
 	// 使用纳秒时间戳的后4位，提高唯一性
 	timestamp := (currentTime / 1000000) % 10000 // 取纳秒时间戳后4位
-	return fmt.Sprintf("GB%04d%02d%04d", timestamp, s.machineID, s.groupBuyCounter)
+	return fmt.Sprintf("GB%04d%02d%02d%04d", timestamp, s.machineID, s.processID%100, s.groupBuyCounter)
 }
 
 // 全局系统UID生成器实例
@@ -171,4 +174,4 @@ func GenerateSystemGroupBuyNo() string {
 		return "GB" + GenerateSystemUID()
 	}
 	return globalSystemUIDGenerator.GenerateSystemGroupBuyNo()
-} 
+}
