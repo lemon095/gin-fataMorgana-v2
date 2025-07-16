@@ -133,6 +133,15 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 	if err != nil {
 		// 记录钱包创建失败的错误，但不影响用户注册流程
 		utils.LogWarn(nil, "用户注册后创建钱包失败 - UID: %s, 错误: %v", user.Uid, err)
+
+		// 尝试再次创建钱包（可能是并发问题）
+		time.Sleep(100 * time.Millisecond)
+		wallet, err = walletService.CreateWallet(user.Uid)
+		if err != nil {
+			utils.LogError(nil, "用户注册后重试创建钱包仍然失败 - UID: %s, 错误: %v", user.Uid, err)
+		} else {
+			utils.LogInfo(nil, "用户注册后重试创建钱包成功 - UID: %s, 钱包ID: %d", user.Uid, wallet.ID)
+		}
 	} else {
 		utils.LogInfo(nil, "用户注册成功，自动创建钱包 - UID: %s, 钱包ID: %d", user.Uid, wallet.ID)
 	}

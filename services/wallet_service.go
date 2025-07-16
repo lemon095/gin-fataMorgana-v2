@@ -619,8 +619,35 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 		UpdatedAt: time.Now().UTC(),
 	}
 
-	if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
-		return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
+	// 添加重试机制
+	maxRetries := 3
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if err := s.walletRepo.CreateWallet(ctx, wallet); err != nil {
+			// 如果是最后一次尝试，返回错误
+			if attempt == maxRetries {
+				utils.LogError(nil, "创建钱包失败，已重试%d次 - UID: %s, 错误: %v", maxRetries, uid, err)
+				return nil, utils.NewAppError(utils.CodeWalletCreateFailed, "创建钱包失败")
+			}
+
+			// 检查是否是重复键错误（钱包可能已被其他进程创建）
+			if strings.Contains(err.Error(), "Duplicate entry") ||
+				strings.Contains(err.Error(), "UNIQUE constraint failed") {
+				// 重新检查钱包是否存在
+				existingWallet, checkErr := s.walletRepo.FindWalletByUid(ctx, uid)
+				if checkErr == nil && existingWallet != nil {
+					utils.LogInfo(nil, "钱包已被其他进程创建 - UID: %s", uid)
+					return existingWallet, nil
+				}
+			}
+
+			// 等待后重试
+			time.Sleep(time.Duration(attempt) * 100 * time.Millisecond)
+			continue
+		}
+
+		// 创建成功
+		utils.LogInfo(nil, "钱包创建成功 - UID: %s, 钱包ID: %d", uid, wallet.ID)
+		break
 	}
 
 	// 更新缓存
