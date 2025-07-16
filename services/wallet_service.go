@@ -579,10 +579,12 @@ func (s *WalletService) GetWallet(uid string) (*models.Wallet, error) {
 			utils.LogInfo(nil, "用户钱包不存在，自动创建钱包 - UID: %s", uid)
 			wallet, err = s.CreateWallet(uid)
 			if err != nil {
+				utils.LogError(nil, "获取钱包失败1: %v", err)
 				return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包信息失败")
 			}
 			return wallet, nil
 		}
+		utils.LogError(nil, "获取钱包失败2: %v", err)
 		return nil, utils.NewAppError(utils.CodeWalletGetFailed, "获取钱包信息失败")
 	}
 

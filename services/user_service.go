@@ -127,6 +127,16 @@ func (s *UserService) Register(req *models.UserRegisterRequest) (*models.UserRes
 		return nil, utils.NewAppError(utils.CodeUserCreateFailed, "创建用户失败")
 	}
 
+	// 自动为用户创建钱包
+	walletService := NewWalletService()
+	wallet, err := walletService.CreateWallet(user.Uid)
+	if err != nil {
+		// 记录钱包创建失败的错误，但不影响用户注册流程
+		utils.LogWarn(nil, "用户注册后创建钱包失败 - UID: %s, 错误: %v", user.Uid, err)
+	} else {
+		utils.LogInfo(nil, "用户注册成功，自动创建钱包 - UID: %s, 钱包ID: %d", user.Uid, wallet.ID)
+	}
+
 	response := user.ToResponse()
 	return &response, nil
 }

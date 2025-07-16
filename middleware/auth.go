@@ -49,7 +49,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			// 根据错误类型返回不同的错误信息
 			errorMessage := "认证失败"
 			errorCode := "AUTH_FAILED"
-			
+
 			if strings.Contains(err.Error(), "已在其他设备登录") {
 				errorMessage = err.Error()
 				errorCode = "TOKEN_REVOKED"
@@ -62,9 +62,9 @@ func AuthMiddleware() gin.HandlerFunc {
 			}
 
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"code":    401,
-				"message": errorMessage,
-				"error":   errorCode,
+				"code":      401,
+				"message":   errorMessage,
+				"error":     errorCode,
 				"timestamp": time.Now().Unix(),
 			})
 			c.Abort()
