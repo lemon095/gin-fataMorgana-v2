@@ -244,7 +244,7 @@ health_check() {
     log_info "执行健康检查..."
     
     # 检查容器状态
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "Up"; then
         log_info "✅ 容器运行正常"
     else
         log_error "❌ 容器运行异常"
