@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   # 主应用
   gin-fataMorgana:
@@ -10,12 +12,12 @@ services:
     environment:
       - TZ=UTC
       - GIN_MODE=release
-      - DATABASE_HOST=172.31.46.166
+      - DATABASE_HOST=mysql57
       - DATABASE_PORT=3306
       - DATABASE_USERNAME=root
       - DATABASE_PASSWORD=shgytywe!#%65926328
       - DATABASE_DBNAME=future
-      - REDIS_HOST=172.31.46.166
+      - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=Test!#$1234.hjdgsag
       - SERVER_MODE=release

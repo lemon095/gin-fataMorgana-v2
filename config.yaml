@@ -8,11 +8,11 @@ server:
 # 数据库配置（支持环境变量覆盖）
 database:
   driver: "mysql"
-  host: "localhost"
+  host: "mysql57" # 使用容器名称
   port: 3306
   username: "root"
   password: "123456"
-  dbname: "gin_fata_morgana"
+  dbname: "future"
   charset: "utf8mb4"
   parse_time: true
   loc: "Local"
@@ -24,7 +24,7 @@ database:
 
 # Redis配置（支持环境变量覆盖）
 redis:
-  host: "localhost"
+  host: "redis" # 使用容器名称
   port: 6379
   password: ""
   db: 0
@@ -38,8 +38,8 @@ redis:
 # JWT配置
 jwt:
   secret: "your-secret-key-here-change-in-production"
-  access_token_expire: 86400    # 24小时
-  refresh_token_expire: 604800  # 7天
+  access_token_expire: 86400 # 24小时
+  refresh_token_expire: 604800 # 7天
 
 # 登录缓存配置
 auth:
@@ -67,12 +67,12 @@ snowflake:
 # 假订单生成配置
 fake_data:
   enabled: true
-  cron_expression: "0 */5 * * * *"  # 每5分钟生成订单（包含秒）
-  cleanup_cron: "0 0 2 * * *"       # 每天凌晨2点清理（包含秒）
+  cron_expression: "0 */5 * * * *" # 每5分钟生成订单（包含秒）
+  cleanup_cron: "0 0 2 * * *" # 每天凌晨2点清理（包含秒）
   leaderboard_cron: "0 */5 * * * *" # 每5分钟更新热榜缓存（包含秒）
   min_orders: 80
   max_orders: 100
-  purchase_ratio: 0.7  # 70%购买单，30%拼单
-  task_min_count: 100  # 任务数最小值
+  purchase_ratio: 0.7 # 70%购买单，30%拼单
+  task_min_count: 100 # 任务数最小值
   task_max_count: 2000 # 任务数最大值
-  retention_days: 2    # 保留天数 
+  retention_days: 2 # 保留天数
