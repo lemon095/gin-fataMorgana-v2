@@ -1,8 +1,8 @@
 version: "3.8"
 
 services:
-  # MySQL 数据库服务
-  mysql57:
+  # MySQL 数据库服务 - 使用现有的外部容器
+  # mysql57:
     image: mysql:5.7
     container_name: gin-fataMorgana-mysql
     restart: unless-stopped
@@ -87,11 +87,12 @@ services:
         max-file: "3"
     networks:
       - data_default
-    depends_on:
-      mysql57:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    # 使用现有的外部MySQL和Redis容器，不需要依赖
+    # depends_on:
+    #   mysql57:
+    #     condition: service_healthy
+    #   redis:
+    #     condition: service_healthy
     healthcheck:
       test:
         [
