@@ -1,6 +1,61 @@
 version: "3.8"
 
 services:
+  # MySQL 数据库服务
+  mysql57:
+    image: mysql:5.7
+    container_name: gin-fataMorgana-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: shgytywe!#%65926328
+      MYSQL_DATABASE: future
+      MYSQL_USER: gin_user
+      MYSQL_PASSWORD: gin_password
+      TZ: UTC
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - gin-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$$MYSQL_ROOT_PASSWORD",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Redis 缓存服务
+  redis:
+    image: redis:6.2-alpine
+    container_name: gin-fataMorgana-redis
+    restart: unless-stopped
+    command: redis-server --requirepass Test!#$1234.hjdgsag
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - gin-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   # 主应用
   gin-fataMorgana:
     build: .
@@ -32,6 +87,11 @@ services:
         max-file: "3"
     networks:
       - gin-network
+    depends_on:
+      mysql57:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -59,6 +119,28 @@ services:
         delay: 5s
         max_attempts: 3
         window: 120s
+
+  # Nginx 反向代理（可选）
+  nginx:
+    image: nginx:alpine
+    container_name: gin-fataMorgana-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    networks:
+      - gin-network
+    depends_on:
+      - gin-fataMorgana
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
 
 networks:
   gin-network:
