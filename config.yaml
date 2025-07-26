@@ -8,7 +8,7 @@ server:
 # 数据库配置（支持环境变量覆盖）
 database:
   driver: "mysql"
-  host: "mysql57" # 使用容器名称
+  host: "mysql57" # 使用容器名称连接
   port: 3306
   username: "root"
   password: "123456"
