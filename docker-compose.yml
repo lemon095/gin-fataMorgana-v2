@@ -137,11 +137,12 @@ services:
     depends_on:
       - gin-fataMorgana
 
-volumes:
-  mysql_data:
-    driver: local
-  redis_data:
-    driver: local
+# 使用外部网络，不需要定义volumes
+# volumes:
+#   mysql_data:
+#     driver: local
+#   redis_data:
+#     driver: local
 
 networks:
   data_default:
