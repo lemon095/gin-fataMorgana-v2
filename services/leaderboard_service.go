@@ -85,6 +85,7 @@ func (s *LeaderboardService) buildLeaderboardResponse(uid string, weekStart, wee
 		TopUsers:  topEntries,
 	}
 
+	
 	return response, nil
 }
 
