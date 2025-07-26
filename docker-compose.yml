@@ -37,24 +37,24 @@ services:
   #     retries: 5
   #     start_period: 60s
 
-  # Redis 缓存服务
-  redis:
-    image: redis:6.2-alpine
-    container_name: gin-fataMorgana-redis
-    restart: unless-stopped
-    command: redis-server --requirepass Test!#$1234.hjdgsag
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - data_default
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+  # Redis 缓存服务 - 使用现有的外部容器
+  # redis:
+  #   image: redis:6.2-alpine
+  #   container_name: gin-fataMorgana-redis
+  #   restart: unless-stopped
+  #   command: redis-server --requirepass Test!#$1234.hjdgsag
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - data_default
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
 
   # 主应用
   gin-fataMorgana:
