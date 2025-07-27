@@ -97,10 +97,12 @@ func (s *UserLevelService) getUserLevelConfig(ctx context.Context, uid string) (
 				var defaultConfig UserLevelConfig
 				if err := json.Unmarshal([]byte(defaultData), &defaultConfig); err != nil {
 					// 解析失败，使用硬编码默认配置
+					fmt.Printf("JSON解析失败: %v, 数据: %s\n", err, defaultData)
 					return s.getDefaultLevelConfig(uid), nil
 				}
 				// 将默认配置的uid设置为当前用户uid
 				defaultConfig.Uid = uid
+				fmt.Printf("成功解析默认配置: %+v\n", defaultConfig)
 				return &defaultConfig, nil
 			}
 			// 默认配置也不存在，使用硬编码默认配置
@@ -124,11 +126,9 @@ func (s *UserLevelService) getDefaultLevelConfig(uid string) *UserLevelConfig {
 	return &UserLevelConfig{
 		Uid: uid,
 		LevelRules: []UserLevelRule{
-			{Level: 1, Name: "青铜会员", Logo: "", Requirement: 60000, RequirementType: "balance", Remark: "余额达到6万升级"},
-			{Level: 2, Name: "白银会员", Logo: "", Requirement: 120000, RequirementType: "balance", Remark: "余额达到12万升级"},
-			{Level: 3, Name: "黄金会员", Logo: "", Requirement: 300000, RequirementType: "balance", Remark: "余额达到30万升级"},
-			{Level: 4, Name: "铂金会员", Logo: "", Requirement: 600000, RequirementType: "balance", Remark: "余额达到60万升级"},
-			{Level: 5, Name: "钻石会员", Logo: "", Requirement: 1200000, RequirementType: "balance", Remark: "余额达到120万升级"},
+			{Level: 1, Name: "青铜会员", Logo: "", Requirement: 70000, RequirementType: "balance", Remark: "余额达到7万升级"},
+			{Level: 2, Name: "白银会员", Logo: "", Requirement: 100000, RequirementType: "balance", Remark: "余额达到10万升级"},
+			{Level: 3, Name: "黄金会员", Logo: "", Requirement: 200000, RequirementType: "balance", Remark: "余额达到20万升级"},
 		},
 		CreatedAt: now,
 		UpdatedAt: now,
