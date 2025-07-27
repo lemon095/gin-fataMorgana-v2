@@ -128,7 +128,7 @@ gin-fataMorgana/
 - `POST /api/v1/auth/register` - 用户注册
 - `POST /api/v1/auth/login` - 用户登录
 - `POST /api/v1/auth/refresh` - 刷新令牌
-- `GET /api/v1/auth/profile` - 获取用户信息
+- `POST /api/v1/auth/profile` - 获取用户信息
 
 ### 钱包接口
 - `GET /api/v1/wallet/info` - 获取钱包信息

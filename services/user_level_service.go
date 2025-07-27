@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gin-fataMorgana/database"
+	"time"
 
 	"gin-fataMorgana/utils"
 
@@ -16,19 +17,19 @@ type UserLevelRule struct {
 	Level           int    `json:"level"`
 	Name            string `json:"name"`
 	Logo            string `json:"logo"`
-	Requirement     int    `json:"requirement"`
+	Requirement     int64  `json:"requirement"`
 	RequirementType string `json:"requirement_type"`
 	Remark          string `json:"remark"`
 }
 
 // UserLevelConfig 用户等级配置
 type UserLevelConfig struct {
-	Uid        string         `json:"uid"`
+	Uid        string          `json:"uid"`
 	LevelRules []UserLevelRule `json:"level_rules"`
-	CreatedAt  string         `json:"created_at"`
-	UpdatedAt  string         `json:"updated_at"`
-	CreatedBy  string         `json:"created_by"`
-	UpdatedBy  string         `json:"updated_by"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
+	CreatedBy  string          `json:"created_by"`
+	UpdatedBy  string          `json:"updated_by"`
 }
 
 // UserLevelInfo 用户等级信息结构
@@ -44,14 +45,14 @@ type UserLevelInfo struct {
 
 // UserLevelService 用户等级服务
 type UserLevelService struct {
-	redisClient *redis.Client
+	redisClient   *redis.Client
 	walletService *WalletService
 }
 
 // NewUserLevelService 创建用户等级服务实例
 func NewUserLevelService() *UserLevelService {
 	return &UserLevelService{
-		redisClient: database.RedisClient,
+		redisClient:   database.RedisClient,
 		walletService: NewWalletService(),
 	}
 }
@@ -86,8 +87,23 @@ func (s *UserLevelService) getUserLevelConfig(ctx context.Context, uid string) (
 	// 从Redis获取配置数据
 	data, err := s.redisClient.Get(ctx, key).Result()
 	if err != nil {
-		// 如果key不存在，返回默认配置
+		// 如果key不存在，尝试从Redis获取默认配置
 		if err.Error() == "redis: nil" {
+			// 尝试从Redis获取默认配置
+			defaultKey := "user:level:config:default"
+			defaultData, defaultErr := s.redisClient.Get(ctx, defaultKey).Result()
+			if defaultErr == nil {
+				// 解析默认配置
+				var defaultConfig UserLevelConfig
+				if err := json.Unmarshal([]byte(defaultData), &defaultConfig); err != nil {
+					// 解析失败，使用硬编码默认配置
+					return s.getDefaultLevelConfig(uid), nil
+				}
+				// 将默认配置的uid设置为当前用户uid
+				defaultConfig.Uid = uid
+				return &defaultConfig, nil
+			}
+			// 默认配置也不存在，使用硬编码默认配置
 			return s.getDefaultLevelConfig(uid), nil
 		}
 		return nil, utils.NewAppError(utils.CodeUserLevelGetFailed, "获取用户等级配置失败")
@@ -104,6 +120,7 @@ func (s *UserLevelService) getUserLevelConfig(ctx context.Context, uid string) (
 
 // getDefaultLevelConfig 获取默认等级配置
 func (s *UserLevelService) getDefaultLevelConfig(uid string) *UserLevelConfig {
+	now := time.Now()
 	return &UserLevelConfig{
 		Uid: uid,
 		LevelRules: []UserLevelRule{
@@ -113,8 +130,8 @@ func (s *UserLevelService) getDefaultLevelConfig(uid string) *UserLevelConfig {
 			{Level: 4, Name: "铂金会员", Logo: "", Requirement: 600000, RequirementType: "balance", Remark: "余额达到60万升级"},
 			{Level: 5, Name: "钻石会员", Logo: "", Requirement: 1200000, RequirementType: "balance", Remark: "余额达到120万升级"},
 		},
-		CreatedAt: "2024-01-01T00:00:00Z",
-		UpdatedAt: "2024-01-01T00:00:00Z",
+		CreatedAt: now,
+		UpdatedAt: now,
 		CreatedBy: "system",
 		UpdatedBy: "system",
 	}
@@ -154,7 +171,7 @@ func (s *UserLevelService) calculateUserLevel(config *UserLevelConfig, balance f
 			if i < len(rules) {
 				nextLevel = rule.Level
 				nextLevelName = rule.Name
-				nextLevelRequirement = rule.Requirement
+				nextLevelRequirement = int(rule.Requirement)
 			}
 			break
 		}
@@ -166,10 +183,10 @@ func (s *UserLevelService) calculateUserLevel(config *UserLevelConfig, balance f
 		var currentRequirement, nextRequirement int
 		for _, rule := range rules {
 			if rule.Level == currentLevel {
-				currentRequirement = rule.Requirement
+				currentRequirement = int(rule.Requirement)
 			}
 			if rule.Level == nextLevel {
-				nextRequirement = rule.Requirement
+				nextRequirement = int(rule.Requirement)
 			}
 		}
 
@@ -254,7 +271,7 @@ func (s *UserLevelService) GetUserLevelRate(ctx context.Context, uid string) (in
 	balance := wallet.Balance
 
 	// 4. 找到用户下一个等级对应的 Requirement
-	nextRequirement := levelConfig.LevelRules[0].Requirement // 默认使用 level1 的 Requirement
+	nextRequirement := int64(levelConfig.LevelRules[0].Requirement) // 默认使用 level1 的 Requirement
 
 	// 遍历等级规则，找到用户下一个等级对应的 Requirement
 	for i, rule := range levelConfig.LevelRules {
@@ -274,7 +291,7 @@ func (s *UserLevelService) GetUserLevelRate(ctx context.Context, uid string) (in
 		}
 	}
 
-	return nextRequirement, nil
+	return int(nextRequirement), nil
 }
 
 // SetUserLevelConfig 设置用户等级配置到Redis
@@ -296,5 +313,3 @@ func (s *UserLevelService) SetUserLevelConfig(ctx context.Context, uid string, c
 
 	return nil
 }
-
-
