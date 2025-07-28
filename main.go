@@ -46,10 +46,6 @@ import (
 )
 
 func main() {
-	// 设置时区为 UTC
-	os.Setenv("TZ", "UTC")
-	time.LoadLocation("UTC")
-
 	// 全局panic恢复机制
 	defer func() {
 		if r := recover(); r != nil {

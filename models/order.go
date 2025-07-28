@@ -16,8 +16,8 @@ const (
 
 // TaskStatus 任务完成状态枚举
 const (
-	TaskStatusPending = "pending"   // 待完成
-	TaskStatusSuccess = "success"   // 已完成
+	TaskStatusPending   = "pending"   // 待完成
+	TaskStatusSuccess   = "success"   // 已完成
 	TaskStatusCancelled = "cancelled" // 已关闭/已取消
 )
 
@@ -143,7 +143,7 @@ func (o *Order) GetTaskStatusName(status string) string {
 
 // IsExpired 检查订单是否已过期
 func (o *Order) IsExpired() bool {
-	return time.Now().UTC().After(o.ExpireTime)
+	return time.Now().After(o.ExpireTime)
 }
 
 // GetRemainingTime 获取剩余时间（秒）
@@ -287,8 +287,8 @@ type GetOrderDetailRequest struct {
 
 // OrderListRequest 订单列表请求
 type OrderListRequest struct {
-	Page     int `json:"page" binding:"min=1"`              // 页码，从1开始
-	PageSize int `json:"page_size" binding:"min=1"`         // 每页大小，最小1
+	Page     int `json:"page" binding:"min=1"`      // 页码，从1开始
+	PageSize int `json:"page_size" binding:"min=1"` // 每页大小，最小1
 }
 
 // OrderListResponse 订单列表响应

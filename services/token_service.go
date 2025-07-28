@@ -23,11 +23,11 @@ func NewTokenService() *TokenService {
 
 // TokenInfo Token信息
 type TokenInfo struct {
-	TokenHash   string    `json:"token_hash"`
-	LoginTime   time.Time `json:"login_time"`
-	DeviceInfo  string    `json:"device_info"`
-	LoginIP     string    `json:"login_ip"`
-	UserAgent   string    `json:"user_agent"`
+	TokenHash  string    `json:"token_hash"`
+	LoginTime  time.Time `json:"login_time"`
+	DeviceInfo string    `json:"device_info"`
+	LoginIP    string    `json:"login_ip"`
+	UserAgent  string    `json:"user_agent"`
 }
 
 // SessionInfo 会话信息
@@ -63,46 +63,46 @@ func (s *TokenService) getUserSessionKey(uid string) string {
 // GetUserActiveToken 获取用户当前活跃token
 func (s *TokenService) GetUserActiveToken(ctx context.Context, uid string) (*TokenInfo, error) {
 	key := s.getUserActiveTokenKey(uid)
-	
+
 	value, err := database.GetKey(ctx, key)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if value == "" {
 		return nil, nil
 	}
-	
+
 	var tokenInfo TokenInfo
 	if err := json.Unmarshal([]byte(value), &tokenInfo); err != nil {
 		return nil, err
 	}
-	
+
 	return &tokenInfo, nil
 }
 
 // SetUserActiveToken 设置用户活跃token
 func (s *TokenService) SetUserActiveToken(ctx context.Context, uid, token, deviceInfo, loginIP, userAgent string) error {
 	tokenHash := s.generateTokenHash(token)
-	
+
 	tokenInfo := &TokenInfo{
 		TokenHash:  tokenHash,
-		LoginTime:  time.Now().UTC(),
+		LoginTime:  time.Now(),
 		DeviceInfo: deviceInfo,
 		LoginIP:    loginIP,
 		UserAgent:  userAgent,
 	}
-	
+
 	// 序列化为JSON
 	data, err := json.Marshal(tokenInfo)
 	if err != nil {
 		return err
 	}
-	
+
 	// 设置活跃token，过期时间与token一致
 	expiration := time.Duration(config.GlobalConfig.JWT.AccessTokenExpire) * time.Second
 	key := s.getUserActiveTokenKey(uid)
-	
+
 	return database.SetKey(ctx, key, string(data), expiration)
 }
 
@@ -110,23 +110,23 @@ func (s *TokenService) SetUserActiveToken(ctx context.Context, uid, token, devic
 func (s *TokenService) AddTokenToBlacklist(ctx context.Context, token string) error {
 	tokenHash := s.generateTokenHash(token)
 	key := s.getTokenBlacklistKey(tokenHash)
-	
+
 	// 黑名单过期时间比token过期时间稍长，确保覆盖
 	expiration := time.Duration(config.GlobalConfig.JWT.AccessTokenExpire+300) * time.Second
-	
-	return database.SetKey(ctx, key, time.Now().UTC().Unix(), expiration)
+
+	return database.SetKey(ctx, key, time.Now().Unix(), expiration)
 }
 
 // IsTokenBlacklisted 检查token是否在黑名单中
 func (s *TokenService) IsTokenBlacklisted(ctx context.Context, token string) (bool, error) {
 	tokenHash := s.generateTokenHash(token)
 	key := s.getTokenBlacklistKey(tokenHash)
-	
+
 	exists, err := database.ExistsKey(ctx, key)
 	if err != nil {
 		return false, err
 	}
-	
+
 	return exists, nil
 }
 
@@ -136,11 +136,11 @@ func (s *TokenService) IsActiveToken(ctx context.Context, uid, token string) (bo
 	if err != nil {
 		return false, err
 	}
-	
+
 	if activeToken == nil {
 		return false, nil
 	}
-	
+
 	tokenHash := s.generateTokenHash(token)
 	return activeToken.TokenHash == tokenHash, nil
 }
@@ -152,18 +152,18 @@ func (s *TokenService) RevokeUserSession(ctx context.Context, uid string) error 
 	if err != nil {
 		return err
 	}
-	
+
 	if activeToken != nil {
 		// 将活跃token加入黑名单
 		key := s.getTokenBlacklistKey(activeToken.TokenHash)
 		expiration := time.Duration(config.GlobalConfig.JWT.AccessTokenExpire+300) * time.Second
-		database.SetKey(ctx, key, time.Now().UTC().Unix(), expiration)
+		database.SetKey(ctx, key, time.Now().Unix(), expiration)
 	}
-	
+
 	// 删除活跃token记录
 	activeKey := s.getUserActiveTokenKey(uid)
 	database.DelKey(ctx, activeKey)
-	
+
 	return nil
 }
 
@@ -173,11 +173,11 @@ func (s *TokenService) GetUserSessionInfo(ctx context.Context, uid string) (*Ses
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if activeToken == nil {
 		return nil, nil
 	}
-	
+
 	return &SessionInfo{
 		CurrentTokenHash: activeToken.TokenHash,
 		LastLoginTime:    activeToken.LoginTime,
@@ -223,17 +223,17 @@ func (s *TokenService) ValidateTokenWithBlacklist(ctx context.Context, tokenStri
 	if !isActive {
 		// 如果不是活跃token，尝试重新设置（可能是Redis过期了）
 		utils.LogWarn(nil, "Token不是活跃token，尝试重新设置 - UID: %s", claims.Uid)
-		
+
 		// 重新设置活跃token
 		err = s.SetUserActiveToken(ctx, claims.Uid, tokenString, "unknown", "unknown", "unknown")
 		if err != nil {
 			utils.LogWarn(nil, "重新设置活跃token失败: %v", err)
 			// 即使设置失败，也允许token通过验证
 		}
-		
+
 		// 返回claims，允许验证通过
 		return claims, nil
 	}
 
 	return claims, nil
-} 
+}

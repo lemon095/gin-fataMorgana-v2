@@ -100,7 +100,7 @@ func (r *LotteryPeriodRepository) GetPeriodByTime(ctx context.Context, targetTim
 
 // UpdatePeriodStatus 更新期数状态
 func (r *LotteryPeriodRepository) UpdatePeriodStatus(ctx context.Context) error {
-	now := time.Now().UTC()
+	now := time.Now()
 	
 	// 更新已过期的期数为 closed
 	err := r.db.WithContext(ctx).

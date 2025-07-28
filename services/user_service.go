@@ -377,7 +377,7 @@ func (s *UserService) recordSuccessfulLogin(ctx context.Context, user *models.Us
 		Email:     user.Email,
 		LoginIP:   loginIP,
 		UserAgent: userAgent,
-		LoginTime: time.Now().UTC(),
+		LoginTime: time.Now(),
 		Status:    1,
 	}
 	s.loginLogRepo.Create(ctx, log)
@@ -406,8 +406,8 @@ func (s *UserService) recordFailedLogin(ctx context.Context, user interface{}, l
 		UserAgent:  userAgent,
 		Status:     0, // 0表示失败
 		FailReason: reason,
-		LoginTime:  time.Now().UTC(),
-		CreatedAt:  time.Now().UTC(),
+		LoginTime:  time.Now(),
+		CreatedAt:  time.Now(),
 	}
 
 	if err := s.loginLogRepo.Create(ctx, logEntry); err != nil {
@@ -468,7 +468,7 @@ func (s *UserService) BindBankCard(req *BindBankCardRequest, uid string) (*model
 
 	// 更新用户的银行卡信息
 	user.BankCardInfo = bankCardInfoJSON
-	user.UpdatedAt = time.Now().UTC()
+	user.UpdatedAt = time.Now()
 
 	// 保存到数据库
 	if err := s.userRepo.Update(ctx, user); err != nil {
@@ -599,7 +599,7 @@ func (s *UserService) ChangePassword(req *models.ChangePasswordRequest, uid stri
 		return utils.NewAppError(utils.CodePasswordEncryptFailed2, "密码加密失败")
 	}
 
-	user.UpdatedAt = time.Now().UTC()
+	user.UpdatedAt = time.Now()
 
 	// 保存到数据库
 	if err := s.userRepo.Update(ctx, user); err != nil {

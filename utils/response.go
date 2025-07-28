@@ -349,7 +349,7 @@ func Success(c *gin.Context, data interface{}) {
 		Code:      CodeSuccess,
 		Message:   ResponseMessage[CodeSuccess],
 		Data:      data,
-		Timestamp: time.Now().UTC().UnixMilli(),
+		Timestamp: time.Now().UnixMilli(),
 	})
 }
 
@@ -359,7 +359,7 @@ func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
 		Code:      CodeSuccess,
 		Message:   message,
 		Data:      data,
-		Timestamp: time.Now().UTC().UnixMilli(),
+		Timestamp: time.Now().UnixMilli(),
 	})
 }
 
@@ -373,7 +373,7 @@ func Error(c *gin.Context, code int) {
 	c.JSON(getHTTPStatus(code), Response{
 		Code:      code,
 		Message:   message,
-		Timestamp: time.Now().UTC().UnixMilli(),
+		Timestamp: time.Now().UnixMilli(),
 	})
 }
 
@@ -382,7 +382,7 @@ func ErrorWithMessage(c *gin.Context, code int, message string) {
 	c.JSON(getHTTPStatus(code), Response{
 		Code:      code,
 		Message:   message,
-		Timestamp: time.Now().UTC().UnixMilli(),
+		Timestamp: time.Now().UnixMilli(),
 	})
 }
 
@@ -397,7 +397,7 @@ func ErrorWithData(c *gin.Context, code int, data interface{}) {
 		Code:      code,
 		Message:   message,
 		Data:      data,
-		Timestamp: time.Now().UTC().UnixMilli(),
+		Timestamp: time.Now().UnixMilli(),
 	})
 }
 

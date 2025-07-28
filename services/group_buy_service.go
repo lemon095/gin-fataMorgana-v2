@@ -129,8 +129,8 @@ func (s *GroupBuyService) ensureUserWallet(ctx context.Context, uid string) erro
 				Uid:       uid,
 				Balance:   0.0,
 				Status:    1, // 1表示正常状态
-				CreatedAt: time.Now().UTC(),
-				UpdatedAt: time.Now().UTC(),
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			}
 
 			err = s.walletRepo.CreateWallet(ctx, newWallet)
@@ -145,7 +145,7 @@ func (s *GroupBuyService) ensureUserWallet(ctx context.Context, uid string) erro
 	// 2. 如果钱包存在但状态不正常，激活钱包
 	if wallet.IsFrozen() {
 		wallet.Status = 1
-		wallet.UpdatedAt = time.Now().UTC()
+		wallet.UpdatedAt = time.Now()
 		err = s.walletRepo.UpdateWallet(ctx, wallet)
 		if err != nil {
 			return err
@@ -178,7 +178,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	}
 
 	// 4. 检查截止时间是否已经过了
-	if time.Now().UTC().After(groupBuy.Deadline) {
+	if time.Now().After(groupBuy.Deadline) {
 		return nil, utils.NewAppError(utils.CodeGroupBuyExpired, "该拼单已超过截止时间")
 	}
 
@@ -257,10 +257,10 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 		FollowStatus:   "pending",
 		FavoriteStatus: "pending",
 		Status:         "pending",
-		ExpireTime:     time.Now().UTC().Add(24 * time.Hour), // 设置24小时后过期
-		IsSystemOrder:  false,                                // 拼单订单也是用户订单，不是系统订单
-		CreatedAt:      time.Now().UTC(),
-		UpdatedAt:      time.Now().UTC(),
+		ExpireTime:     time.Now().Add(24 * time.Hour), // 设置24小时后过期
+		IsSystemOrder:  false,                          // 拼单订单也是用户订单，不是系统订单
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	// 12. 保存订单
@@ -302,7 +302,7 @@ func (s *GroupBuyService) JoinGroupBuy(ctx context.Context, groupBuyNo, uid stri
 	// 15. 更新拼单信息
 	groupBuy.OrderNo = &orderNo
 	groupBuy.Status = "pending" // 更新为pending状态
-	groupBuy.UpdatedAt = time.Now().UTC()
+	groupBuy.UpdatedAt = time.Now()
 
 	err = s.groupBuyRepo.UpdateGroupBuy(ctx, groupBuy)
 	if err != nil {
@@ -332,7 +332,7 @@ func (s *GroupBuyService) calculateProfitAmountByGroupBuy(amount, profitMargin f
 // generateTransactionNo 生成交易流水号
 func (s *GroupBuyService) generateTransactionNo() string {
 	// 格式：TX + 年月日 + 时分秒 + 4位随机数
-	now := time.Now().UTC()
+	now := time.Now()
 	timestamp := now.Format("20060102150405")
 	random := utils.RandomString(4)
 	return fmt.Sprintf("TX%s%s", timestamp, random)

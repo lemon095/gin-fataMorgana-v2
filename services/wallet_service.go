@@ -157,7 +157,7 @@ func (s *WalletService) AtomicBalanceOperationWithRetry(ctx context.Context, uid
 	}
 
 	// 6. 更新钱包
-	wallet.UpdatedAt = time.Now().UTC()
+	wallet.UpdatedAt = time.Now()
 	if err := s.walletRepo.UpdateWallet(ctx, wallet); err != nil {
 		return utils.NewAppError(utils.CodeWalletUpdateFailed, "更新钱包失败")
 	}
@@ -292,8 +292,8 @@ func (s *WalletService) TransferBalance(ctx context.Context, fromUid, toUid stri
 	toWallet.Recharge(amount)
 
 	// 9. 更新钱包
-	fromWallet.UpdatedAt = time.Now().UTC()
-	toWallet.UpdatedAt = time.Now().UTC()
+	fromWallet.UpdatedAt = time.Now()
+	toWallet.UpdatedAt = time.Now()
 
 	if err := s.walletRepo.UpdateWallet(ctx, fromWallet); err != nil {
 		return utils.NewAppError(utils.CodeWalletUpdateFailed, "更新转出方钱包失败")
@@ -615,8 +615,8 @@ func (s *WalletService) CreateWallet(uid string) (*models.Wallet, error) {
 		Uid:       uid,
 		Balance:   0,
 		Status:    1, // 1表示正常状态
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	// 添加重试机制
@@ -675,8 +675,8 @@ func (s *WalletService) Recharge(uid string, amount float64, description string)
 		BalanceAfter:  0, // 充值时余额为0，实际余额在审核通过后更新
 		Description:   description,
 		Status:        models.TransactionStatusPending,
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
@@ -726,8 +726,8 @@ func (s *WalletService) CreateProfitTransaction(ctx context.Context, uid string,
 		Description:    description,
 		RelatedOrderNo: relatedOrderNo,
 		Status:         models.TransactionStatusSuccess, // 利润直接成功
-		CreatedAt:      time.Now().UTC(),
-		UpdatedAt:      time.Now().UTC(),
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {
@@ -822,8 +822,8 @@ func (s *WalletService) RequestWithdraw(req *WithdrawRequest, userUid string) (*
 		BalanceAfter:  balanceAfter, // 扣减后的余额
 		Description:   req.Description,
 		Status:        models.TransactionStatusPending, // 状态为待处理
-		CreatedAt:     time.Now().UTC(),
-		UpdatedAt:     time.Now().UTC(),
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 
 	if err := s.walletRepo.CreateTransaction(ctx, transaction); err != nil {

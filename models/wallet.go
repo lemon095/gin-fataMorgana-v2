@@ -107,7 +107,7 @@ func (w *Wallet) GetStatusName() string {
 
 // UpdateLastActive 更新最后活跃时间
 func (w *Wallet) UpdateLastActive() {
-	w.LastActiveAt = time.Now().UTC()
+	w.LastActiveAt = time.Now()
 }
 
 // 错误定义

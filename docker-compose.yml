@@ -65,7 +65,6 @@ services:
     ports:
       - "9001:9001"
     environment:
-      - TZ=UTC
       - GIN_MODE=release
       - DATABASE_HOST=mysql57
       - DATABASE_PORT=3306

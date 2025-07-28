@@ -51,7 +51,7 @@ func (s *WalletCacheService) CacheWalletBalance(ctx context.Context, wallet *mod
 
 	// 生成缓存Key
 	cacheKey := s.generateWalletKey(wallet.Uid)
-	
+
 	// 将钱包数据转换为JSON
 	walletJSON, err := json.Marshal(wallet)
 	if err != nil {
@@ -78,7 +78,7 @@ func (s *WalletCacheService) CacheEmptyWallet(ctx context.Context, uid string) e
 
 	// 生成空值缓存Key
 	emptyKey := s.generateEmptyKey(uid)
-	
+
 	// 缓存空值，过期时间较短（10分钟）
 	err := database.GetGlobalRedisHelper().Set(ctx, emptyKey, "empty", 10*time.Minute)
 	if err != nil {
@@ -96,7 +96,7 @@ func (s *WalletCacheService) IsEmptyCached(ctx context.Context, uid string) (boo
 
 	// 生成空值缓存Key
 	emptyKey := s.generateEmptyKey(uid)
-	
+
 	// 检查空值缓存是否存在
 	exists, err := database.GetGlobalRedisHelper().Exists(ctx, emptyKey)
 	if err != nil {
@@ -114,7 +114,7 @@ func (s *WalletCacheService) GetCachedWalletBalance(ctx context.Context, uid str
 
 	// 生成缓存Key
 	cacheKey := s.generateWalletKey(uid)
-	
+
 	// 获取缓存数据
 	walletJSON, err := database.GetGlobalRedisHelper().Get(ctx, cacheKey)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *WalletCacheService) UpdateWalletBalanceOnEvent(ctx context.Context, uid
 
 	// 2. 更新余额
 	wallet.Balance = newBalance
-	wallet.UpdatedAt = time.Now().UTC()
+	wallet.UpdatedAt = time.Now()
 
 	// 3. 更新缓存（保持原有过期时间）
 	return s.CacheWalletBalance(ctx, wallet)
@@ -217,7 +217,7 @@ func (s *WalletCacheService) ExtendWalletCacheOnLogin(ctx context.Context, uid s
 
 	// 1. 更新用户登录时间
 	loginKey := s.generateUserLoginKey(uid)
-	err := database.GetGlobalRedisHelper().Set(ctx, loginKey, time.Now().UTC().Unix(), 30*24*time.Hour)
+	err := database.GetGlobalRedisHelper().Set(ctx, loginKey, time.Now().Unix(), 30*24*time.Hour)
 	if err != nil {
 		return utils.NewAppError(utils.CodeRedisError, "更新用户登录时间失败")
 	}
@@ -263,7 +263,7 @@ func (s *WalletCacheService) HasRecentLogin(ctx context.Context, uid string, dur
 	}
 
 	loginTime := time.Unix(loginTimeUnix, 0)
-	now := time.Now().UTC()
+	now := time.Now()
 
 	return now.Sub(loginTime) <= duration, nil
 }
@@ -345,4 +345,4 @@ func (s *WalletCacheService) DeleteWalletBalance(ctx context.Context, uid string
 // 清理互斥锁映射
 func (s *WalletCacheService) CleanupMutexMap() {
 	s.mutexMap = sync.Map{}
-} 
+}

@@ -25,9 +25,6 @@ FROM alpine:latest
 # 安装必要的运行时依赖
 RUN apk --no-cache add ca-certificates tzdata
 
-# 设置时区
-ENV TZ=UTC
-
 # 创建非root用户
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup

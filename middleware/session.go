@@ -22,8 +22,8 @@ func SessionMiddleware() gin.HandlerFunc {
 		// 设置请求开始时间
 		c.Set("start_time", time.Now())
 
-		// 输出当前UTC时间
-		println("[SessionMiddleware] 当前UTC时间:", time.Now().UTC().Format("2006-01-02 15:04:05"))
+		// 输出当前时间
+		println("[SessionMiddleware] 当前时间:", time.Now().Format("2006-01-02 15:04:05"))
 
 		// 检查登录态
 		authHeader := c.GetHeader("Authorization")

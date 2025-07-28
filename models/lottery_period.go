@@ -6,15 +6,14 @@ import (
 
 // LotteryPeriodStatus 期数状态枚举
 const (
-	LotteryPeriodStatusPending = "pending"   // 待开始
-	LotteryPeriodStatusActive  = "active"    // 进行中
-	LotteryPeriodStatusClosed  = "closed"    // 已结束
+	LotteryPeriodStatusPending = "pending" // 待开始
+	LotteryPeriodStatusActive  = "active"  // 进行中
+	LotteryPeriodStatusClosed  = "closed"  // 已结束
 )
 
 // LotteryPeriod 游戏期数表
 // 对应数据库表 lottery_periods
 // 仅保留SQL定义的字段
-//
 type LotteryPeriod struct {
 	ID               uint      `json:"id" gorm:"primaryKey;autoIncrement"`
 	PeriodNumber     string    `json:"period_number" gorm:"uniqueIndex:uk_period_number;not null;size:20;comment:期数编号"`
@@ -39,18 +38,18 @@ func (LotteryPeriod) TableComment() string {
 
 // IsActive 检查期数是否活跃（在开始时间和结束时间范围内）
 func (lp *LotteryPeriod) IsActive() bool {
-	now := time.Now().UTC()
+	now := time.Now()
 	return now.After(lp.OrderStartTime) && now.Before(lp.OrderEndTime)
 }
 
 // IsExpired 检查期数是否已过期
 func (lp *LotteryPeriod) IsExpired() bool {
-	return time.Now().UTC().After(lp.OrderEndTime)
+	return time.Now().After(lp.OrderEndTime)
 }
 
 // IsPending 检查期数是否待开始
 func (lp *LotteryPeriod) IsPending() bool {
-	return time.Now().UTC().Before(lp.OrderStartTime)
+	return time.Now().Before(lp.OrderStartTime)
 }
 
 // IsValidTimeRange 检查期数时间范围是否有效

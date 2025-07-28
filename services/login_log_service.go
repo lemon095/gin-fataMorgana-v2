@@ -33,7 +33,7 @@ func (s *LoginLogService) RecordLogin(ctx context.Context, user *models.User, lo
 		Email:      user.Email,
 		LoginIP:    loginIP,
 		UserAgent:  userAgent,
-		LoginTime:  time.Now().UTC(),
+		LoginTime:  time.Now(),
 		Status:     status,
 		FailReason: failReason,
 		DeviceInfo: deviceInfo,
@@ -115,7 +115,7 @@ func (s *LoginLogService) GetLoginLogsByIP(ctx context.Context, uid, ip string) 
 
 // CheckFailedLoginAttempts 检查失败登录尝试次数
 func (s *LoginLogService) CheckFailedLoginAttempts(ctx context.Context, uid string, maxAttempts int, lockoutDuration time.Duration) (bool, error) {
-	since := time.Now().UTC().Add(-lockoutDuration)
+	since := time.Now().Add(-lockoutDuration)
 	count, err := s.loginLogRepo.GetFailedLoginAttempts(ctx, uid, since)
 	if err != nil {
 		return false, err
@@ -126,7 +126,7 @@ func (s *LoginLogService) CheckFailedLoginAttempts(ctx context.Context, uid stri
 
 // CleanOldLogs 清理旧登录记录
 func (s *LoginLogService) CleanOldLogs(ctx context.Context, days int) error {
-	before := time.Now().UTC().AddDate(0, 0, -days)
+	before := time.Now().AddDate(0, 0, -days)
 	return s.loginLogRepo.CleanOldLogs(ctx, before)
 }
 

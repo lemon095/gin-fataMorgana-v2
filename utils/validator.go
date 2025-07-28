@@ -240,7 +240,7 @@ func CreateValidationErrorResponse(err error) Response {
 		Code:      CodeInvalidParams, // 统一用参数错误码
 		Message:   mainMessage,
 		Data:      nil, // 错误时data为nil
-		Timestamp: time.Now().UTC().UnixMilli(),
+		Timestamp: time.Now().UnixMilli(),
 	}
 }
 

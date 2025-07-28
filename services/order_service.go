@@ -118,7 +118,7 @@ func (s *OrderService) CreateOrder(req *CreateOrderRequest, operatorUid string) 
 		FollowCount:   req.FollowCount,
 		FavoriteCount: req.FavoriteCount,
 		Status:        models.OrderStatusPending,
-		ExpireTime:    time.Now().UTC().Add(5 * time.Minute), // 创建时间+5分钟
+		ExpireTime:    time.Now().Add(5 * time.Minute), // 创建时间+5分钟
 		AuditorUid:    operatorUid,
 		IsSystemOrder: false, // 默认为用户订单，不是系统订单
 	}
@@ -203,7 +203,7 @@ func (s *OrderService) validatePeriod(ctx context.Context, periodNumber string) 
 	}
 
 	// 检查当前时间是否在期数的订单开始时间和订单结束时间范围内
-	now := time.Now().UTC()
+	now := time.Now()
 	if now.Before(period.OrderStartTime) {
 		return utils.NewAppError(utils.CodePeriodNotStarted, "期数还未开始")
 	}
@@ -329,9 +329,9 @@ func (s *OrderService) getGroupBuyList(ctx context.Context, uid string, page, pa
 			CreatedAt:     groupBuy.CreatedAt,
 			UpdatedAt:     groupBuy.UpdatedAt,
 			IsSystemOrder: false, // 拼单不是系统订单
-			IsExpired:     time.Now().UTC().After(groupBuy.Deadline),
+			IsExpired:     time.Now().After(groupBuy.Deadline),
 			RemainingTime: func() int64 {
-				if time.Now().UTC().After(groupBuy.Deadline) {
+				if time.Now().After(groupBuy.Deadline) {
 					return 0
 				}
 				return int64(time.Until(groupBuy.Deadline).Seconds())

@@ -35,9 +35,9 @@ func GenerateAccessToken(userID uint, uid string, username string) (string, erro
 		Uid:      uid,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(AccessTokenExpiry)),
-			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-			NotBefore: jwt.NewNumericDate(time.Now().UTC()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(AccessTokenExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "gin-fataMorgana",
 			Subject:   username,
 		},
@@ -54,9 +54,9 @@ func GenerateRefreshToken(userID uint, uid string, username string) (string, err
 		Uid:      uid,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(RefreshTokenExpiry)),
-			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
-			NotBefore: jwt.NewNumericDate(time.Now().UTC()),
+					ExpiresAt: jwt.NewNumericDate(time.Now().Add(RefreshTokenExpiry)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "gin-fataMorgana",
 			Subject:   username,
 		},
@@ -91,7 +91,7 @@ func ValidateToken(tokenString string) (*Claims, error) {
 	}
 
 	// 检查令牌是否过期
-	if time.Now().UTC().Unix() > claims.ExpiresAt.Unix() {
+	if time.Now().Unix() > claims.ExpiresAt.Unix() {
 		return nil, NewAppError(CodeTokenExpired, "令牌已过期")
 	}
 
