@@ -257,6 +257,7 @@ func main() {
 	announcementController := controllers.NewAnnouncementController()
 	groupBuyController := controllers.NewGroupBuyController()
 	shareController := controllers.NewShareController()
+	currencyController := controllers.NewCurrencyController()
 
 	// 根路径
 	r.GET("/", func(c *gin.Context) {
@@ -371,6 +372,12 @@ func main() {
 
 	// 分享链接接口 - 获取分享链接
 	v1.POST("/shareLink", shareController.GetShareLink)
+
+	// 货币配置路由
+	currency := v1.Group("/currency")
+	{
+		currency.POST("/current", currencyController.GetCurrentCurrency) // 获取当前货币配置 - 无需认证
+	}
 
 	// 定时任务管理路由
 	cron := v1.Group("/cron")

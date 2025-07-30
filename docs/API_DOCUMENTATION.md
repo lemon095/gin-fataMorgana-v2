@@ -109,9 +109,33 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 2. 假数据接口
+## 2. 货币配置接口
 
-### 2.1 实时动态假数据
+### 2.1 获取当前货币配置
+
+- **接口**: `POST /api/v1/currency/current`
+- **说明**: 获取系统当前使用的货币符号配置
+- **认证**: 无需认证
+- **请求参数**: 无
+- **返回示例**:
+
+```json
+{
+  "code": 0,
+  "message": "操作成功",
+  "data": {
+    "symbol": "COP"
+  },
+  "timestamp": 1751365370
+}
+```
+
+- **返回参数说明**:
+  - `symbol`: 货币符号，如 "COP"、"USD"、"CNY" 等
+
+## 3. 假数据接口
+
+### 3.1 实时动态假数据
 
 - **接口**: `POST /api/v1/fake/activities`
 - **说明**: 获取实时动态假数据，用于前端展示
@@ -148,9 +172,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 3. 认证相关接口
+## 4. 认证相关接口
 
-### 3.1 用户注册
+### 4.1 用户注册
 
 - **接口**: `POST /api/v1/auth/register`
 - **说明**: 用户注册
@@ -376,9 +400,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 4. 会话管理接口
+## 5. 会话管理接口
 
-### 4.1 检查登录状态
+### 5.1 检查登录状态
 
 - **接口**: `POST /api/v1/session/status`
 - **说明**: 检查当前登录状态
@@ -404,7 +428,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 4.2 获取当前用户信息
+### 5.2 获取当前用户信息
 
 - **接口**: `POST /api/v1/session/user`
 - **说明**: 获取当前会话用户信息
@@ -430,7 +454,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 4.3 用户登出
+### 5.3 用户登出
 
 - **接口**: `POST /api/v1/session/logout`
 - **说明**: 用户登出
@@ -448,7 +472,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 4.4 刷新会话
+### 5.4 刷新会话
 
 - **接口**: `POST /api/v1/session/refresh`
 - **说明**: 刷新会话
@@ -469,9 +493,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 5. 钱包相关接口
+## 6. 钱包相关接口
 
-### 5.1 获取钱包信息
+### 6.1 获取钱包信息
 
 - **接口**: `POST /api/v1/wallet/info`
 - **说明**: 获取当前用户钱包信息
@@ -503,7 +527,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 5.2 获取资金记录
+### 6.2 获取资金记录
 
 - **接口**: `POST /api/v1/wallet/transactions`
 - **说明**: 获取用户资金记录
@@ -546,7 +570,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 5.3 申请提现
+### 6.3 申请提现
 
 - **接口**: `POST /api/v1/wallet/withdraw`
 - **说明**: 申请提现
@@ -582,7 +606,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 5.4 获取提现汇总
+### 6.4 获取提现汇总
 
 - **接口**: `POST /api/v1/wallet/withdraw-summary`
 - **说明**: 获取提现汇总信息
@@ -609,7 +633,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 5.5 充值申请
+### 6.5 充值申请
 
 - **接口**: `POST /api/v1/wallet/recharge-apply`
 - **说明**: 充值申请
@@ -637,7 +661,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 5.6 充值确认
+### 6.6 充值确认
 
 - **接口**: `POST /api/v1/wallet/recharge-confirm`
 - **说明**: 充值确认
@@ -661,9 +685,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 6. 订单相关接口
+## 7. 订单相关接口
 
-### 6.1 获取订单列表
+### 7.1 获取订单列表
 
 - **接口**: `POST /api/v1/order/list`
 - **说明**: 获取用户订单列表
@@ -714,7 +738,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 6.2 创建订单
+### 7.2 创建订单
 
 - **接口**: `POST /api/v1/order/create`
 - **说明**: 创建新订单（uid 从 token 中自动获取，无需在请求中传递）
@@ -756,7 +780,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 6.3 获取订单详情
+### 7.3 获取订单详情
 
 - **接口**: `POST /api/v1/order/detail`
 - **说明**: 获取订单详情
@@ -773,7 +797,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
   - `order_no`: 订单编号
 - **返回示例**: 同订单列表中的单个订单数据
 
-### 6.4 获取订单统计
+### 7.4 获取订单统计
 
 - **接口**: `POST /api/v1/order/stats`
 - **说明**: 获取用户订单统计信息
@@ -797,7 +821,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 6.5 根据状态获取订单
+### 7.5 根据状态获取订单
 
 - **接口**: `POST /api/v1/order/by-status`
 - **说明**: 根据状态筛选订单
@@ -818,7 +842,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
   - `status`: 订单状态（pending/success/failed/cancelled）
 - **返回示例**: 同订单列表
 
-### 6.6 根据日期范围获取订单
+### 7.6 根据日期范围获取订单
 
 - **接口**: `POST /api/v1/order/by-date`
 - **说明**: 根据日期范围筛选订单
@@ -841,9 +865,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
   - `end_date`: 结束日期（YYYY-MM-DD）
 - **返回示例**: 同订单列表
 
-## 7. 热榜接口
+## 8. 热榜接口
 
-### 7.1 获取任务热榜
+### 8.1 获取任务热榜
 
 - **接口**: `POST /api/v1/leaderboard/ranking`
 - **说明**: 获取任务热榜排行榜列表和当前用户数据（优化版本，不使用窗口函数）
@@ -936,9 +960,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 8. 管理员接口
+## 9. 管理员接口
 
-### 8.1 确认提现
+### 9.1 确认提现
 
 - **接口**: `POST /api/v1/admin/withdraw/confirm`
 - **说明**: 管理员确认提现
@@ -962,7 +986,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-### 8.2 取消提现
+### 9.2 取消提现
 
 - **接口**: `POST /api/v1/admin/withdraw/cancel`
 - **说明**: 管理员取消提现
@@ -987,7 +1011,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 }
 ```
 
-## 9. 错误码说明
+## 10. 错误码说明
 
 | 错误码 | 说明         |
 | ------ | ------------ |
@@ -1007,9 +1031,9 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 | 1008   | 账户锁定     |
 | 1009   | 注册关闭     |
 
-## 10. 使用示例
+## 11. 使用示例
 
-### 9.1 用户注册和登录流程
+### 11.1 用户注册和登录流程
 
 ```bash
 # 1. 用户注册
@@ -1037,7 +1061,7 @@ curl -X POST http://localhost:9001/api/v1/auth/profile \
   -d '{}'
 ```
 
-### 10.2 钱包操作流程
+### 11.2 钱包操作流程
 
 ```bash
 # 1. 获取钱包信息
@@ -1062,7 +1086,7 @@ curl -X POST http://localhost:9001/api/v1/wallet/withdraw \
   }'
 ```
 
-### 10.3 热榜接口使用示例
+### 11.3 热榜接口使用示例
 
 ```bash
 # 获取任务热榜（用户ID: 1001 - 在榜上）
@@ -1087,7 +1111,7 @@ curl -X POST http://localhost:9001/api/v1/leaderboard/ranking \
   }'
 ```
 
-## 11. 注意事项
+## 12. 注意事项
 
 1. **认证**: 需要认证的接口必须在请求头中包含 `Authorization: Bearer <token>`
 2. **请求格式**: 所有请求都使用 JSON 格式
@@ -1096,7 +1120,7 @@ curl -X POST http://localhost:9001/api/v1/leaderboard/ranking \
 5. **分页**: 支持分页的接口使用 page 和 page_size 参数
 6. **限流**: 部分接口有访问频率限制，请合理使用
 
-## 12. 更新日志
+## 13. 更新日志
 
 - **v1.0.0**: 初始版本，所有业务接口改为 POST 请求
 - 统一 API 前缀为 `/api/v1`
