@@ -45,7 +45,7 @@ redis:
   host: "localhost"         # Redis主机
   port: 6379               # Redis端口
   password: ""             # Redis密码
-  db: 0                    # Redis数据库编号
+  db: 1                    # Redis数据库编号
   # 连接池配置
   pool_size: 10            # 连接池大小
   min_idle_conns: 5        # 最小空闲连接数

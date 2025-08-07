@@ -165,7 +165,7 @@ func setDefaults() {
 		GlobalConfig.Redis.Port = 6379
 	}
 	if GlobalConfig.Redis.DB == 0 {
-		GlobalConfig.Redis.DB = 0
+		GlobalConfig.Redis.DB = 1
 	}
 	if GlobalConfig.JWT.AccessTokenExpire == 0 {
 		GlobalConfig.JWT.AccessTokenExpire = 86400 // 1天
@@ -267,6 +267,11 @@ func overrideWithEnvVars() {
 	}
 	if env := os.Getenv("REDIS_PASSWORD"); env != "" {
 		GlobalConfig.Redis.Password = env
+	}
+	if env := os.Getenv("REDIS_DB"); env != "" {
+		if db := parsePort(env); db >= 0 {
+			GlobalConfig.Redis.DB = db
+		}
 	}
 
 	// 假数据配置 - 不使用环境变量覆盖，直接使用配置文件中的值
