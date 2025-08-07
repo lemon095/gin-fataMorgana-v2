@@ -35,7 +35,7 @@ func NewGroupBuyController() *GroupBuyController {
 // @Success 200 {object} utils.Response{data=models.GetGroupBuyDetailResponse}
 // @Failure 404 {object} utils.Response
 // @Failure 500 {object} utils.Response
-// @Router /api/v1/group-buy/active-detail [post]
+// @Router /api/v2/group-buy/active-detail [post]
 func (c *GroupBuyController) GetActiveGroupBuyDetail(ctx *gin.Context) {
 	// 获取当前用户ID
 	userID := middleware.GetCurrentUser(ctx)
@@ -75,7 +75,7 @@ func (c *GroupBuyController) GetActiveGroupBuyDetail(ctx *gin.Context) {
 // @Failure 400 {object} utils.Response
 // @Failure 404 {object} utils.Response
 // @Failure 500 {object} utils.Response
-// @Router /api/v1/group-buy/join [post]
+// @Router /api/v2/group-buy/join [post]
 func (c *GroupBuyController) JoinGroupBuy(ctx *gin.Context) {
 	// 获取当前用户ID
 	userID := middleware.GetCurrentUser(ctx)

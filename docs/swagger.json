@@ -15,7 +15,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:9001",
+    "host": "localhost:9002",
     "basePath": "/",
     "paths": {
         "/auth/register": {

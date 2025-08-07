@@ -125,21 +125,21 @@ gin-fataMorgana/
 ## 📡 API接口
 
 ### 认证接口
-- `POST /api/v1/auth/register` - 用户注册
-- `POST /api/v1/auth/login` - 用户登录
-- `POST /api/v1/auth/refresh` - 刷新令牌
-- `POST /api/v1/auth/profile` - 获取用户信息
+- `POST /api/v2/auth/register` - 用户注册
+- `POST /api/v2/auth/login` - 用户登录
+- `POST /api/v2/auth/refresh` - 刷新令牌
+- `POST /api/v2/auth/profile` - 获取用户信息
 
 ### 钱包接口
-- `GET /api/v1/wallet/info` - 获取钱包信息
-- `GET /api/v1/wallet/transactions` - 获取交易记录
-- `POST /api/v1/wallet/withdraw` - 申请提现
+- `GET /api/v2/wallet/info` - 获取钱包信息
+- `GET /api/v2/wallet/transactions` - 获取交易记录
+- `POST /api/v2/wallet/withdraw` - 申请提现
 
 ### 健康检查
 - `GET /health` - 系统健康检查
-- `GET /api/v1/health/check` - 系统健康检查
-- `GET /api/v1/health/database` - 数据库健康检查
-- `GET /api/v1/health/redis` - Redis健康检查
+- `GET /api/v2/health/check` - 系统健康检查
+- `GET /api/v2/health/database` - 数据库健康检查
+- `GET /api/v2/health/redis` - Redis健康检查
 
 ## 🛠️ 部署
 

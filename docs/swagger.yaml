@@ -1,4 +1,4 @@
-basePath: /api/v1
+basePath: /api/v2
 definitions:
   models.UserRegisterRequest:
     properties:
@@ -55,7 +55,7 @@ definitions:
       timestamp:
         type: integer
     type: object
-host: localhost:9001
+host: localhost:9002
 info:
   contact:
     email: support@swagger.io

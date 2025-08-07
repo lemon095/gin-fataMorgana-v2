@@ -1,8 +1,8 @@
 -- 创建数据库
-CREATE DATABASE IF NOT EXISTS gin_fataMorgana CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS future_v2 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 使用数据库
-USE gin_fataMorgana;
+USE future_v2;
 
 -- 创建管理员用户表（邀请码管理表）
 CREATE TABLE IF NOT EXISTS admin_users (

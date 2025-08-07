@@ -8,7 +8,7 @@
 
 ### 获取当前货币配置
 
-- **接口**: `POST /api/v1/currency/current`
+- **接口**: `POST /api/v2/currency/current`
 - **说明**: 获取系统当前使用的货币符号配置
 - **认证**: 无需认证
 - **请求参数**: 无
@@ -42,7 +42,7 @@
    - `GetCurrentCurrency()`: 处理获取货币配置的HTTP请求
 
 3. **路由配置**: `main.go`
-   - 在 `/api/v1/currency/current` 路径下注册了POST接口
+   - 在 `/api/v2/currency/current` 路径下注册了POST接口
 
 ## 测试
 
@@ -53,7 +53,7 @@
 redis-cli set "currency_config:current" '{"symbol":"COP"}'
 
 # 测试接口
-curl -X POST http://localhost:9001/api/v1/currency/current \
+curl -X POST http://localhost:9002/api/v2/currency/current \
   -H "Content-Type: application/json" \
   -d '{}'
 ```

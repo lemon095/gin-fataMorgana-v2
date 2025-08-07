@@ -49,7 +49,7 @@
 
 ```bash
 # 方式1：直接执行SQL文件
-mysql -u root -p gin_fataMorgana < database/migrations/01_create_all_tables.sql
+mysql -u root -p future_v2 < database/migrations/01_create_all_tables.sql
 
 # 方式2：使用项目迁移工具
 go run cmd/migrate/main.go

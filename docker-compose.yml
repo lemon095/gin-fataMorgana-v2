@@ -57,13 +57,13 @@ services:
   #     start_period: 30s
 
   # 主应用
-  gin-fataMorgana:
+  gin-fataMorgana-v2:
     build: .
-    image: gin-fatamorgana:latest
-    container_name: gin-fataMorgana-app
+    image: gin-fatamorgana-v2:latest
+    container_name: gin-fataMorgana-app-v2
     restart: unless-stopped
     ports:
-      - "9001:9001"
+      - "9002:9002"
     environment:
       - TZ=UTC
       - GIN_MODE=release
@@ -71,7 +71,7 @@ services:
       - DATABASE_PORT=3306
       - DATABASE_USERNAME=root
       - DATABASE_PASSWORD=shgytywe!#%65926328
-      - DATABASE_DBNAME=future
+      - DATABASE_DBNAME=future_v2
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=Test!#$1234.hjdgsag
@@ -101,7 +101,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:9001/health",
+          "http://localhost:9002/health",
         ]
       interval: 30s
       timeout: 10s

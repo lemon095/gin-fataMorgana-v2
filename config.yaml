@@ -1,8 +1,8 @@
 # 服务器配置
 server:
   host: "0.0.0.0"
-  port: 9001
-  domain: "localhost:9001"
+  port: 9002
+  domain: "localhost:9002"
   mode: "debug" # debug, release
 
 # 数据库配置（支持环境变量覆盖）
@@ -12,7 +12,7 @@ database:
   port: 3306
   username: "root"
   password: "123456"
-  dbname: "future"
+  dbname: "future_v2"
   charset: "utf8mb4"
   parse_time: true
   loc: "Local"

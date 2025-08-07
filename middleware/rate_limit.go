@@ -122,7 +122,7 @@ func LoginRateLimitMiddleware() gin.HandlerFunc {
 		}
 
 		var key string
-		if c.Request.URL.Path == "/api/v1/auth/login" && c.Request.Method == "POST" {
+		if c.Request.URL.Path == "/api/v2/auth/login" && c.Request.Method == "POST" {
 			raw, _ := ioutil.ReadAll(c.Request.Body)
 			var body struct {
 				Account string `json:"account"`

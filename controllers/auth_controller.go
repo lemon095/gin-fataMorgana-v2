@@ -366,7 +366,7 @@ func (ac *AuthController) GetBankCardInfo(c *gin.Context) {
 // @Failure 400 {object} utils.Response
 // @Failure 401 {object} utils.Response
 // @Failure 500 {object} utils.Response
-// @Router /api/v1/auth/change-password [post]
+// @Router /api/v2/auth/change-password [post]
 func (ac *AuthController) ChangePassword(c *gin.Context) {
 	var req models.ChangePasswordRequest
 

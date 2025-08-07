@@ -3,7 +3,7 @@
 -- 包含所有表的创建和索引优化
 -- ========================================
 
-USE future;
+USE future_v2;
 
 -- ========================================
 -- 1. 用户相关表
@@ -328,7 +328,7 @@ SELECT
     ROUND(((data_length + index_length) / 1024 / 1024), 2) AS 'Size (MB)',
     table_rows
 FROM information_schema.tables 
-WHERE table_schema = 'gin_fataMorgana'
+WHERE table_schema = 'future_v2'
 ORDER BY table_name;
 
 -- 显示索引统计
@@ -339,6 +339,6 @@ SELECT
     SUM(CASE WHEN non_unique = 0 AND index_name != 'PRIMARY' THEN 1 ELSE 0 END) as unique_keys,
     SUM(CASE WHEN non_unique = 1 THEN 1 ELSE 0 END) as regular_indexes
 FROM information_schema.statistics 
-WHERE table_schema = 'gin_fataMorgana'
+WHERE table_schema = 'future_v2'
 GROUP BY table_name
 ORDER BY table_name; 

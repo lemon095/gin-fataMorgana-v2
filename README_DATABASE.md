@@ -16,8 +16,8 @@
 ```yaml
 server:
   host: "0.0.0.0"      # 服务器监听地址
-  port: 9001           # 服务器端口
-  domain: "localhost:9001"  # 域名
+  port: 9002           # 服务器端口
+domain: "localhost:9002"  # 域名
   mode: "debug"        # 运行模式：debug/release
 ```
 

@@ -10,8 +10,8 @@
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host      localhost:9001
-// @BasePath  /api/v1
+// @host      localhost:9002
+// @BasePath  /api/v2
 
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -278,24 +278,24 @@ func main() {
 	api := r.Group("/api")
 
 	// API版本控制
-	v1 := api.Group("/v1")
+	v2 := api.Group("/v2")
 
 	// 健康检查接口
-	v1.GET("/health/system", healthController.HealthCheck)
-	v1.GET("/health/database", healthController.DatabaseHealth)
-	v1.GET("/health/redis", healthController.RedisHealth)
+	v2.GET("/health/system", healthController.HealthCheck)
+	v2.GET("/health/database", healthController.DatabaseHealth)
+	v2.GET("/health/redis", healthController.RedisHealth)
 
 	// 认证相关接口
-	v1.POST("/auth/register", authController.Register)                                               // 注册接口（已移除频率限制）
-	v1.POST("/auth/login", authController.Login)                                                     // 登录接口（已移除频率限制）
-	v1.POST("/auth/logout", middleware.AuthMiddleware(), authController.Logout)                      // 用户登出 - 撤销当前token
-	v1.POST("/auth/profile", middleware.AuthMiddleware(), authController.GetProfile)                 // 获取用户信息 - 获取当前用户完整资料
-	v1.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
-	v1.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)        // 绑定银行卡
-	v1.POST("/auth/get-bank-card-info", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
+	v2.POST("/auth/register", authController.Register)                                               // 注册接口（已移除频率限制）
+	v2.POST("/auth/login", authController.Login)                                                     // 登录接口（已移除频率限制）
+	v2.POST("/auth/logout", middleware.AuthMiddleware(), authController.Logout)                      // 用户登出 - 撤销当前token
+	v2.POST("/auth/profile", middleware.AuthMiddleware(), authController.GetProfile)                 // 获取用户信息 - 获取当前用户完整资料
+	v2.POST("/auth/change-password", middleware.AuthMiddleware(), authController.ChangePassword)     // 修改密码
+	v2.POST("/auth/bind-bank-card", middleware.AuthMiddleware(), authController.BindBankCard)        // 绑定银行卡
+	v2.POST("/auth/get-bank-card-info", middleware.AuthMiddleware(), authController.GetBankCardInfo) // 获取银行卡信息
 
 	// 会话管理路由
-	session := v1.Group("/session")
+	session := v2.Group("/session")
 	{
 		session.POST("/status", sessionController.CheckLoginStatus) // 检查登录状态 - 验证用户是否已登录
 		session.POST("/user", sessionController.GetCurrentUserInfo) // 获取当前用户信息 - 获取会话中的用户信息
@@ -304,7 +304,7 @@ func main() {
 	}
 
 	// 钱包相关路由
-	wallet := v1.Group("/wallet")
+	wallet := v2.Group("/wallet")
 	{
 		wallet.Use(middleware.AuthMiddleware())                                   // 需要认证
 		wallet.POST("/info", walletController.GetWallet)                          // 获取钱包信息 - 查询用户余额和钱包状态
@@ -316,7 +316,7 @@ func main() {
 	}
 
 	// 订单相关路由
-	order := v1.Group("/order")
+	order := v2.Group("/order")
 	{
 		order.Use(middleware.AuthMiddleware())                   // 需要认证
 		order.POST("/create", orderController.CreateOrder)       // 创建订单 - 用户创建新任务订单
@@ -329,27 +329,27 @@ func main() {
 	}
 
 	// 管理员路由
-	admin := v1.Group("/admin")
+	admin := v2.Group("/admin")
 	{
 		admin.Use(middleware.AuthMiddleware()) // 需要认证
 		// 这里可以添加管理员相关的路由
 	}
 
 	// 假数据路由
-	fake := v1.Group("/fake")
+	fake := v2.Group("/fake")
 	{
 		fake.POST("/activities", controllers.GetFakeRealtimeActivities) // 获取假数据实时动态 - 生成模拟活动数据用于前端测试
 	}
 
 	// 排行榜路由
-	leaderboard := v1.Group("/leaderboard")
+	leaderboard := v2.Group("/leaderboard")
 	{
 		leaderboard.Use(middleware.AuthMiddleware())                       // 需要认证
 		leaderboard.POST("/ranking", leaderboardController.GetLeaderboard) // 获取任务热榜 - 查询周度任务完成排行榜
 	}
 
 	// 金额配置路由
-	amountConfig := v1.Group("/amountConfig")
+	amountConfig := v2.Group("/amountConfig")
 	{
 		amountConfig.Use(middleware.AuthMiddleware())                             // 需要认证
 		amountConfig.POST("/list", amountConfigController.GetAmountConfigsByType) // 获取金额配置列表 - 根据类型获取金额配置
@@ -357,13 +357,13 @@ func main() {
 	}
 
 	// 公告路由
-	announcements := v1.Group("/announcements")
+	announcements := v2.Group("/announcements")
 	{
 		announcements.POST("/list", announcementController.GetAnnouncementList) // 获取公告列表 - 分页获取公告信息
 	}
 
 	// 拼单路由
-	groupBuy := v1.Group("/groupBuy")
+	groupBuy := v2.Group("/groupBuy")
 	{
 		groupBuy.Use(middleware.AuthMiddleware())                                   // 需要认证
 		groupBuy.POST("/active-detail", groupBuyController.GetActiveGroupBuyDetail) // 获取活跃拼单详情 - 获取当前可参与的拼单信息
@@ -371,16 +371,16 @@ func main() {
 	}
 
 	// 分享链接接口 - 获取分享链接
-	v1.POST("/shareLink", shareController.GetShareLink)
+	v2.POST("/shareLink", shareController.GetShareLink)
 
 	// 货币配置路由
-	currency := v1.Group("/currency")
+	currency := v2.Group("/currency")
 	{
 		currency.POST("/current", currencyController.GetCurrentCurrency) // 获取当前货币配置 - 无需认证
 	}
 
 	// 定时任务管理路由
-	cron := v1.Group("/cron")
+	cron := v2.Group("/cron")
 	{
 		cron.Use(middleware.AuthMiddleware())                                               // 需要认证
 		cron.POST("/manual-generate", cronController.ManualGenerateOrders)                  // 手动生成订单
@@ -392,7 +392,7 @@ func main() {
 	// 启动服务器
 	port := fmt.Sprintf("%d", config.GlobalConfig.Server.Port)
 	if port == "0" {
-		port = "9001"
+		port = "9002"
 	}
 
 	// 创建HTTP服务器

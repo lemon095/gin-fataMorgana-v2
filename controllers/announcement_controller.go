@@ -30,7 +30,7 @@ func NewAnnouncementController() *AnnouncementController {
 // @Success 200 {object} utils.Response{data=models.AnnouncementListResponse} "成功返回公告列表"
 // @Failure 400 {object} utils.Response "请求参数错误"
 // @Failure 500 {object} utils.Response "服务器内部错误"
-// @Router /api/v1/announcements/list [post]
+// @Router /api/v2/announcements/list [post]
 func (c *AnnouncementController) GetAnnouncementList(ctx *gin.Context) {
 	var request models.AnnouncementListRequest
 

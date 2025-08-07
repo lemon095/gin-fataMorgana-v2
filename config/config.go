@@ -153,7 +153,7 @@ func setDefaults() {
 		GlobalConfig.Server.Host = "0.0.0.0"
 	}
 	if GlobalConfig.Server.Port == 0 {
-		GlobalConfig.Server.Port = 9001
+		GlobalConfig.Server.Port = 9002
 	}
 	if GlobalConfig.Server.Mode == "" {
 		GlobalConfig.Server.Mode = "debug"

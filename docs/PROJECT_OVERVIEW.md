@@ -169,54 +169,54 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 1. 系统健康检查
 - `GET /health` - 系统健康检查
-- `GET /api/v1/health/check` - 系统健康检查
-- `GET /api/v1/health/database` - 数据库健康检查
-- `GET /api/v1/health/redis` - Redis健康检查
+- `GET /api/v2/health/check` - 系统健康检查
+- `GET /api/v2/health/database` - 数据库健康检查
+- `GET /api/v2/health/redis` - Redis健康检查
 
 ### 2. 认证相关接口
-- `POST /api/v1/auth/register` - 用户注册
-- `POST /api/v1/auth/login` - 用户登录
-- `POST /api/v1/auth/refresh` - 刷新令牌
-- `POST /api/v1/auth/logout` - 用户登出
-- `POST /api/v1/auth/profile` - 获取用户信息
-- `POST /api/v1/auth/bind-bank-card` - 绑定银行卡
-- `POST /api/v1/auth/bank-card` - 获取银行卡信息
+- `POST /api/v2/auth/register` - 用户注册
+- `POST /api/v2/auth/login` - 用户登录
+- `POST /api/v2/auth/refresh` - 刷新令牌
+- `POST /api/v2/auth/logout` - 用户登出
+- `POST /api/v2/auth/profile` - 获取用户信息
+- `POST /api/v2/auth/bind-bank-card` - 绑定银行卡
+- `POST /api/v2/auth/bank-card` - 获取银行卡信息
 
 ### 3. 会话管理接口
-- `POST /api/v1/session/status` - 检查登录状态
-- `POST /api/v1/session/user` - 获取当前用户信息
-- `POST /api/v1/session/logout` - 用户登出
-- `POST /api/v1/session/refresh` - 刷新会话
+- `POST /api/v2/session/status` - 检查登录状态
+- `POST /api/v2/session/user` - 获取当前用户信息
+- `POST /api/v2/session/logout` - 用户登出
+- `POST /api/v2/session/refresh` - 刷新会话
 
 ### 4. 钱包相关接口
-- `POST /api/v1/wallet/info` - 获取钱包信息
-- `POST /api/v1/wallet/transactions` - 获取资金记录
-- `POST /api/v1/wallet/withdraw` - 申请提现
-- `POST /api/v1/wallet/withdraw-summary` - 获取提现汇总
-- `POST /api/v1/wallet/recharge-apply` - 充值申请
-- `POST /api/v1/wallet/recharge-confirm` - 充值确认
+- `POST /api/v2/wallet/info` - 获取钱包信息
+- `POST /api/v2/wallet/transactions` - 获取资金记录
+- `POST /api/v2/wallet/withdraw` - 申请提现
+- `POST /api/v2/wallet/withdraw-summary` - 获取提现汇总
+- `POST /api/v2/wallet/recharge-apply` - 充值申请
+- `POST /api/v2/wallet/recharge-confirm` - 充值确认
 
 ### 5. 管理员接口
-- `POST /api/v1/admin/withdraw/confirm` - 确认提现
-- `POST /api/v1/admin/withdraw/cancel` - 取消提现
+- `POST /api/v2/admin/withdraw/confirm` - 确认提现
+- `POST /api/v2/admin/withdraw/cancel` - 取消提现
 
 ### 6. 订单相关接口
-- `POST /api/v1/order/list` - 获取订单列表
-- `POST /api/v1/order/create` - 创建订单
-- `POST /api/v1/order/detail` - 获取订单详情
-- `POST /api/v1/order/stats` - 获取订单统计
-- `POST /api/v1/order/by-status` - 根据状态获取订单
-- `POST /api/v1/order/by-date` - 根据日期范围获取订单
+- `POST /api/v2/order/list` - 获取订单列表
+- `POST /api/v2/order/create` - 创建订单
+- `POST /api/v2/order/detail` - 获取订单详情
+- `POST /api/v2/order/stats` - 获取订单统计
+- `POST /api/v2/order/by-status` - 根据状态获取订单
+- `POST /api/v2/order/by-date` - 根据日期范围获取订单
 
 ### 7. 热榜相关接口
-- `POST /api/v1/leaderboard/ranking` - 获取任务热榜
+- `POST /api/v2/leaderboard/ranking` - 获取任务热榜
 
 ### 8. 金额配置相关接口
-- `POST /api/v1/amount-config/list` - 根据类型获取金额配置列表
-- `GET /api/v1/amount-config/:id` - 根据ID获取金额配置详情
+- `POST /api/v2/amount-config/list` - 根据类型获取金额配置列表
+- `GET /api/v2/amount-config/:id` - 根据ID获取金额配置详情
 
 ### 9. 假数据接口
-- `POST /api/v1/fake/activities` - 获取假数据实时动态
+- `POST /api/v2/fake/activities` - 获取假数据实时动态
 
 ## 核心功能模块
 
@@ -287,7 +287,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ## 部署信息
 
-- **服务端口**: 9001
+- **服务端口**: 9002
 - **数据库**: MySQL
 - **缓存**: Redis
 - **文档地址**: `/swagger/*`

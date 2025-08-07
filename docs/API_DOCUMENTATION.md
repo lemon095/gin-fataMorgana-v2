@@ -2,13 +2,13 @@
 
 ## 概述
 
-Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证、钱包管理、健康监控等功能。所有业务接口都使用 POST 请求，统一前缀为 `/api/v1`。
+Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证、钱包管理、健康监控等功能。所有业务接口都使用 POST 请求，统一前缀为 `/api/v2`。
 
 ## 基础信息
 
-- **基础 URL**: `http://localhost:9001`
-- **API 版本**: v1
-- **统一前缀**: `/api/v1`
+- **基础 URL**: `http://localhost:9002`
+- **API 版本**: v2
+- **统一前缀**: `/api/v2`
 - **请求方式**: 主要使用 POST
 - **数据格式**: JSON
 - **认证方式**: Bearer Token
@@ -66,14 +66,14 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 1.2 详细健康检查
 
-- **接口**: `GET /api/v1/health/check`
+- **接口**: `GET /api/v2/health/check`
 - **说明**: 系统详细健康检查
 - **请求参数**: 无
 - **返回示例**: 同上
 
 ### 1.3 数据库健康检查
 
-- **接口**: `GET /api/v1/health/database`
+- **接口**: `GET /api/v2/health/database`
 - **说明**: 数据库连接状态检查
 - **请求参数**: 无
 - **返回示例**:
@@ -92,7 +92,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 1.4 Redis 健康检查
 
-- **接口**: `GET /api/v1/health/redis`
+- **接口**: `GET /api/v2/health/redis`
 - **说明**: Redis 连接状态检查
 - **请求参数**: 无
 - **返回示例**:
@@ -113,7 +113,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 2.1 获取当前货币配置
 
-- **接口**: `POST /api/v1/currency/current`
+- **接口**: `POST /api/v2/currency/current`
 - **说明**: 获取系统当前使用的货币符号配置
 - **认证**: 无需认证
 - **请求参数**: 无
@@ -137,7 +137,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.1 实时动态假数据
 
-- **接口**: `POST /api/v1/fake/activities`
+- **接口**: `POST /api/v2/fake/activities`
 - **说明**: 获取实时动态假数据，用于前端展示
 - **请求参数**:
 
@@ -176,7 +176,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 4.1 用户注册
 
-- **接口**: `POST /api/v1/auth/register`
+- **接口**: `POST /api/v2/auth/register`
 - **说明**: 用户注册
 - **请求参数**:
 
@@ -217,7 +217,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.2 用户登录
 
-- **接口**: `POST /api/v1/auth/login`
+- **接口**: `POST /api/v2/auth/login`
 - **说明**: 用户登录
 - **请求参数**:
 
@@ -248,7 +248,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.3 刷新令牌
 
-- **接口**: `POST /api/v1/auth/refresh`
+- **接口**: `POST /api/v2/auth/refresh`
 - **说明**: 刷新访问令牌
 - **请求参数**:
 
@@ -278,7 +278,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.4 用户登出
 
-- **接口**: `POST /api/v1/auth/logout`
+- **接口**: `POST /api/v2/auth/logout`
 - **说明**: 用户登出
 - **请求参数**: 无
 - **返回示例**:
@@ -294,7 +294,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.5 获取用户信息
 
-- **接口**: `POST /api/v1/auth/profile`
+- **接口**: `POST /api/v2/auth/profile`
 - **说明**: 获取当前用户信息
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -331,7 +331,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.6 绑定银行卡
 
-- **接口**: `POST /api/v1/auth/bind-bank-card`
+- **接口**: `POST /api/v2/auth/bind-bank-card`
 - **说明**: 绑定银行卡
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -373,7 +373,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 3.7 获取银行卡信息
 
-- **接口**: `POST /api/v1/auth/bank-card`
+- **接口**: `POST /api/v2/auth/bank-card`
 - **说明**: 获取当前用户银行卡信息
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -404,7 +404,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 5.1 检查登录状态
 
-- **接口**: `POST /api/v1/session/status`
+- **接口**: `POST /api/v2/session/status`
 - **说明**: 检查当前登录状态
 - **请求参数**:
 
@@ -430,7 +430,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 5.2 获取当前用户信息
 
-- **接口**: `POST /api/v1/session/user`
+- **接口**: `POST /api/v2/session/user`
 - **说明**: 获取当前会话用户信息
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -456,7 +456,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 5.3 用户登出
 
-- **接口**: `POST /api/v1/session/logout`
+- **接口**: `POST /api/v2/session/logout`
 - **说明**: 用户登出
 - **请求参数**: 无
 - **返回示例**:
@@ -474,7 +474,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 5.4 刷新会话
 
-- **接口**: `POST /api/v1/session/refresh`
+- **接口**: `POST /api/v2/session/refresh`
 - **说明**: 刷新会话
 - **认证**: 需要 Bearer Token
 - **请求参数**: 无
@@ -497,7 +497,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 6.1 获取钱包信息
 
-- **接口**: `POST /api/v1/wallet/info`
+- **接口**: `POST /api/v2/wallet/info`
 - **说明**: 获取当前用户钱包信息
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -529,7 +529,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 6.2 获取资金记录
 
-- **接口**: `POST /api/v1/wallet/transactions`
+- **接口**: `POST /api/v2/wallet/transactions`
 - **说明**: 获取用户资金记录
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -572,7 +572,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 6.3 申请提现
 
-- **接口**: `POST /api/v1/wallet/withdraw`
+- **接口**: `POST /api/v2/wallet/withdraw`
 - **说明**: 申请提现
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -608,7 +608,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 6.4 获取提现汇总
 
-- **接口**: `POST /api/v1/wallet/withdraw-summary`
+- **接口**: `POST /api/v2/wallet/withdraw-summary`
 - **说明**: 获取提现汇总信息
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -635,7 +635,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 6.5 充值申请
 
-- **接口**: `POST /api/v1/wallet/recharge-apply`
+- **接口**: `POST /api/v2/wallet/recharge-apply`
 - **说明**: 充值申请
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -663,7 +663,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 6.6 充值确认
 
-- **接口**: `POST /api/v1/wallet/recharge-confirm`
+- **接口**: `POST /api/v2/wallet/recharge-confirm`
 - **说明**: 充值确认
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -689,7 +689,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 7.1 获取订单列表
 
-- **接口**: `POST /api/v1/order/list`
+- **接口**: `POST /api/v2/order/list`
 - **说明**: 获取用户订单列表
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -740,7 +740,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 7.2 创建订单
 
-- **接口**: `POST /api/v1/order/create`
+- **接口**: `POST /api/v2/order/create`
 - **说明**: 创建新订单（uid 从 token 中自动获取，无需在请求中传递）
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -782,7 +782,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 7.3 获取订单详情
 
-- **接口**: `POST /api/v1/order/detail`
+- **接口**: `POST /api/v2/order/detail`
 - **说明**: 获取订单详情
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -799,7 +799,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 7.4 获取订单统计
 
-- **接口**: `POST /api/v1/order/stats`
+- **接口**: `POST /api/v2/order/stats`
 - **说明**: 获取用户订单统计信息
 - **认证**: 需要 Bearer Token
 - **请求参数**: 无
@@ -823,7 +823,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 7.5 根据状态获取订单
 
-- **接口**: `POST /api/v1/order/by-status`
+- **接口**: `POST /api/v2/order/by-status`
 - **说明**: 根据状态筛选订单
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -844,7 +844,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 7.6 根据日期范围获取订单
 
-- **接口**: `POST /api/v1/order/by-date`
+- **接口**: `POST /api/v2/order/by-date`
 - **说明**: 根据日期范围筛选订单
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -869,7 +869,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 8.1 获取任务热榜
 
-- **接口**: `POST /api/v1/leaderboard/ranking`
+- **接口**: `POST /api/v2/leaderboard/ranking`
 - **说明**: 获取任务热榜排行榜列表和当前用户数据（优化版本，不使用窗口函数）
 - **认证**: 需要 Bearer Token
 - **请求参数**: 无（空 JSON 对象）
@@ -964,7 +964,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 9.1 确认提现
 
-- **接口**: `POST /api/v1/admin/withdraw/confirm`
+- **接口**: `POST /api/v2/admin/withdraw/confirm`
 - **说明**: 管理员确认提现
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -988,7 +988,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ### 9.2 取消提现
 
-- **接口**: `POST /api/v1/admin/withdraw/cancel`
+- **接口**: `POST /api/v2/admin/withdraw/cancel`
 - **说明**: 管理员取消提现
 - **认证**: 需要 Bearer Token
 - **请求参数**:
@@ -1037,7 +1037,7 @@ Gin-FataMorgana 是一个基于 Gin 框架的 Go Web 服务，提供用户认证
 
 ```bash
 # 1. 用户注册
-curl -X POST http://localhost:9001/api/v1/auth/register \
+curl -X POST http://localhost:9002/api/v2/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -1047,7 +1047,7 @@ curl -X POST http://localhost:9001/api/v1/auth/register \
   }'
 
 # 2. 用户登录
-curl -X POST http://localhost:9001/api/v1/auth/login \
+curl -X POST http://localhost:9002/api/v2/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -1055,7 +1055,7 @@ curl -X POST http://localhost:9001/api/v1/auth/login \
   }'
 
 # 3. 获取用户信息（需要token）
-curl -X POST http://localhost:9001/api/v1/auth/profile \
+curl -X POST http://localhost:9002/api/v2/auth/profile \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{}'
@@ -1065,13 +1065,13 @@ curl -X POST http://localhost:9001/api/v1/auth/profile \
 
 ```bash
 # 1. 获取钱包信息
-curl -X POST http://localhost:9001/api/v1/wallet/info \
+curl -X POST http://localhost:9002/api/v2/wallet/info \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{}'
 
 # 2. 申请提现
-curl -X POST http://localhost:9001/api/v1/wallet/withdraw \
+curl -X POST http://localhost:9002/api/v2/wallet/withdraw \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -d '{
@@ -1090,21 +1090,21 @@ curl -X POST http://localhost:9001/api/v1/wallet/withdraw \
 
 ```bash
 # 获取任务热榜（用户ID: 1001 - 在榜上）
-curl -X POST http://localhost:9001/api/v1/leaderboard/ranking \
+curl -X POST http://localhost:9002/api/v2/leaderboard/ranking \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": 1001
   }'
 
 # 获取任务热榜（用户ID: 9999 - 不在榜上）
-curl -X POST http://localhost:9001/api/v1/leaderboard/ranking \
+curl -X POST http://localhost:9002/api/v2/leaderboard/ranking \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": 9999
   }'
 
 # 测试无效用户ID
-curl -X POST http://localhost:9001/api/v1/leaderboard/ranking \
+curl -X POST http://localhost:9002/api/v2/leaderboard/ranking \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": 0
@@ -1123,10 +1123,10 @@ curl -X POST http://localhost:9001/api/v1/leaderboard/ranking \
 ## 13. 更新日志
 
 - **v1.0.0**: 初始版本，所有业务接口改为 POST 请求
-- 统一 API 前缀为 `/api/v1`
+- 统一 API 前缀为 `/api/v2`
 - 健康检查接口保持 GET 请求以便监控
 - 完善错误码和响应格式
 - **v1.1.0**: 新增任务热榜接口
-  - 添加 `/api/v1/leaderboard/ranking` 接口
+  - 添加 `/api/v2/leaderboard/ranking` 接口
   - 支持获取排行榜列表和当前用户数据
   - 包含排名、用户名、金额、完成单数、利润金额、时间等字段

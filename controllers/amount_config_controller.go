@@ -33,7 +33,7 @@ func NewAmountConfigController() *AmountConfigController {
 // @Failure 400 {object} utils.Response "请求参数错误"
 // @Failure 401 {object} utils.Response "认证失败"
 // @Failure 500 {object} utils.Response "服务器内部错误"
-// @Router /api/v1/amount-config/list [post]
+// @Router /api/v2/amount-config/list [post]
 func (c *AmountConfigController) GetAmountConfigsByType(ctx *gin.Context) {
 	var request models.AmountConfigRequest
 
@@ -67,7 +67,7 @@ func (c *AmountConfigController) GetAmountConfigsByType(ctx *gin.Context) {
 // @Failure 401 {object} utils.Response "认证失败"
 // @Failure 404 {object} utils.Response "配置不存在"
 // @Failure 500 {object} utils.Response "服务器内部错误"
-// @Router /api/v1/amount-config/{id} [get]
+// @Router /api/v2/amount-config/{id} [get]
 func (c *AmountConfigController) GetAmountConfigByID(ctx *gin.Context) {
 	// 获取路径参数
 	idStr := ctx.Param("id")

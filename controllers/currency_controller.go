@@ -27,7 +27,7 @@ func NewCurrencyController() *CurrencyController {
 // @Produce json
 // @Success 200 {object} utils.Response{data=services.CurrencyConfig} "成功"
 // @Failure 500 {object} utils.Response "服务器错误"
-// @Router /api/v1/currency/current [post]
+// @Router /api/v2/currency/current [post]
 func (cc *CurrencyController) GetCurrentCurrency(c *gin.Context) {
 	// 获取当前货币配置
 	currencyConfig, err := cc.currencyService.GetCurrentCurrency(c.Request.Context())
@@ -38,4 +38,4 @@ func (cc *CurrencyController) GetCurrentCurrency(c *gin.Context) {
 
 	// 返回成功响应
 	utils.Success(c, currencyConfig)
-} 
+}

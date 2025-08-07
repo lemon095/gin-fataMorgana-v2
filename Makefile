@@ -91,7 +91,7 @@ db-show-index: ## 显示当前数据库的所有索引
 # 健康检查
 health: ## 健康检查
 	@echo "执行健康检查..."
-	curl -f http://localhost:9001/health || echo "健康检查失败"
+	curl -f http://localhost:9002/health || echo "健康检查失败"
 
 # 开发工具
 dev-setup: ## 开发环境设置
@@ -112,7 +112,7 @@ prod-setup: ## 生产环境设置
 monitor: ## 监控服务状态
 	@echo "监控服务状态..."
 	@echo "应用状态:"
-	curl -s http://localhost:9001/health | jq '.' 2>/dev/null || echo "应用未响应"
+	curl -s http://localhost:9002/health | jq '.' 2>/dev/null || echo "应用未响应"
 	@echo ""
 	@echo "Docker服务状态:"
 	$(DOCKER_COMPOSE) ps
@@ -121,13 +121,13 @@ monitor: ## 监控服务状态
 backup: ## 备份数据
 	@echo "备份数据..."
 	@mkdir -p backups
-	$(DOCKER_COMPOSE) exec mysql mysqldump -u root -proot123456 gin_fataMorgana > backups/backup_$(shell date +%Y%m%d_%H%M%S).sql
+	$(DOCKER_COMPOSE) exec mysql mysqldump -u root -proot123456 future_v2 > backups/backup_$(shell date +%Y%m%d_%H%M%S).sql
 
 # 恢复相关
 restore: ## 恢复数据（需要指定备份文件）
 	@echo "恢复数据..."
 	@if [ -z "$(file)" ]; then echo "请指定备份文件: make restore file=backups/backup_20240101_120000.sql"; exit 1; fi
-	$(DOCKER_COMPOSE) exec -T mysql mysql -u root -proot123456 gin_fataMorgana < $(file)
+	$(DOCKER_COMPOSE) exec -T mysql mysql -u root -proot123456 future_v2 < $(file)
 
 # 安全相关
 security-check: ## 安全检查
