@@ -300,6 +300,29 @@ CREATE TABLE IF NOT EXISTS `operation_failures` (
 COMMENT='操作失败记录表 - 记录用户操作失败信息';
 
 -- ========================================
+-- 6. 消息推送表
+-- ========================================
+
+-- 消息表
+CREATE TABLE IF NOT EXISTS `messages` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `uid` varchar(8) NOT NULL COMMENT '用户唯一ID',
+  `status` enum('draft','sent','read') NOT NULL DEFAULT 'draft' COMMENT '状态：draft-草稿/未发送，sent-已发送，read-已读',
+  `message_type` enum('warning','error','question','info') NOT NULL DEFAULT 'info' COMMENT '消息类型：warning-警告，error-错误，question-问号，info-消息',
+  `content` text NOT NULL COMMENT '消息内容',
+  `read_at` datetime(3) DEFAULT NULL COMMENT '用户读取时间',
+  `created_by` varchar(100) NOT NULL COMMENT '创建管理员用户名',
+  `created_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) COMMENT '创建时间',
+  `updated_at` datetime(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_uid_status` (`uid`, `status`),
+  KEY `idx_uid_created_at` (`uid`, `created_at`),
+  KEY `idx_status_created_at` (`status`, `created_at`),
+  KEY `idx_message_type` (`message_type`),
+  KEY `idx_created_by` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息表 - 存储系统推送给用户的消息，支持多种消息类型和状态管理';
+
+-- ========================================
 -- 表统计信息更新
 -- ========================================
 
@@ -316,6 +339,7 @@ ANALYZE TABLE amount_config;
 ANALYZE TABLE announcements;
 ANALYZE TABLE announcement_banners;
 ANALYZE TABLE member_level;
+ANALYZE TABLE messages;
 
 -- ========================================
 -- 显示创建结果

@@ -258,6 +258,7 @@ func main() {
 	groupBuyController := controllers.NewGroupBuyController()
 	shareController := controllers.NewShareController()
 	currencyController := controllers.NewCurrencyController()
+	messageController := controllers.NewMessageController()
 
 	// 根路径
 	r.GET("/", func(c *gin.Context) {
@@ -377,6 +378,13 @@ func main() {
 	currency := v2.Group("/currency")
 	{
 		currency.POST("/current", currencyController.GetCurrentCurrency) // 获取当前货币配置 - 无需认证
+	}
+
+	// 消息推送路由
+	message := v2.Group("/message")
+	{
+		message.Use(middleware.AuthMiddleware())               // 需要认证
+		message.POST("/pop", messageController.GetUserMessage) // 获取用户消息推送
 	}
 
 	// 定时任务管理路由
