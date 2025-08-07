@@ -158,15 +158,15 @@ deploy() {
     
     # 停止现有容器
     log_info "停止现有容器..."
-    docker-compose down || true
+    docker compose down || true
     
     # 构建新镜像
     log_info "构建新镜像..."
-    docker-compose build --no-cache
+    docker compose build --no-cache
     
     # 启动服务
     log_info "启动服务..."
-    docker-compose up -d
+    docker compose up -d
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -184,7 +184,7 @@ update() {
     
     # 备份当前状态
     log_info "备份当前状态..."
-    docker-compose ps > backup_status.txt 2>/dev/null || true
+    docker compose ps > backup_status.txt 2>/dev/null || true
     
     # 拉取最新代码
     log_info "拉取最新代码..."
@@ -200,11 +200,11 @@ update() {
     
     # 重新构建和部署
     log_info "重新构建应用..."
-    docker-compose build --no-cache
+    docker compose build --no-cache
     
     log_info "重启服务..."
-    docker-compose down
-    docker-compose up -d
+    docker compose down
+    docker compose up -d
     
     # 等待服务启动
     log_info "等待服务启动..."
@@ -219,14 +219,14 @@ update() {
 # 重启应用
 restart() {
     log_info "重启应用..."
-    docker-compose restart
+    docker compose restart
     log_info "应用重启完成"
 }
 
 # 查看状态
 status() {
     log_info "应用状态："
-    docker-compose ps
+    docker compose ps
     
     echo ""
     log_info "服务健康状态："
@@ -236,7 +236,7 @@ status() {
 # 查看日志
 logs() {
     log_info "显示应用日志..."
-    docker-compose logs -f --tail=100
+    docker compose logs -f --tail=100
 }
 
 # 健康检查
@@ -244,7 +244,7 @@ health_check() {
     log_info "执行健康检查..."
     
     # 检查容器状态
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "Up"; then
         log_info "✅ 容器运行正常"
     else
         log_error "❌ 容器运行异常"
@@ -252,7 +252,7 @@ health_check() {
     fi
     
     # 检查应用健康端点
-    if curl -f -s http://localhost:9001/health > /dev/null; then
+    if curl -f -s http://localhost:9002/health > /dev/null; then
         log_info "✅ 应用健康检查通过"
     else
         log_warn "⚠️  应用健康检查失败"
@@ -283,7 +283,7 @@ backup() {
     
     # 备份数据库
     log_info "备份数据库..."
-    docker exec mysql57 mysqldump -u root -p'shgytywe!#%65926328' future > "$BACKUP_DIR/database.sql" 2>/dev/null || log_warn "数据库备份失败"
+    docker exec mysql57 mysqldump -u root -p'shgytywe!#%65926328' future_v2 > "$BACKUP_DIR/database.sql" 2>/dev/null || log_warn "数据库备份失败"
     
     # 备份配置文件
     log_info "备份配置文件..."
